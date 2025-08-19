@@ -1,0 +1,7 @@
+*
+!*/
+!.editorconfig
+!.gitignore
+!Cargo.lock
+!Cargo.toml
+!/crates/**
