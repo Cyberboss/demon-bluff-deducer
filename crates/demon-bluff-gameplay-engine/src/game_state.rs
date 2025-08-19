@@ -1,7 +1,11 @@
 use std::iter::repeat;
 
-use crate::villager::{
-    ConfirmedVillager, HiddenVillager, RevealedVillager, Villager, VillagerArchetype, VillagerIndex,
+use thiserror::Error;
+
+use crate::{
+    Expression,
+    testimony::Testimony,
+    villager::{ActiveVillager, HiddenVillager, Villager, VillagerArchetype, VillagerIndex},
 };
 
 const DAYS_BEFORE_NIGHT: u8 = 4;
@@ -32,17 +36,29 @@ pub struct GameState {
 
 pub struct RevealResult {
     index: VillagerIndex,
-    archetype: VillagerArchetype,
+    archetype: Option<VillagerArchetype>,
+}
+
+pub struct KillAttempt {
+    target: VillagerIndex,
+    result: Option<KillResult>,
+}
+
+pub struct KillResult {
+    true_identity: Option<VillagerArchetype>,
+    corrupted: bool,
+}
+
+pub struct AbilityResult<'a> {
+    source: VillagerIndex,
+    targets: &'a [VillagerIndex],
+    testimony: Expression<Testimony>,
 }
 
 pub enum Action<'a> {
-    Reveal(RevealResult),
-    CantReveal(VillagerIndex),
-    Kill(VillagerIndex),
-    Ability {
-        source: VillagerIndex,
-        targets: &'a [VillagerIndex],
-    },
+    TryReveal(RevealResult),
+    TryKill(KillAttempt),
+    Ability(AbilityResult<'a>),
     LilisNightKill(VillagerIndex),
 }
 
@@ -61,6 +77,24 @@ impl DrawStats {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum GameStateInitError {
+    #[error("Provided villager count does not match DrawStats")]
+    VillagerCountMismatch,
+    #[error("Provided revealed villager count does not match reveal order count")]
+    RevealOrderCountMismatch,
+}
+
+#[derive(Error, Debug)]
+pub enum GameStateMutationError {
+    #[error("A night action must be taken")]
+    MustTakeNightAction,
+    #[error("A night action cannot be taken")]
+    CannotTakeNightAction,
+    #[error("The target villager cannot be revealed")]
+    VillagerCannotBeRevealed,
+}
+
 impl GameState {
     pub fn new(
         next_day: u8,
@@ -69,9 +103,22 @@ impl GameState {
         villagers: Vec<Villager>,
         reveal_order: Vec<VillagerIndex>,
         hitpoints: u8,
-    ) -> Result<Self, ()> {
+    ) -> Result<Self, GameStateInitError> {
         if draw_stats.total_villagers() != villagers.len() {
-            return Err(());
+            return Err(GameStateInitError::VillagerCountMismatch);
+        }
+
+        if villagers
+            .iter()
+            .map(|villager| match villager {
+                Villager::Active(_) => 0,
+                Villager::Hidden(_) => 1,
+                Villager::Confirmed(_) => 0,
+            })
+            .sum::<usize>()
+            != reveal_order.len()
+        {
+            return Err(GameStateInitError::RevealOrderCountMismatch);
         }
 
         Ok(Self {
@@ -84,41 +131,47 @@ impl GameState {
         })
     }
 
-    pub fn mutate(&mut self, action: Action) -> Result<(), ()> {
+    pub fn mutate(&mut self, action: Action) -> Result<(), GameStateMutationError> {
         let must_be_night = self.next_day > DAYS_BEFORE_NIGHT;
         match action {
-            Action::Reveal(result) => {
+            Action::TryReveal(result) => {
                 if must_be_night {
-                    return Err(());
+                    return Err(GameStateMutationError::MustTakeNightAction);
+                }
+
+                let target_villager = &self.villagers[result.index.0];
+                match target_villager {
+                    Villager::Active(_) | Villager::Confirmed(_) => {
+                        return Err((GameStateMutationError::VillagerCannotBeRevealed));
+                    }
+                    Villager::Hidden(hidden_villager) => {
+                        if hidden_villager.cant_reveal() {
+                            return Err(GameStateMutationError::VillagerCannotBeRevealed);
+                        }
+
+                        self.villagers[result.index.0] =
+                            Villager::Active(ActiveVillager::new(result.archetype))
+                    }
+                }
+            }
+            Action::TryKill(attempt) => {
+                if must_be_night {
+                    return Err(GameStateMutationError::MustTakeNightAction);
                 }
 
                 todo!();
             }
-            Action::Kill(villager_index) => {
+            Action::Ability(result) => {
                 if must_be_night {
-                    return Err(());
-                }
-
-                todo!();
-            }
-            Action::Ability { source, targets } => {
-                if must_be_night {
-                    return Err(());
+                    return Err(GameStateMutationError::MustTakeNightAction);
                 }
 
                 todo!();
             }
             Action::LilisNightKill(villager_index) => {
                 if !must_be_night {
-                    return Err(());
+                    return Err(GameStateMutationError::CannotTakeNightAction);
                 }
-            }
-            Action::CantReveal(villager_index) => {
-                if must_be_night {
-                    return Err(());
-                }
-
-                todo!();
             }
         };
 

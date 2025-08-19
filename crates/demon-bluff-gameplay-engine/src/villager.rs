@@ -1,4 +1,8 @@
-use crate::{Expression, affect::Affect, testimony::Testimony};
+use crate::{
+    Expression,
+    affect::Affect,
+    testimony::{self, Testimony},
+};
 
 pub struct VillagerIndex(pub usize);
 
@@ -61,7 +65,7 @@ pub enum VillagerArchetype {
     Demon(Demon),
 }
 
-pub struct RevealedVillager {
+pub struct ActiveVillager {
     instance: VillagerInstance,
     cant_kill: bool,
 }
@@ -84,9 +88,35 @@ pub struct ConfirmedVillager {
 }
 
 pub enum Villager {
-    Revealed(RevealedVillager),
+    Active(ActiveVillager),
     Hidden(HiddenVillager),
     Confirmed(ConfirmedVillager),
+}
+
+impl VillagerInstance {
+    pub fn new(archetype: VillagerArchetype, testimony: Option<Expression<Testimony>>) -> Self {
+        let action_available = archetype.has_action();
+        Self {
+            archetype,
+            testimony,
+            action_available,
+        }
+    }
+}
+
+impl ActiveVillager {
+    pub fn new(instance: VillagerInstance) -> Self {
+        Self {
+            instance,
+            cant_kill: false,
+        }
+    }
+}
+
+impl HiddenVillager {
+    pub fn cant_reveal(&self) -> bool {
+        self.cant_reveal
+    }
 }
 
 impl VillagerArchetype {
@@ -106,14 +136,48 @@ impl VillagerArchetype {
 
     pub fn lies(&self) -> bool {
         match self {
-            Self::GoodVillager(_) => false,
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => false,
+            },
             Self::Outcast(outcast) => match outcast {
                 Outcast::Drunk => true,
-                _ => false,
+                Outcast::Wretch
+                | Outcast::Bombardier
+                | Outcast::Doppelganger
+                | Outcast::PlagueDoctor => false,
             },
             Self::Minion(minion) => match minion {
                 Minion::Puppet => false,
-                _ => true,
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer => true,
             },
             Self::Demon(_) => true,
         }
@@ -121,23 +185,205 @@ impl VillagerArchetype {
 
     pub fn disguises(&self) -> bool {
         match self {
-            Self::GoodVillager(_) => false,
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => false,
+            },
             Self::Outcast(outcast) => match outcast {
                 Outcast::Drunk => true,
-                _ => false,
+                Outcast::Wretch
+                | Outcast::Bombardier
+                | Outcast::Doppelganger
+                | Outcast::PlagueDoctor => false,
             },
-            Self::Minion(_) | Self::Demon(_) => true,
+            Self::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => true,
+            },
+            Self::Demon(demon) => match demon {
+                Demon::Baa | Demon::Pooka | Demon::Lilis => true,
+            },
         }
     }
 
     pub fn corrupted(&self) -> bool {
         match self {
-            Self::GoodVillager(_) => false,
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => false,
+            },
             Self::Outcast(outcast) => match outcast {
                 Outcast::Drunk => true,
-                _ => false,
+                Outcast::Wretch
+                | Outcast::Bombardier
+                | Outcast::Doppelganger
+                | Outcast::PlagueDoctor => false,
             },
-            Self::Minion(_) | Self::Demon(_) => false,
+            Self::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => false,
+            },
+            Self::Demon(demon) => match demon {
+                Demon::Baa | Demon::Pooka | Demon::Lilis => false,
+            },
+        }
+    }
+
+    pub fn has_night_action(&self) -> bool {
+        match self {
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => false,
+            },
+            Self::Outcast(outcast) => match outcast {
+                Outcast::Drunk
+                | Outcast::Wretch
+                | Outcast::Bombardier
+                | Outcast::Doppelganger
+                | Outcast::PlagueDoctor => false,
+            },
+            Self::Demon(demon) => match demon {
+                Demon::Lilis => true,
+                Demon::Baa | Demon::Pooka => false,
+            },
+            Self::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => false,
+            },
+        }
+    }
+
+    pub fn has_action(&self) -> bool {
+        match self {
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness => false,
+                GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => true,
+            },
+            Self::Outcast(outcast) => match outcast {
+                Outcast::Drunk | Outcast::Wretch | Outcast::Bombardier | Outcast::Doppelganger => {
+                    false
+                }
+                Outcast::PlagueDoctor => true,
+            },
+            Self::Demon(demon) => match demon {
+                Demon::Lilis | Demon::Baa | Demon::Pooka => false,
+            },
+            Self::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => false,
+            },
         }
     }
 
