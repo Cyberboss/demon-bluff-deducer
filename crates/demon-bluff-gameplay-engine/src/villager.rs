@@ -1,4 +1,4 @@
-use crate::testimony::Testimony;
+use crate::{affect::Affect, testimony::Testimony};
 
 pub struct VillagerIndex(pub usize);
 
@@ -48,7 +48,6 @@ pub struct RevealedVillager {
 
 pub struct HiddenVillager {
     dead: bool,
-    index: VillagerIndex,
 }
 
 pub struct VillagerInstance {
@@ -84,7 +83,43 @@ impl VillagerArchetype {
         }
     }
 
-    pub fn affects() -> Vec<Affect> {
+    pub fn lies(&self) -> bool {
+        match self {
+            Self::GoodVillager(_) => false,
+            Self::Outcast(outcast) => match outcast {
+                Outcast::Drunk => true,
+                _ => false,
+            },
+            Self::Minion(minion) => match minion {
+                Minion::Puppet => false,
+                _ => true,
+            },
+            Self::Demon(_) => true,
+        }
+    }
+
+    pub fn disguises(&self) -> bool {
+        match self {
+            Self::GoodVillager(_) => false,
+            Self::Outcast(outcast) => match outcast {
+                Outcast::Drunk => true,
+                _ => false,
+            },
+            Self::Minion(_) | Self::Demon(_) => true,
+        }
+    }
+
+    pub fn affects(
+        total_villagers: u8,
+        index: VillagerIndex,
+        hidden_villagers: &[VillagerIndex],
+    ) -> Vec<Affect> {
         todo!()
+    }
+}
+
+impl HiddenVillager {
+    pub fn new(dead: bool) -> Self {
+        Self { dead }
     }
 }

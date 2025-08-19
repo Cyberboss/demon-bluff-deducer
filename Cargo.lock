@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "demon-bluff-logic-engine"
+name = "demon-bluff-gameplay-engine"
 version = "0.1.0"

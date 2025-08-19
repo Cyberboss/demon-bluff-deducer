@@ -5,6 +5,11 @@ pub enum ConfessorClaim {
     Dizzy,
 }
 
+pub enum Direction {
+    Clockwise,
+    CounterClockwise,
+}
+
 pub enum ArchitectClaim {
     Left,
     Right,
@@ -12,9 +17,8 @@ pub enum ArchitectClaim {
 }
 
 pub enum EnlightendClaim {
-    Clockwise,
-    CounterClockwise,
     Equidistant,
+    Direction(Direction),
 }
 
 pub enum BakerClaim {
