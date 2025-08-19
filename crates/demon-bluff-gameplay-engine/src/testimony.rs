@@ -1,4 +1,4 @@
-use crate::villager::{VillagerArchetype, VillagerIndex, VillagerInstance};
+use crate::villager::{VillagerArchetype, VillagerIndex};
 
 pub enum ConfessorClaim {
     Good,
@@ -54,4 +54,10 @@ pub enum Testimony {
     Affected(Vec<VillagerIndex>),
     FakeEvil(Vec<VillagerIndex>),
     SelfDestruct(Vec<VillagerIndex>),
+}
+
+impl EvilPairs {
+    pub fn new(pair_count: u8) -> Self {
+        Self(pair_count)
+    }
 }

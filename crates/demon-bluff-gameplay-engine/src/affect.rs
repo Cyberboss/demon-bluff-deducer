@@ -1,4 +1,4 @@
-use crate::{testimony::Direction, villager::Expression};
+use crate::{Expression, testimony::Direction};
 
 pub struct VillagerAffect {
     direction: Direction,
@@ -15,4 +15,13 @@ pub enum Affect {
     Night(NightEffect),
     FakeOutcast,
     DupeVillager,
+}
+
+impl VillagerAffect {
+    pub fn new(direction: Direction, distance: u8) -> Self {
+        Self {
+            direction,
+            distance,
+        }
+    }
 }

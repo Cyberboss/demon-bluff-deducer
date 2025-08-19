@@ -1,13 +1,32 @@
-use crate::{affect::Affect, testimony::Testimony};
+use crate::{Expression, affect::Affect, testimony::Testimony};
 
 pub struct VillagerIndex(pub usize);
 
 pub enum GoodVillager {
-    FortuneTeller,
-    Bishop,
-    Empress,
+    Alchemist,
     Architect,
+    Baker,
+    Bard,
+    Bishop,
+    Confessor,
+    Dreamer,
+    Druid,
+    Empress,
+    Enlightened,
+    FortuneTeller,
+    Gemcrafter,
+    Hunter,
+    Jester,
+    Judge,
+    Knight,
+    Knitter,
+    Lover,
+    Medium,
     Oracle,
+    Poet,
+    Scout,
+    Slayer,
+    Witness,
 }
 
 pub enum Outcast {
@@ -43,29 +62,31 @@ pub enum VillagerArchetype {
 }
 
 pub struct RevealedVillager {
-    index: VillagerIndex,
+    instance: VillagerInstance,
+    cant_kill: bool,
 }
 
 pub struct HiddenVillager {
     dead: bool,
+    cant_reveal: bool,
 }
 
 pub struct VillagerInstance {
     archetype: VillagerArchetype,
     testimony: Option<Expression<Testimony>>,
+    action_available: bool,
 }
 
 pub struct ConfirmedVillager {
-    identity: VillagerInstance,
-    disguise: VillagerInstance,
+    instance: VillagerInstance,
+    true_identity: Option<VillagerArchetype>,
     corrupted: bool,
 }
 
-pub enum Expression<Type> {
-    Unary(Type),
-    Not(Box<Expression<Type>>),
-    And(Box<Expression<Type>>, Box<Expression<Type>>),
-    Or(Box<Expression<Type>>, Box<Expression<Type>>),
+pub enum Villager {
+    Revealed(RevealedVillager),
+    Hidden(HiddenVillager),
+    Confirmed(ConfirmedVillager),
 }
 
 impl VillagerArchetype {
@@ -109,6 +130,17 @@ impl VillagerArchetype {
         }
     }
 
+    pub fn corrupted(&self) -> bool {
+        match self {
+            Self::GoodVillager(_) => false,
+            Self::Outcast(outcast) => match outcast {
+                Outcast::Drunk => true,
+                _ => false,
+            },
+            Self::Minion(_) | Self::Demon(_) => false,
+        }
+    }
+
     pub fn affects(
         total_villagers: u8,
         index: VillagerIndex,
@@ -119,7 +151,7 @@ impl VillagerArchetype {
 }
 
 impl HiddenVillager {
-    pub fn new(dead: bool) -> Self {
-        Self { dead }
+    pub fn new(dead: bool, cant_reveal: bool) -> Self {
+        Self { dead, cant_reveal }
     }
 }
