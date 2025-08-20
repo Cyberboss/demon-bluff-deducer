@@ -279,6 +279,10 @@ impl GameState {
         self.villagers.len()
     }
 
+    pub fn reveal_order(&self) -> &Vec<VillagerIndex> {
+        &self.reveal_order
+    }
+
     pub fn witch_active(&self) -> bool {
         for villager in &self.villagers {
             match villager {

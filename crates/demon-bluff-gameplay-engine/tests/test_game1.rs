@@ -223,4 +223,10 @@ pub fn test_game_1() {
         )))
         .unwrap();
     assert_eq!(GameStateMutationResult::Win, mutation_result);
+
+    let mut i = 0;
+    for revealed_index in state.reveal_order() {
+        assert_eq!(VillagerIndex(i), *revealed_index);
+        i = i + 1;
+    }
 }
