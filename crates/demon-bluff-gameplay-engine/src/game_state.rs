@@ -34,6 +34,7 @@ pub struct DrawStats {
 }
 
 pub struct GameState {
+    // TODO: Alignment of cards may affect Architect claim, double check
     next_day: u8,
     draw_stats: DrawStats,
     deck: Vec<VillagerArchetype>,
@@ -309,6 +310,7 @@ impl GameState {
         let must_be_night = self.next_day > DAYS_BEFORE_NIGHT;
         let mut health_deduction = 0;
         let mut reset_cant_kills = false;
+        let mut revealed = None;
 
         match action {
             Action::TryReveal(result) => {
@@ -342,6 +344,7 @@ impl GameState {
                                     return Err(GameStateMutationError::RevealNoActionNorTestimony);
                                 }
 
+                                revealed = Some(result.index.clone());
                                 self.villagers[result.index.0] =
                                     Villager::Active(ActiveVillager::new(instance))
                             }
@@ -446,6 +449,7 @@ impl GameState {
                                         },
                                         _ => {}
                                     }
+                                    revealed = Some(attempt.target.clone());
                                     let _ = replace(
                                         target_villager,
                                         Villager::Confirmed(confirmed_villager),
@@ -599,6 +603,7 @@ impl GameState {
                                                     }
                                                     _ => {}
                                                 }
+                                                revealed = Some(target.clone());
                                                 let _ = replace(
                                                     target_villager,
                                                     Villager::Confirmed(confirmed_villager),
@@ -670,6 +675,10 @@ impl GameState {
                 }
             }
         };
+
+        if let Some(revealed) = revealed {
+            self.reveal_order.push(revealed);
+        }
 
         if reset_cant_kills {
             for villager in &mut self.villagers {
