@@ -1,4 +1,11 @@
-use crate::villager::{VillagerArchetype, VillagerIndex};
+use itertools::Itertools;
+
+use crate::{
+    Expression, testimony,
+    villager::{self, VillagerArchetype, VillagerIndex},
+};
+
+pub const ALCHEMIST_CURE_RANGE: usize = 2;
 
 pub enum ConfessorClaim {
     Good,
@@ -33,7 +40,7 @@ pub enum BakerClaim {
 #[derive(Clone)]
 pub struct RoleClaim {
     villager: VillagerIndex,
-    evil_role: VillagerArchetype,
+    archetype: VillagerArchetype,
 }
 
 #[derive(Clone)]
@@ -68,5 +75,73 @@ pub enum Testimony {
 impl EvilPairsClaim {
     pub fn new(pair_count: u8) -> Self {
         Self(pair_count)
+    }
+}
+
+impl RoleClaim {
+    pub fn new(villager: VillagerIndex, archetype: VillagerArchetype) -> Self {
+        Self {
+            villager,
+            archetype,
+        }
+    }
+}
+
+impl Testimony {
+    pub fn cure(
+        start_index: VillagerIndex,
+        villagers_cured: usize,
+        total_villagers: usize,
+        cure_range: usize,
+    ) -> Expression<Testimony> {
+        if villagers_cured == 0 {
+            return Expression::Unary(Testimony::Cured(Vec::<VillagerIndex>::new()));
+        }
+
+        let start_index = start_index.0;
+        let candidate_count = cure_range * 2;
+        let mut potential_indicies = Vec::with_capacity(candidate_count);
+        let mut current_index = if start_index >= cure_range {
+            start_index - cure_range
+        } else {
+            total_villagers - (cure_range - start_index)
+        };
+
+        for _ in 0..cure_range {
+            potential_indicies.push(current_index);
+            current_index = if current_index + 1 >= total_villagers {
+                0
+            } else {
+                current_index + 1
+            }
+        }
+
+        current_index = if current_index + 1 >= total_villagers {
+            0
+        } else {
+            current_index + 1
+        };
+
+        for _ in 0..cure_range {
+            potential_indicies.push(current_index);
+            current_index = if current_index + 1 >= total_villagers {
+                0
+            } else {
+                current_index + 1
+            }
+        }
+
+        let mut expr = None;
+        for combo in potential_indicies.iter().combinations(villagers_cured) {
+            let new_expr = Expression::Unary(Testimony::Cured(
+                combo.iter().map(|index| VillagerIndex(**index)).collect(),
+            ));
+            expr = Some(match expr {
+                Some(old_expr) => Expression::Or(Box::new(old_expr), Box::new(new_expr)),
+                None => new_expr,
+            });
+        }
+
+        return expr.expect("logic error in cure expression builder");
     }
 }

@@ -1,3 +1,5 @@
+use std::fmt::{Display, write};
+
 use crate::{Expression, affect::Affect, testimony::Testimony};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -101,6 +103,12 @@ pub enum ExecutionResult {
     EvilKilled,
     SelfDestructKilled,
     HealthDeduction(u8),
+}
+
+impl Display for VillagerIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "#{}", self.0 + 1)
+    }
 }
 
 impl VillagerArchetype {

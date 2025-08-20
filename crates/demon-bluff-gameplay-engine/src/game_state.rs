@@ -127,12 +127,23 @@ pub enum GameStateMutationError {
     CannotReplaceTestimony,
     #[error("Trying to reveal a card that is disallowed by the deck")]
     InvalidReveal,
+    #[error("A villager with an action cannot be revealed with a testimony")]
+    RevealActionAndTestimony,
+    #[error("A villager without an action cannot be revealed without a testimony")]
+    RevealNoActionNorTestimony,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum GameStateMutationResult {
     Win,
     Loss,
     Continue,
+}
+
+impl RevealResult {
+    pub fn new(index: VillagerIndex, instance: Option<VillagerInstance>) -> Self {
+        Self { index, instance }
+    }
 }
 
 impl DrawStats {
@@ -183,9 +194,9 @@ impl GameState {
         if villagers
             .iter()
             .map(|villager| match villager {
-                Villager::Active(_) => 0,
-                Villager::Hidden(_) => 1,
-                Villager::Confirmed(_) => 0,
+                Villager::Active(_) => 1,
+                Villager::Hidden(_) => 0,
+                Villager::Confirmed(_) => 1,
             })
             .sum::<usize>()
             != reveal_order.len()
@@ -210,6 +221,10 @@ impl GameState {
 
     pub fn draw_stats(&self) -> &DrawStats {
         &self.draw_stats
+    }
+
+    pub fn total_villagers(&self) -> usize {
+        self.villagers.len()
     }
 
     pub fn evils_killed(&self) -> u8 {
@@ -300,6 +315,16 @@ impl GameState {
                                     return Err(GameStateMutationError::InvalidReveal);
                                 }
 
+                                if instance.action_available() {
+                                    if instance.testimony().is_some() {
+                                        return Err(
+                                            GameStateMutationError::RevealActionAndTestimony,
+                                        );
+                                    }
+                                } else if instance.testimony().is_none() {
+                                    return Err(GameStateMutationError::RevealNoActionNorTestimony);
+                                }
+
                                 self.villagers[result.index.0] =
                                     Villager::Active(ActiveVillager::new(instance))
                             }
@@ -349,9 +374,23 @@ impl GameState {
                                         kill_data.identity,
                                         kill_data.testimony,
                                     );
+
                                     if valid_draw(&self.deck, new_instance.archetype()) {
                                         return Err(GameStateMutationError::InvalidReveal);
                                     }
+
+                                    if new_instance.action_available() {
+                                        if new_instance.testimony().is_some() {
+                                            return Err(
+                                                GameStateMutationError::RevealActionAndTestimony,
+                                            );
+                                        }
+                                    } else if new_instance.testimony().is_none() {
+                                        return Err(
+                                            GameStateMutationError::RevealNoActionNorTestimony,
+                                        );
+                                    }
+
                                     let _ = replace(
                                         target_villager,
                                         Villager::Confirmed(ConfirmedVillager::new(
@@ -470,6 +509,14 @@ impl GameState {
                                                     return Err(
                                                         GameStateMutationError::InvalidReveal,
                                                     );
+                                                }
+
+                                                if new_instance.action_available() {
+                                                    if new_instance.testimony().is_some() {
+                                                        return Err(GameStateMutationError::RevealActionAndTestimony);
+                                                    }
+                                                } else if new_instance.testimony().is_none() {
+                                                    return Err(GameStateMutationError::RevealNoActionNorTestimony);
                                                 }
                                                 let _ = replace(
                                                     target_villager,
