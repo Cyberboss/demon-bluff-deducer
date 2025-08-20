@@ -532,7 +532,7 @@ impl HiddenVillager {
     }
 
     pub fn cant_reveal(&self) -> bool {
-        self.cant_reveal
+        self.cant_reveal || self.dead
     }
 
     pub fn set_cant_reveal(&mut self) {
@@ -596,6 +596,10 @@ impl ConfirmedVillager {
         self.true_identity
             .as_ref()
             .unwrap_or(&self.instance.archetype)
+    }
+
+    pub fn instance(&self) -> &VillagerInstance {
+        &self.instance
     }
 
     pub fn instance_mut(&mut self) -> &mut VillagerInstance {

@@ -275,6 +275,15 @@ impl GameState {
         })
     }
 
+    pub fn iter_villagers<'a, F>(&'a self, mut f: F)
+    where
+        F: FnMut(VillagerIndex, &'a Villager),
+    {
+        for (index, villager) in self.villagers.iter().enumerate() {
+            f(VillagerIndex(index), villager);
+        }
+    }
+
     pub fn total_evils(&self) -> u8 {
         self.total_evils
     }
@@ -291,7 +300,7 @@ impl GameState {
         &self.reveal_order
     }
 
-    pub fn witch_active(&self) -> bool {
+    pub fn witch_block_active(&self) -> bool {
         for villager in &self.villagers {
             match villager {
                 Villager::Hidden(hidden_villager) => {
