@@ -1,7 +1,8 @@
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::{
-        Action, DrawStats, GameStateMutationError, GameStateMutationResult, RevealResult, new_game,
+        AbilityResult, Action, DrawStats, GameStateMutationError, GameStateMutationResult,
+        KillData, KillResult, RevealResult, SlayerKill, new_game,
     },
     testimony::{ALCHEMIST_CURE_RANGE, ArchitectClaim, BakerClaim, RoleClaim, Testimony},
     villager::{
@@ -183,4 +184,19 @@ pub fn test_game_1() {
             _ => panic!("Incorrect error result"),
         },
     }
+
+    mutation_result = state
+        .mutate(Action::Ability(AbilityResult::new(
+            VillagerIndex(0),
+            Some(Expression::Unary(Testimony::Slayed(VillagerIndex(1)))),
+            Some(SlayerKill::new(
+                VillagerIndex(1),
+                KillResult::Revealed(KillData::new(
+                    Some(VillagerArchetype::Minion(Minion::Witch)),
+                    false,
+                )),
+            )),
+        )))
+        .unwrap();
+    assert_eq!(GameStateMutationResult::Continue, mutation_result);
 }

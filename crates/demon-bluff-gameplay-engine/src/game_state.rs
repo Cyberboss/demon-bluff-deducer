@@ -1,5 +1,6 @@
 use std::{
     collections::HashSet,
+    hash::Hash,
     iter::{Skip, repeat},
     mem::replace,
 };
@@ -70,6 +71,15 @@ pub struct KillData {
     corrupted: bool,
 }
 
+impl KillData {
+    pub fn new(true_identity: Option<VillagerArchetype>, corrupted: bool) -> Self {
+        Self {
+            true_identity,
+            corrupted,
+        }
+    }
+}
+
 pub struct SlayerKill {
     target: VillagerIndex,
     result: KillResult,
@@ -77,7 +87,6 @@ pub struct SlayerKill {
 
 pub struct AbilityResult {
     source: VillagerIndex,
-    targets: HashSet<VillagerIndex>,
     testimony: Option<Expression<Testimony>>,
     slayer_kill: Option<SlayerKill>,
 }
@@ -140,6 +149,26 @@ pub enum GameStateMutationResult {
     Win,
     Loss,
     Continue,
+}
+
+impl SlayerKill {
+    pub fn new(target: VillagerIndex, result: KillResult) -> Self {
+        Self { target, result }
+    }
+}
+
+impl AbilityResult {
+    pub fn new(
+        source: VillagerIndex,
+        testimony: Option<Expression<Testimony>>,
+        slayer_kill: Option<SlayerKill>,
+    ) -> Self {
+        Self {
+            source,
+            testimony,
+            slayer_kill,
+        }
+    }
 }
 
 impl RevealResult {
@@ -512,115 +541,93 @@ impl GameState {
                                     return Err(GameStateMutationError::SlayerKillDataMismatch);
                                 }
                             }
-
-                            if result.targets.len() != 1 {
-                                return Err(GameStateMutationError::SlayerKillDataMismatch);
-                            }
                         }
 
                         // slayer validation
-                        for target in result.targets {
-                            let target_villager = &mut self.villagers[target.0];
+                        if let Some(slayer_kill) = &slayer_kill {
+                            let target_villager = &mut self.villagers[slayer_kill.target.0];
                             match target_villager {
                                 Villager::Active(active_villager) => {
-                                    if let Some(slayer_kill) = &slayer_kill {
-                                        // safe to do this here, slayer can only kill once
-                                        match &slayer_kill.result {
-                                            KillResult::Unrevealed(_) => {
-                                                return Err(
-                                                    GameStateMutationError::InvalidRevealedKill,
-                                                );
-                                            }
-                                            KillResult::Revealed(kill_data) => {
-                                                let new_instance =
-                                                    active_villager.instance().clone();
+                                    // safe to do this here, slayer can only kill once
+                                    match &slayer_kill.result {
+                                        KillResult::Unrevealed(_) => {
+                                            return Err(
+                                                GameStateMutationError::InvalidRevealedKill,
+                                            );
+                                        }
+                                        KillResult::Revealed(kill_data) => {
+                                            let new_instance = active_villager.instance().clone();
 
-                                                let confirmed_villager = ConfirmedVillager::new(
-                                                    new_instance,
-                                                    kill_data.true_identity.clone(),
-                                                    kill_data.corrupted,
-                                                );
-                                                match confirmed_villager.true_identity() {
-                                                    VillagerArchetype::Minion(minion) => {
-                                                        match minion {
-                                                            Minion::Witch => {
-                                                                reset_cant_kills = true
-                                                            }
-                                                            _ => {}
-                                                        }
-                                                    }
+                                            let confirmed_villager = ConfirmedVillager::new(
+                                                new_instance,
+                                                kill_data.true_identity.clone(),
+                                                kill_data.corrupted,
+                                            );
+                                            match confirmed_villager.true_identity() {
+                                                VillagerArchetype::Minion(minion) => match minion {
+                                                    Minion::Witch => reset_cant_kills = true,
                                                     _ => {}
-                                                }
-                                                let _ = replace(
-                                                    target_villager,
-                                                    Villager::Confirmed(confirmed_villager),
-                                                );
+                                                },
+                                                _ => {}
                                             }
+                                            let _ = replace(
+                                                target_villager,
+                                                Villager::Confirmed(confirmed_villager),
+                                            );
                                         }
                                     }
                                 }
                                 Villager::Hidden(hidden_villager) => {
-                                    if let Some(slayer_kill) = &slayer_kill {
-                                        if hidden_villager.dead() {
-                                            return Err(GameStateMutationError::OmaeWaMouShindeiru);
-                                        }
+                                    if hidden_villager.dead() {
+                                        return Err(GameStateMutationError::OmaeWaMouShindeiru);
+                                    }
 
-                                        // safe to do this here, slayer can only kill once
-                                        match &slayer_kill.result {
-                                            KillResult::Unrevealed(kill_data) => {
-                                                let new_instance = VillagerInstance::new(
-                                                    kill_data.identity.clone(),
-                                                    kill_data.testimony.clone(),
-                                                );
-                                                if valid_draw(&self.deck, new_instance.archetype())
-                                                {
-                                                    return Err(
-                                                        GameStateMutationError::InvalidReveal,
-                                                    );
+                                    // safe to do this here, slayer can only kill once
+                                    match &slayer_kill.result {
+                                        KillResult::Unrevealed(kill_data) => {
+                                            let new_instance = VillagerInstance::new(
+                                                kill_data.identity.clone(),
+                                                kill_data.testimony.clone(),
+                                            );
+                                            if valid_draw(&self.deck, new_instance.archetype()) {
+                                                return Err(GameStateMutationError::InvalidReveal);
+                                            }
+
+                                            if new_instance.action_available() {
+                                                if new_instance.testimony().is_some() {
+                                                    return Err(GameStateMutationError::RevealActionAndTestimony);
                                                 }
+                                            } else if new_instance.testimony().is_none() {
+                                                return Err(GameStateMutationError::RevealNoActionNorTestimony);
+                                            }
 
-                                                if new_instance.action_available() {
-                                                    if new_instance.testimony().is_some() {
-                                                        return Err(GameStateMutationError::RevealActionAndTestimony);
-                                                    }
-                                                } else if new_instance.testimony().is_none() {
-                                                    return Err(GameStateMutationError::RevealNoActionNorTestimony);
-                                                }
-
-                                                let confirmed_villager = ConfirmedVillager::new(
-                                                    new_instance,
-                                                    kill_data.inner.true_identity.clone(),
-                                                    kill_data.inner.corrupted,
-                                                );
-                                                match confirmed_villager.true_identity() {
-                                                    VillagerArchetype::Minion(minion) => {
-                                                        match minion {
-                                                            Minion::Witch => {
-                                                                reset_cant_kills = true
-                                                            }
-                                                            _ => {}
-                                                        }
-                                                    }
+                                            let confirmed_villager = ConfirmedVillager::new(
+                                                new_instance,
+                                                kill_data.inner.true_identity.clone(),
+                                                kill_data.inner.corrupted,
+                                            );
+                                            match confirmed_villager.true_identity() {
+                                                VillagerArchetype::Minion(minion) => match minion {
+                                                    Minion::Witch => reset_cant_kills = true,
                                                     _ => {}
-                                                }
-                                                revealed = Some(target.clone());
-                                                let _ = replace(
-                                                    target_villager,
-                                                    Villager::Confirmed(confirmed_villager),
-                                                );
+                                                },
+                                                _ => {}
                                             }
-                                            KillResult::Revealed(_) => {
-                                                return Err(
-                                                    GameStateMutationError::InvalidUnrevealedKill,
-                                                );
-                                            }
+                                            revealed = Some(slayer_kill.target.clone());
+                                            let _ = replace(
+                                                target_villager,
+                                                Villager::Confirmed(confirmed_villager),
+                                            );
+                                        }
+                                        KillResult::Revealed(_) => {
+                                            return Err(
+                                                GameStateMutationError::InvalidUnrevealedKill,
+                                            );
                                         }
                                     }
                                 }
                                 Villager::Confirmed(_) => {
-                                    if slayer_kill.is_some() {
-                                        return Err(GameStateMutationError::MustTakeNightAction);
-                                    }
+                                    return Err(GameStateMutationError::OmaeWaMouShindeiru);
                                 }
                             }
                         }
