@@ -10,8 +10,8 @@ use crate::{
     Expression,
     testimony::{self, Testimony},
     villager::{
-        ActiveVillager, ConfirmedVillager, HiddenVillager, Villager, VillagerArchetype,
-        VillagerIndex, VillagerInstance,
+        ActiveVillager, ConfirmedVillager, Demon, GoodVillager, HiddenVillager, Minion, Outcast,
+        Villager, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
 };
 
@@ -39,6 +39,7 @@ pub struct GameState {
     villagers: Vec<Villager>,
     reveal_order: Vec<VillagerIndex>,
     hitpoints: u8,
+    total_evils: u8,
 }
 
 pub struct RevealResult {
@@ -86,21 +87,6 @@ pub enum Action {
     LilisNightKill(Option<VillagerIndex>),
 }
 
-impl DrawStats {
-    pub fn new(villagers: u8, outcasts: u8, minions: u8, demons: u8) -> DrawStats {
-        Self {
-            villagers,
-            outcasts,
-            minions,
-            demons,
-        }
-    }
-
-    pub fn total_villagers(&self) -> usize {
-        (self.villagers + self.outcasts + self.minions + self.demons) as usize
-    }
-}
-
 #[derive(Error, Debug)]
 pub enum GameStateInitError {
     #[error("Provided villager count does not match DrawStats")]
@@ -139,6 +125,45 @@ pub enum GameStateMutationError {
     SlayerKillDataMismatch,
     #[error("Trying to replace an existing testimony")]
     CannotReplaceTestimony,
+    #[error("Trying to reveal a card that is disallowed by the deck")]
+    InvalidReveal,
+}
+
+pub enum GameStateMutationResult {
+    Win,
+    Loss,
+    Continue,
+}
+
+impl DrawStats {
+    pub fn new(villagers: u8, outcasts: u8, minions: u8, demons: u8) -> DrawStats {
+        Self {
+            villagers,
+            outcasts,
+            minions,
+            demons,
+        }
+    }
+
+    pub fn total_villagers(&self) -> usize {
+        (self.villagers + self.outcasts + self.minions + self.demons) as usize
+    }
+
+    pub fn villagers(&self) -> u8 {
+        self.villagers
+    }
+
+    pub fn outcasts(&self) -> u8 {
+        self.outcasts
+    }
+
+    pub fn minions(&self) -> u8 {
+        self.minions
+    }
+
+    pub fn demons(&self) -> u8 {
+        self.demons
+    }
 }
 
 impl GameState {
@@ -149,6 +174,7 @@ impl GameState {
         villagers: Vec<Villager>,
         reveal_order: Vec<VillagerIndex>,
         hitpoints: u8,
+        total_evils: u8,
     ) -> Result<Self, GameStateInitError> {
         if draw_stats.total_villagers() != villagers.len() {
             return Err(GameStateInitError::VillagerCountMismatch);
@@ -174,11 +200,84 @@ impl GameState {
             villagers,
             reveal_order,
             hitpoints,
+            total_evils,
         })
     }
 
-    pub fn mutate(&mut self, action: Action) -> Result<(), GameStateMutationError> {
+    pub fn total_evils(&self) -> u8 {
+        self.total_evils
+    }
+
+    pub fn draw_stats(&self) -> &DrawStats {
+        &self.draw_stats
+    }
+
+    pub fn evils_killed(&self) -> u8 {
+        self.villagers
+            .iter()
+            .map(|villager| match villager {
+                Villager::Active(_) | Villager::Hidden(_) => 0,
+                Villager::Confirmed(confirmed_villager) => {
+                    match confirmed_villager.true_identity() {
+                        VillagerArchetype::GoodVillager(good_villager) => match good_villager {
+                            GoodVillager::Alchemist
+                            | GoodVillager::Architect
+                            | GoodVillager::Baker
+                            | GoodVillager::Bishop
+                            | GoodVillager::Confessor
+                            | GoodVillager::Empress
+                            | GoodVillager::Enlightened
+                            | GoodVillager::Gemcrafter
+                            | GoodVillager::Hunter
+                            | GoodVillager::Knight
+                            | GoodVillager::Knitter
+                            | GoodVillager::Lover
+                            | GoodVillager::Medium
+                            | GoodVillager::Oracle
+                            | GoodVillager::Poet
+                            | GoodVillager::Scout
+                            | GoodVillager::Witness
+                            | GoodVillager::Bard
+                            | GoodVillager::Dreamer
+                            | GoodVillager::Druid
+                            | GoodVillager::FortuneTeller
+                            | GoodVillager::Jester
+                            | GoodVillager::Judge
+                            | GoodVillager::Slayer => 0,
+                        },
+                        VillagerArchetype::Outcast(outcast) => match outcast {
+                            Outcast::Drunk
+                            | Outcast::Wretch
+                            | Outcast::Bombardier
+                            | Outcast::Doppelganger
+                            | Outcast::PlagueDoctor => 0,
+                        },
+                        VillagerArchetype::Minion(minion) => match minion {
+                            Minion::Counsellor
+                            | Minion::Witch
+                            | Minion::Minion
+                            | Minion::Poisoner
+                            | Minion::Twinion
+                            | Minion::Shaman
+                            | Minion::Puppeteer
+                            | Minion::Puppet => 1,
+                        },
+                        VillagerArchetype::Demon(demon) => match demon {
+                            Demon::Baa | Demon::Pooka | Demon::Lilis => 1,
+                        },
+                    }
+                }
+            })
+            .sum::<u8>()
+    }
+
+    pub fn mutate(
+        &mut self,
+        action: Action,
+    ) -> Result<GameStateMutationResult, GameStateMutationError> {
         let must_be_night = self.next_day > DAYS_BEFORE_NIGHT;
+        let mut health_deduction = 0;
+        let mut evils_killed = 0;
         match action {
             Action::TryReveal(result) => {
                 if must_be_night {
@@ -197,6 +296,10 @@ impl GameState {
 
                         match result.instance {
                             Some(instance) => {
+                                if !self.valid_draw(instance.archetype()) {
+                                    return Err(GameStateMutationError::InvalidReveal);
+                                }
+
                                 self.villagers[result.index.0] =
                                     Villager::Active(ActiveVillager::new(instance))
                             }
@@ -218,13 +321,15 @@ impl GameState {
                             }
                             KillResult::Revealed(kill_data) => {
                                 let new_instance = active_villager.instance().clone();
+                                let confirmed_villager = ConfirmedVillager::new(
+                                    new_instance,
+                                    kill_data.true_identity,
+                                    kill_data.corrupted,
+                                );
+                                let execute_result = confirmed_villager.execution_result();
                                 let _ = replace(
                                     target_villager,
-                                    Villager::Confirmed(ConfirmedVillager::new(
-                                        new_instance,
-                                        kill_data.true_identity,
-                                        kill_data.corrupted,
-                                    )),
+                                    Villager::Confirmed(confirmed_villager),
                                 );
                             }
                         },
@@ -244,6 +349,9 @@ impl GameState {
                                         kill_data.identity,
                                         kill_data.testimony,
                                     );
+                                    if valid_draw(&self.deck, new_instance.archetype()) {
+                                        return Err(GameStateMutationError::InvalidReveal);
+                                    }
                                     let _ = replace(
                                         target_villager,
                                         Villager::Confirmed(ConfirmedVillager::new(
@@ -357,6 +465,12 @@ impl GameState {
                                                     kill_data.identity.clone(),
                                                     kill_data.testimony.clone(),
                                                 );
+                                                if valid_draw(&self.deck, new_instance.archetype())
+                                                {
+                                                    return Err(
+                                                        GameStateMutationError::InvalidReveal,
+                                                    );
+                                                }
                                                 let _ = replace(
                                                     target_villager,
                                                     Villager::Confirmed(ConfirmedVillager::new(
@@ -433,11 +547,26 @@ impl GameState {
             }
         };
 
-        return Ok(());
+        if health_deduction >= self.hitpoints {
+            self.hitpoints = 0;
+            return Ok(GameStateMutationResult::Loss);
+        }
+
+        self.hitpoints -= health_deduction;
+
+        if self.evils_killed() >= self.total_evils {
+            return Ok(GameStateMutationResult::Win);
+        }
+
+        return Ok(GameStateMutationResult::Continue);
+    }
+
+    pub fn valid_draw(&self, archetype: &VillagerArchetype) -> bool {
+        valid_draw(&self.deck, archetype)
     }
 }
 
-pub fn new_game(deck: Vec<VillagerArchetype>, draw_stats: DrawStats) -> GameState {
+pub fn new_game(deck: Vec<VillagerArchetype>, draw_stats: DrawStats, total_evils: u8) -> GameState {
     let total_villagers = draw_stats.total_villagers();
     GameState::new(
         1,
@@ -449,6 +578,18 @@ pub fn new_game(deck: Vec<VillagerArchetype>, draw_stats: DrawStats) -> GameStat
             .collect(),
         Vec::new(),
         10,
+        total_evils,
     )
     .expect("logic error in new_game creation")
+}
+
+fn valid_draw(deck: &Vec<VillagerArchetype>, archetype: &VillagerArchetype) -> bool {
+    let prereq = archetype.deck_prerequisite();
+    for deck_archetype in deck {
+        if *deck_archetype == prereq {
+            return true;
+        }
+    }
+
+    return false;
 }

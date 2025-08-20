@@ -3,7 +3,7 @@ use crate::{Expression, affect::Affect, testimony::Testimony};
 #[derive(Clone, PartialEq, Eq)]
 pub struct VillagerIndex(pub usize);
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum GoodVillager {
     Alchemist,
     Architect,
@@ -31,7 +31,7 @@ pub enum GoodVillager {
     Witness,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Outcast {
     Drunk,
     Wretch,
@@ -40,7 +40,7 @@ pub enum Outcast {
     PlagueDoctor,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Minion {
     Counsellor,
     Witch,
@@ -52,14 +52,14 @@ pub enum Minion {
     Puppet,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Demon {
     Baa,
     Pooka,
     Lilis,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum VillagerArchetype {
     GoodVillager(GoodVillager),
     Outcast(Outcast),
@@ -95,6 +95,12 @@ pub enum Villager {
     Active(ActiveVillager),
     Hidden(HiddenVillager),
     Confirmed(ConfirmedVillager),
+}
+
+pub enum ExecutionResult {
+    EvilKilled,
+    SelfDestructKilled,
+    HealthDeduction(u8),
 }
 
 impl VillagerArchetype {
@@ -402,6 +408,19 @@ impl VillagerArchetype {
         }
     }
 
+    // this function only exists because of pupeteer so I'm taking the lazy route
+    pub fn deck_prerequisite(&self) -> VillagerArchetype {
+        match self {
+            Self::GoodVillager(good_villager) => Self::GoodVillager(good_villager.clone()),
+            Self::Outcast(outcast) => Self::Outcast(outcast.clone()),
+            Self::Minion(minion) => match minion {
+                Minion::Puppet => Self::Minion(Minion::Puppeteer),
+                other => Self::Minion(other.clone()),
+            },
+            Self::Demon(demon) => Self::Demon(demon.clone()),
+        }
+    }
+
     pub fn affects(
         total_villagers: u8,
         index: VillagerIndex,
@@ -480,6 +499,10 @@ impl VillagerInstance {
         }
     }
 
+    pub fn archetype(&self) -> &VillagerArchetype {
+        &self.archetype
+    }
+
     pub fn action_available(&self) -> bool {
         self.action_available
     }
@@ -506,7 +529,64 @@ impl ConfirmedVillager {
         }
     }
 
+    pub fn true_identity(&self) -> &VillagerArchetype {
+        self.true_identity
+            .as_ref()
+            .unwrap_or(&self.instance.archetype)
+    }
+
     pub fn instance_mut(&mut self) -> &mut VillagerInstance {
         &mut self.instance
+    }
+
+    pub fn execution_result(&self) -> ExecutionResult {
+        match self.true_identity() {
+            VillagerArchetype::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => ExecutionResult::HealthDeduction(5),
+            },
+            VillagerArchetype::Outcast(outcast) => match outcast {
+                Outcast::Drunk => ExecutionResult::HealthDeduction(2), // I don't know if it's a bug or what, but its what happens despite what their card says
+                Outcast::Wretch | Outcast::Doppelganger | Outcast::PlagueDoctor => {
+                    ExecutionResult::HealthDeduction(5)
+                }
+                Outcast::Bombardier => ExecutionResult::SelfDestructKilled,
+            },
+            VillagerArchetype::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => ExecutionResult::EvilKilled,
+            },
+            VillagerArchetype::Demon(demon) => match demon {
+                Demon::Baa | Demon::Pooka | Demon::Lilis => ExecutionResult::EvilKilled,
+            },
+        }
     }
 }
