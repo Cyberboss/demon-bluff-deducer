@@ -2,7 +2,7 @@ use demon_bluff_gameplay_engine::{
     Expression,
     game_state::{
         AbilityResult, Action, DrawStats, GameStateMutationError, GameStateMutationResult,
-        KillData, KillResult, RevealResult, SlayerKill, new_game,
+        KillAttempt, KillData, KillResult, RevealResult, SlayerKill, new_game,
     },
     testimony::{ALCHEMIST_CURE_RANGE, ArchitectClaim, BakerClaim, RoleClaim, Testimony},
     villager::{
@@ -36,7 +36,7 @@ pub fn test_game_1() {
                 None,
             )),
         )))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
     mutation_result = state
         .mutate(Action::TryReveal(RevealResult::new(
@@ -49,7 +49,7 @@ pub fn test_game_1() {
                 )]))),
             )),
         )))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     let mut result = state.mutate(Action::TryReveal(RevealResult::new(
@@ -100,7 +100,7 @@ pub fn test_game_1() {
                 )),
             )),
         )))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     mutation_result = state
@@ -113,7 +113,7 @@ pub fn test_game_1() {
                 ))),
             )),
         )))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     result = state.mutate(Action::TryReveal(RevealResult::new(
@@ -140,7 +140,7 @@ pub fn test_game_1() {
                 None,
             )),
         )))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     result = state.mutate(Action::TryReveal(RevealResult::new(
@@ -167,12 +167,12 @@ pub fn test_game_1() {
                 Some(Expression::Unary(Testimony::Good(vec![VillagerIndex(0)]))),
             )),
         )))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     mutation_result = state
         .mutate(Action::TryReveal(RevealResult::new(VillagerIndex(6), None)))
-        .unwrap();
+        .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     result = state.mutate(Action::TryReveal(RevealResult::new(VillagerIndex(6), None)));
@@ -191,12 +191,36 @@ pub fn test_game_1() {
             Some(Expression::Unary(Testimony::Slayed(VillagerIndex(1)))),
             Some(SlayerKill::new(
                 VillagerIndex(1),
-                KillResult::Revealed(KillData::new(
-                    Some(VillagerArchetype::Minion(Minion::Witch)),
-                    false,
-                )),
+                KillResult::Revealed(
+                    KillData::new(Some(VillagerArchetype::Minion(Minion::Witch)), false)
+                        .expect("malformed kill data??"),
+                ),
+            )),
+        )))
+        .expect("malformed game step??");
+    assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    mutation_result = state
+        .mutate(Action::TryReveal(RevealResult::new(
+            VillagerIndex(6),
+            Some(VillagerInstance::new(
+                VillagerArchetype::Outcast(Outcast::Bombardier),
+                Some(Expression::Unary(Testimony::SelfDestruct(vec![
+                    VillagerIndex(6),
+                ]))),
+            )),
+        )))
+        .expect("malformed game step??");
+    assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    mutation_result = state
+        .mutate(Action::TryExecute(KillAttempt::new(
+            VillagerIndex(3),
+            Some(KillResult::Revealed(
+                KillData::new(Some(VillagerArchetype::Demon(Demon::Pooka)), false)
+                    .expect("malformed kill data??"),
             )),
         )))
         .unwrap();
-    assert_eq!(GameStateMutationResult::Continue, mutation_result);
+    assert_eq!(GameStateMutationResult::Win, mutation_result);
 }

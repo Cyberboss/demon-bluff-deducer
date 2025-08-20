@@ -263,7 +263,7 @@ impl VillagerArchetype {
         }
     }
 
-    pub fn corrupted(&self) -> bool {
+    pub fn starts_corrupted(&self) -> bool {
         match self {
             Self::GoodVillager(good_villager) => match good_villager {
                 GoodVillager::Alchemist
@@ -310,6 +310,57 @@ impl VillagerArchetype {
             },
             Self::Demon(demon) => match demon {
                 Demon::Baa | Demon::Pooka | Demon::Lilis => false,
+            },
+        }
+    }
+
+    pub fn can_be_corrupted(&self) -> bool {
+        match self {
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => true,
+            },
+            Self::Outcast(outcast) => match outcast {
+                Outcast::Drunk => true,
+                Outcast::Wretch => false,
+                Outcast::Bombardier => false,
+                Outcast::Doppelganger => todo!("Can a Doppleganger be corrupted?"),
+                Outcast::PlagueDoctor => todo!("Can a PlagueDoctor be corrupted?"),
+            },
+            Self::Demon(demon) => match demon {
+                Demon::Lilis | Demon::Baa | Demon::Pooka => false,
+            },
+            Self::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => false,
             },
         }
     }
@@ -488,16 +539,16 @@ impl HiddenVillager {
         self.cant_reveal = true;
     }
 
+    pub fn reset_cant_reveal(&mut self) {
+        self.cant_reveal = false;
+    }
+
     pub fn cant_kill(&self) -> bool {
         self.cant_kill
     }
 
     pub fn set_cant_kill(&mut self) {
         self.cant_kill = true;
-    }
-
-    pub fn reset_cant_kill(&mut self) {
-        self.cant_kill = false;
     }
 }
 

@@ -71,15 +71,6 @@ pub struct KillData {
     corrupted: bool,
 }
 
-impl KillData {
-    pub fn new(true_identity: Option<VillagerArchetype>, corrupted: bool) -> Self {
-        Self {
-            true_identity,
-            corrupted,
-        }
-    }
-}
-
 pub struct SlayerKill {
     target: VillagerIndex,
     result: KillResult,
@@ -149,6 +140,36 @@ pub enum GameStateMutationResult {
     Win,
     Loss,
     Continue,
+}
+
+#[derive(Error, Debug)]
+pub enum KillDataConstructionError {
+    #[error("The true identity cannot be corrupted")]
+    TrueIdentityCannotBeCorrupted,
+}
+
+impl KillAttempt {
+    pub fn new(target: VillagerIndex, result: Option<KillResult>) -> Self {
+        Self { target, result }
+    }
+}
+
+impl KillData {
+    pub fn new(
+        true_identity: Option<VillagerArchetype>,
+        corrupted: bool,
+    ) -> Result<Self, KillDataConstructionError> {
+        if let Some(archetype) = &true_identity
+            && archetype.can_be_corrupted()
+        {
+            return Err(KillDataConstructionError::TrueIdentityCannotBeCorrupted);
+        }
+
+        Ok(Self {
+            true_identity,
+            corrupted,
+        })
+    }
 }
 
 impl SlayerKill {
@@ -690,7 +711,7 @@ impl GameState {
         if reset_cant_kills {
             for villager in &mut self.villagers {
                 if let Villager::Hidden(hidden_villager) = villager {
-                    hidden_villager.reset_cant_kill();
+                    hidden_villager.reset_cant_reveal();
                 }
             }
         }
