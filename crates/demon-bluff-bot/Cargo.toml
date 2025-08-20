@@ -1,0 +1,8 @@
+[package]
+name = "demon-bluff-bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+demon-bluff-gameplay-engine = { path = "../demon-bluff-gameplay-engine" }
+demon-bluff-logic-engine = { path = "../demon-bluff-logic-engine" }
