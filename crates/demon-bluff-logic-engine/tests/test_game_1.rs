@@ -1,7 +1,8 @@
 use demon_bluff_gameplay_engine::{
-    game_state::{DrawStats, new_game},
-    villager::{Demon, GoodVillager, Minion, Outcast, VillagerArchetype},
+    game_state::{Action, DrawStats, RevealResult, new_game},
+    villager::{Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex},
 };
+use demon_bluff_logic_engine::{PlayerAction, predict};
 
 #[test]
 pub fn test_game_1() {
@@ -20,4 +21,8 @@ pub fn test_game_1() {
         DrawStats::new(4, 1, 1, 1),
         2,
     );
+
+    let prediction = predict(&state).expect("prediction failed??");
+
+    assert_eq!(PlayerAction::TryReveal(VillagerIndex(0)), prediction);
 }
