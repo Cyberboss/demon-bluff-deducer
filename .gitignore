@@ -5,3 +5,4 @@
 !Cargo.lock
 !Cargo.toml
 !/crates/**
+!/test_games
