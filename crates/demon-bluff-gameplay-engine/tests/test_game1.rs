@@ -173,4 +173,14 @@ pub fn test_game_1() {
         .mutate(Action::TryReveal(RevealResult::new(VillagerIndex(6), None)))
         .unwrap();
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    result = state.mutate(Action::TryReveal(RevealResult::new(VillagerIndex(6), None)));
+
+    match result {
+        Ok(_) => panic!("Expected an error result"),
+        Err(error) => match error {
+            GameStateMutationError::VillagerCannotBeRevealed => {}
+            _ => panic!("Incorrect error result"),
+        },
+    }
 }
