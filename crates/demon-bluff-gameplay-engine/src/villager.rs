@@ -495,6 +495,10 @@ impl HiddenVillager {
     pub fn set_cant_kill(&mut self) {
         self.cant_kill = true;
     }
+
+    pub fn reset_cant_kill(&mut self) {
+        self.cant_kill = false;
+    }
 }
 
 impl VillagerInstance {

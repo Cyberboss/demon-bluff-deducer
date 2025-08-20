@@ -10,8 +10,9 @@ use crate::{
     Expression,
     testimony::{self, Testimony},
     villager::{
-        ActiveVillager, ConfirmedVillager, Demon, GoodVillager, HiddenVillager, Minion, Outcast,
-        Villager, VillagerArchetype, VillagerIndex, VillagerInstance,
+        self, ActiveVillager, ConfirmedVillager, Demon, ExecutionResult, GoodVillager,
+        HiddenVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex,
+        VillagerInstance,
     },
 };
 
@@ -82,7 +83,7 @@ pub struct AbilityResult {
 
 pub enum Action {
     TryReveal(RevealResult),
-    TryKill(KillAttempt),
+    TryExecute(KillAttempt),
     Ability(AbilityResult),
     LilisNightKill(Option<VillagerIndex>),
 }
@@ -227,6 +228,21 @@ impl GameState {
         self.villagers.len()
     }
 
+    pub fn witch_active(&self) -> bool {
+        for villager in &self.villagers {
+            match villager {
+                Villager::Hidden(hidden_villager) => {
+                    if hidden_villager.cant_reveal() {
+                        return true;
+                    }
+                }
+                Villager::Confirmed(_) | Villager::Active(_) => {}
+            }
+        }
+
+        false
+    }
+
     pub fn evils_killed(&self) -> u8 {
         self.villagers
             .iter()
@@ -292,7 +308,8 @@ impl GameState {
     ) -> Result<GameStateMutationResult, GameStateMutationError> {
         let must_be_night = self.next_day > DAYS_BEFORE_NIGHT;
         let mut health_deduction = 0;
-        let mut evils_killed = 0;
+        let mut reset_cant_kills = false;
+
         match action {
             Action::TryReveal(result) => {
                 if must_be_night {
@@ -333,7 +350,7 @@ impl GameState {
                     }
                 }
             }
-            Action::TryKill(attempt) => {
+            Action::TryExecute(attempt) => {
                 if must_be_night {
                     return Err(GameStateMutationError::MustTakeNightAction);
                 }
@@ -351,7 +368,24 @@ impl GameState {
                                     kill_data.true_identity,
                                     kill_data.corrupted,
                                 );
-                                let execute_result = confirmed_villager.execution_result();
+                                match confirmed_villager.execution_result() {
+                                    ExecutionResult::EvilKilled => {}
+                                    ExecutionResult::SelfDestructKilled => {
+                                        return Ok(GameStateMutationResult::Loss);
+                                    }
+                                    ExecutionResult::HealthDeduction(deduction) => {
+                                        health_deduction = health_deduction + deduction
+                                    }
+                                }
+
+                                match confirmed_villager.true_identity() {
+                                    VillagerArchetype::Minion(minion) => match minion {
+                                        Minion::Witch => reset_cant_kills = true,
+                                        _ => {}
+                                    },
+                                    _ => {}
+                                }
+
                                 let _ = replace(
                                     target_villager,
                                     Villager::Confirmed(confirmed_villager),
@@ -390,14 +424,31 @@ impl GameState {
                                             GameStateMutationError::RevealNoActionNorTestimony,
                                         );
                                     }
+                                    let confirmed_villager = ConfirmedVillager::new(
+                                        new_instance,
+                                        kill_data.inner.true_identity,
+                                        kill_data.inner.corrupted,
+                                    );
+                                    match confirmed_villager.execution_result() {
+                                        ExecutionResult::EvilKilled => {}
+                                        ExecutionResult::SelfDestructKilled => {
+                                            return Ok(GameStateMutationResult::Loss);
+                                        }
+                                        ExecutionResult::HealthDeduction(deduction) => {
+                                            health_deduction = health_deduction + deduction
+                                        }
+                                    }
 
+                                    match confirmed_villager.true_identity() {
+                                        VillagerArchetype::Minion(minion) => match minion {
+                                            Minion::Witch => reset_cant_kills = true,
+                                            _ => {}
+                                        },
+                                        _ => {}
+                                    }
                                     let _ = replace(
                                         target_villager,
-                                        Villager::Confirmed(ConfirmedVillager::new(
-                                            new_instance,
-                                            kill_data.inner.true_identity,
-                                            kill_data.inner.corrupted,
-                                        )),
+                                        Villager::Confirmed(confirmed_villager),
                                     );
                                 }
                                 KillResult::Revealed(_) => {
@@ -479,13 +530,26 @@ impl GameState {
                                             KillResult::Revealed(kill_data) => {
                                                 let new_instance =
                                                     active_villager.instance().clone();
+
+                                                let confirmed_villager = ConfirmedVillager::new(
+                                                    new_instance,
+                                                    kill_data.true_identity.clone(),
+                                                    kill_data.corrupted,
+                                                );
+                                                match confirmed_villager.true_identity() {
+                                                    VillagerArchetype::Minion(minion) => {
+                                                        match minion {
+                                                            Minion::Witch => {
+                                                                reset_cant_kills = true
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    }
+                                                    _ => {}
+                                                }
                                                 let _ = replace(
                                                     target_villager,
-                                                    Villager::Confirmed(ConfirmedVillager::new(
-                                                        new_instance,
-                                                        kill_data.true_identity.clone(),
-                                                        kill_data.corrupted,
-                                                    )),
+                                                    Villager::Confirmed(confirmed_villager),
                                                 );
                                             }
                                         }
@@ -518,13 +582,26 @@ impl GameState {
                                                 } else if new_instance.testimony().is_none() {
                                                     return Err(GameStateMutationError::RevealNoActionNorTestimony);
                                                 }
+
+                                                let confirmed_villager = ConfirmedVillager::new(
+                                                    new_instance,
+                                                    kill_data.inner.true_identity.clone(),
+                                                    kill_data.inner.corrupted,
+                                                );
+                                                match confirmed_villager.true_identity() {
+                                                    VillagerArchetype::Minion(minion) => {
+                                                        match minion {
+                                                            Minion::Witch => {
+                                                                reset_cant_kills = true
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    }
+                                                    _ => {}
+                                                }
                                                 let _ = replace(
                                                     target_villager,
-                                                    Villager::Confirmed(ConfirmedVillager::new(
-                                                        new_instance,
-                                                        kill_data.inner.true_identity.clone(),
-                                                        kill_data.inner.corrupted,
-                                                    )),
+                                                    Villager::Confirmed(confirmed_villager),
                                                 );
                                             }
                                             KillResult::Revealed(_) => {
@@ -593,6 +670,14 @@ impl GameState {
                 }
             }
         };
+
+        if reset_cant_kills {
+            for villager in &mut self.villagers {
+                if let Villager::Hidden(hidden_villager) = villager {
+                    hidden_villager.reset_cant_kill();
+                }
+            }
+        }
 
         if health_deduction >= self.hitpoints {
             self.hitpoints = 0;

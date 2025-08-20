@@ -168,4 +168,9 @@ pub fn test_game_1() {
         )))
         .unwrap();
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    mutation_result = state
+        .mutate(Action::TryReveal(RevealResult::new(VillagerIndex(6), None)))
+        .unwrap();
+    assert_eq!(GameStateMutationResult::Continue, mutation_result);
 }
