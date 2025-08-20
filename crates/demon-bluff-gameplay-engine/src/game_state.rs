@@ -45,43 +45,51 @@ pub struct GameState {
     total_evils: u8,
 }
 
+#[derive(Debug)]
 pub struct RevealResult {
     index: VillagerIndex,
     instance: Option<VillagerInstance>,
 }
 
+#[derive(Debug)]
 pub struct KillAttempt {
     target: VillagerIndex,
     result: Option<KillResult>,
 }
 
+#[derive(Debug)]
 pub enum KillResult {
     Unrevealed(UnrevealedKillData),
     Revealed(KillData),
 }
 
+#[derive(Debug)]
 pub struct UnrevealedKillData {
     identity: VillagerArchetype,
     testimony: Option<Expression<Testimony>>,
     inner: KillData,
 }
 
+#[derive(Debug)]
 pub struct KillData {
     true_identity: Option<VillagerArchetype>,
     corrupted: bool,
 }
 
+#[derive(Debug)]
 pub struct SlayerKill {
     target: VillagerIndex,
     result: KillResult,
 }
 
+#[derive(Debug)]
 pub struct AbilityResult {
     source: VillagerIndex,
     testimony: Option<Expression<Testimony>>,
     slayer_kill: Option<SlayerKill>,
 }
 
+#[derive(Debug)]
 pub enum Action {
     TryReveal(RevealResult),
     TryExecute(KillAttempt),

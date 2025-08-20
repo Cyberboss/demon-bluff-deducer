@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 demon-bluff-gameplay-engine = { path = "../demon-bluff-gameplay-engine" }
+thiserror = "2.0.16"

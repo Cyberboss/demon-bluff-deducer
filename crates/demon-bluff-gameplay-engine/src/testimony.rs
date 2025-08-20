@@ -7,52 +7,53 @@ use crate::{
 
 pub const ALCHEMIST_CURE_RANGE: usize = 2;
 
+#[derive(Clone, Debug)]
 pub enum ConfessorClaim {
     Good,
     Dizzy,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Direction {
     Clockwise,
     CounterClockwise,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ArchitectClaim {
     Left,
     Right,
     Equal,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum EnlightendClaim {
     Equidistant,
     Direction(Direction),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum BakerClaim {
     Original,
     Was(VillagerArchetype),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RoleClaim {
     villager: VillagerIndex,
     archetype: VillagerArchetype,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ScoutClaim {
     evil_role: VillagerArchetype,
     distance: u8,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EvilPairsClaim(u8);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Testimony {
     Good(Vec<VillagerIndex>),
     Real(Vec<VillagerIndex>),
@@ -70,6 +71,7 @@ pub enum Testimony {
     FakeEvil(Vec<VillagerIndex>),
     SelfDestruct(Vec<VillagerIndex>),
     Slayed(VillagerIndex),
+    Confess(ConfessorClaim),
 }
 
 impl EvilPairsClaim {

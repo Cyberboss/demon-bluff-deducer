@@ -3,7 +3,7 @@ pub mod game_state;
 pub mod testimony;
 pub mod villager;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Expression<Type> {
     Unary(Type),
     Not(Box<Expression<Type>>),
