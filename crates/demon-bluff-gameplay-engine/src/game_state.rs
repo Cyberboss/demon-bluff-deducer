@@ -1,11 +1,14 @@
-use std::iter::repeat;
+use std::{iter::repeat, mem::replace};
 
 use thiserror::Error;
 
 use crate::{
     Expression,
     testimony::Testimony,
-    villager::{ActiveVillager, HiddenVillager, Villager, VillagerArchetype, VillagerIndex},
+    villager::{
+        ActiveVillager, ConfirmedVillager, HiddenVillager, Villager, VillagerArchetype,
+        VillagerIndex, VillagerInstance,
+    },
 };
 
 const DAYS_BEFORE_NIGHT: u8 = 4;
@@ -36,7 +39,7 @@ pub struct GameState {
 
 pub struct RevealResult {
     index: VillagerIndex,
-    archetype: Option<VillagerArchetype>,
+    instance: Option<VillagerInstance>,
 }
 
 pub struct KillAttempt {
@@ -44,7 +47,18 @@ pub struct KillAttempt {
     result: Option<KillResult>,
 }
 
-pub struct KillResult {
+pub enum KillResult {
+    Unrevealed(UnrevealedKillData),
+    Revealed(KillData),
+}
+
+pub struct UnrevealedKillData {
+    identity: VillagerArchetype,
+    testimony: Option<Expression<Testimony>>,
+    inner: KillData,
+}
+
+pub struct KillData {
     true_identity: Option<VillagerArchetype>,
     corrupted: bool,
 }
@@ -93,6 +107,14 @@ pub enum GameStateMutationError {
     CannotTakeNightAction,
     #[error("The target villager cannot be revealed")]
     VillagerCannotBeRevealed,
+    #[error("The target villager is already dead")]
+    OmaeWaMouShindeiru,
+    #[error("The target cannot be unrevealed killed as it is already revealed")]
+    InvalidUnrevealedKill,
+    #[error("The target cannot be revealed killed as it is has not been revealed")]
+    InvalidRevealedKill,
+    #[error("The target cannot be killed because it has been set as unkillable")]
+    CantKill,
 }
 
 impl GameState {
@@ -139,18 +161,23 @@ impl GameState {
                     return Err(GameStateMutationError::MustTakeNightAction);
                 }
 
-                let target_villager = &self.villagers[result.index.0];
+                let target_villager = &mut self.villagers[result.index.0];
                 match target_villager {
                     Villager::Active(_) | Villager::Confirmed(_) => {
-                        return Err((GameStateMutationError::VillagerCannotBeRevealed));
+                        return Err(GameStateMutationError::VillagerCannotBeRevealed);
                     }
                     Villager::Hidden(hidden_villager) => {
                         if hidden_villager.cant_reveal() {
                             return Err(GameStateMutationError::VillagerCannotBeRevealed);
                         }
 
-                        self.villagers[result.index.0] =
-                            Villager::Active(ActiveVillager::new(result.archetype))
+                        match result.instance {
+                            Some(instance) => {
+                                self.villagers[result.index.0] =
+                                    Villager::Active(ActiveVillager::new(instance))
+                            }
+                            None => hidden_villager.set_cant_reveal(),
+                        }
                     }
                 }
             }
@@ -158,7 +185,58 @@ impl GameState {
                 if must_be_night {
                     return Err(GameStateMutationError::MustTakeNightAction);
                 }
-
+                let target_villager = &mut self.villagers[attempt.target.0];
+                match target_villager {
+                    Villager::Active(active_villager) => match attempt.result {
+                        Some(result) => match result {
+                            KillResult::Unrevealed(_) => {
+                                return Err(GameStateMutationError::InvalidRevealedKill);
+                            }
+                            KillResult::Revealed(kill_data) => {
+                                let new_instance = active_villager.instance().clone();
+                                let _ = replace(
+                                    target_villager,
+                                    Villager::Confirmed(ConfirmedVillager::new(
+                                        new_instance,
+                                        kill_data.true_identity,
+                                        kill_data.corrupted,
+                                    )),
+                                );
+                            }
+                        },
+                        None => active_villager.set_cant_kill(),
+                    },
+                    Villager::Hidden(hidden_villager) => {
+                        if hidden_villager.cant_kill() {
+                            return Err(GameStateMutationError::CantKill);
+                        }
+                        match attempt.result {
+                            Some(result) => match result {
+                                KillResult::Unrevealed(kill_data) => {
+                                    let new_instance = VillagerInstance::new(
+                                        kill_data.identity,
+                                        kill_data.testimony,
+                                    );
+                                    let _ = replace(
+                                        target_villager,
+                                        Villager::Confirmed(ConfirmedVillager::new(
+                                            new_instance,
+                                            kill_data.inner.true_identity,
+                                            kill_data.inner.corrupted,
+                                        )),
+                                    );
+                                }
+                                KillResult::Revealed(_) => {
+                                    return Err(GameStateMutationError::InvalidUnrevealedKill);
+                                }
+                            },
+                            None => hidden_villager.set_cant_kill(),
+                        }
+                    }
+                    Villager::Confirmed(confirmed_villager) => {
+                        return Err(GameStateMutationError::OmaeWaMouShindeiru);
+                    }
+                }
                 todo!();
             }
             Action::Ability(result) => {

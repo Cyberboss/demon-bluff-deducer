@@ -4,8 +4,10 @@ use crate::{
     testimony::{self, Testimony},
 };
 
+#[derive(Clone)]
 pub struct VillagerIndex(pub usize);
 
+#[derive(Clone)]
 pub enum GoodVillager {
     Alchemist,
     Architect,
@@ -33,6 +35,7 @@ pub enum GoodVillager {
     Witness,
 }
 
+#[derive(Clone)]
 pub enum Outcast {
     Drunk,
     Wretch,
@@ -41,6 +44,7 @@ pub enum Outcast {
     PlagueDoctor,
 }
 
+#[derive(Clone)]
 pub enum Minion {
     Counsellor,
     Witch,
@@ -52,12 +56,14 @@ pub enum Minion {
     Puppet,
 }
 
+#[derive(Clone)]
 pub enum Demon {
     Baa,
     Pooka,
     Lilis,
 }
 
+#[derive(Clone)]
 pub enum VillagerArchetype {
     GoodVillager(GoodVillager),
     Outcast(Outcast),
@@ -73,8 +79,10 @@ pub struct ActiveVillager {
 pub struct HiddenVillager {
     dead: bool,
     cant_reveal: bool,
+    cant_kill: bool,
 }
 
+#[derive(Clone)]
 pub struct VillagerInstance {
     archetype: VillagerArchetype,
     testimony: Option<Expression<Testimony>>,
@@ -93,36 +101,35 @@ pub enum Villager {
     Confirmed(ConfirmedVillager),
 }
 
-impl VillagerInstance {
-    pub fn new(archetype: VillagerArchetype, testimony: Option<Expression<Testimony>>) -> Self {
-        let action_available = archetype.has_action();
-        Self {
-            archetype,
-            testimony,
-            action_available,
-        }
-    }
-}
-
-impl ActiveVillager {
-    pub fn new(instance: VillagerInstance) -> Self {
-        Self {
-            instance,
-            cant_kill: false,
-        }
-    }
-}
-
-impl HiddenVillager {
-    pub fn cant_reveal(&self) -> bool {
-        self.cant_reveal
-    }
-}
-
 impl VillagerArchetype {
     pub fn is_evil(&self) -> bool {
         match self {
-            Self::GoodVillager(_) => false,
+            Self::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Witness
+                | GoodVillager::Bard
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Slayer => false,
+            },
             Self::Outcast(outcast) => match outcast {
                 Outcast::Drunk
                 | Outcast::Wretch
@@ -130,7 +137,19 @@ impl VillagerArchetype {
                 | Outcast::Doppelganger
                 | Outcast::PlagueDoctor => false,
             },
-            Self::Minion(_) | Self::Demon(_) => true,
+            Self::Minion(minion) => match minion {
+                Minion::Counsellor
+                | Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Shaman
+                | Minion::Puppeteer
+                | Minion::Puppet => true,
+            },
+            Self::Demon(demon) => match demon {
+                Demon::Baa | Demon::Pooka | Demon::Lilis => true,
+            },
         }
     }
 
@@ -396,8 +415,74 @@ impl VillagerArchetype {
     }
 }
 
+impl ActiveVillager {
+    pub fn new(instance: VillagerInstance) -> Self {
+        Self {
+            instance,
+            cant_kill: false,
+        }
+    }
+
+    pub fn instance(&self) -> &VillagerInstance {
+        &self.instance
+    }
+
+    pub fn cant_kill(&self) -> bool {
+        self.cant_kill
+    }
+
+    pub fn set_cant_kill(&mut self) {
+        self.cant_kill = true;
+    }
+}
+
 impl HiddenVillager {
-    pub fn new(dead: bool, cant_reveal: bool) -> Self {
-        Self { dead, cant_reveal }
+    pub fn new(dead: bool, cant_reveal: bool, cant_kill: bool) -> Self {
+        Self {
+            dead,
+            cant_reveal,
+            cant_kill,
+        }
+    }
+
+    pub fn cant_reveal(&self) -> bool {
+        self.cant_reveal
+    }
+
+    pub fn set_cant_reveal(&mut self) {
+        self.cant_reveal = true;
+    }
+
+    pub fn cant_kill(&self) -> bool {
+        self.cant_kill
+    }
+
+    pub fn set_cant_kill(&mut self) {
+        self.cant_kill = true;
+    }
+}
+
+impl VillagerInstance {
+    pub fn new(archetype: VillagerArchetype, testimony: Option<Expression<Testimony>>) -> Self {
+        let action_available = archetype.has_action();
+        Self {
+            archetype,
+            testimony,
+            action_available,
+        }
+    }
+}
+
+impl ConfirmedVillager {
+    pub fn new(
+        instance: VillagerInstance,
+        true_identity: Option<VillagerArchetype>,
+        corrupted: bool,
+    ) -> Self {
+        Self {
+            instance,
+            true_identity,
+            corrupted,
+        }
     }
 }
