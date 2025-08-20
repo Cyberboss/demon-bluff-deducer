@@ -1,10 +1,6 @@
-use crate::{
-    Expression,
-    affect::Affect,
-    testimony::{self, Testimony},
-};
+use crate::{Expression, affect::Affect, testimony::Testimony};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct VillagerIndex(pub usize);
 
 #[derive(Clone)]
@@ -427,6 +423,10 @@ impl ActiveVillager {
         &self.instance
     }
 
+    pub fn instance_mut(&mut self) -> &mut VillagerInstance {
+        &mut self.instance
+    }
+
     pub fn cant_kill(&self) -> bool {
         self.cant_kill
     }
@@ -443,6 +443,14 @@ impl HiddenVillager {
             cant_reveal,
             cant_kill,
         }
+    }
+
+    pub fn die(&mut self) {
+        self.dead = true;
+    }
+
+    pub fn dead(&self) -> bool {
+        self.dead
     }
 
     pub fn cant_reveal(&self) -> bool {
@@ -471,6 +479,18 @@ impl VillagerInstance {
             action_available,
         }
     }
+
+    pub fn action_available(&self) -> bool {
+        self.action_available
+    }
+
+    pub fn testimony(&self) -> &Option<Expression<Testimony>> {
+        &self.testimony
+    }
+
+    pub fn set_testimony(&mut self, testimony: Expression<Testimony>) {
+        self.testimony = Some(testimony);
+    }
 }
 
 impl ConfirmedVillager {
@@ -484,5 +504,9 @@ impl ConfirmedVillager {
             true_identity,
             corrupted,
         }
+    }
+
+    pub fn instance_mut(&mut self) -> &mut VillagerInstance {
+        &mut self.instance
     }
 }

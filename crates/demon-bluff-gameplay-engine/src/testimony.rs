@@ -62,6 +62,7 @@ pub enum Testimony {
     Affected(Vec<VillagerIndex>),
     FakeEvil(Vec<VillagerIndex>),
     SelfDestruct(Vec<VillagerIndex>),
+    Slayed(VillagerIndex),
 }
 
 impl EvilPairsClaim {
