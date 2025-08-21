@@ -36,7 +36,7 @@ fn main() -> Result<()> {
         ..Default::default()
     })?;
 
-    let mut stdin = std::io::stdin();
+    let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
 
     loop {
@@ -62,21 +62,22 @@ fn main() -> Result<()> {
             println!("{}", line);
         }
 
-        write!(stdout, "Press any key to continue...")?;
+        write!(stdout, "Type \"next\" for next turn or \"exit\" to quit...")?;
         stdout.flush()?;
 
         loop {
             let mut string = String::new();
             stdin.read_line(&mut string)?;
 
-            if string == "next" {
+            if string.starts_with("next") {
                 break;
             }
-            if string == "exit" {
+            if string.starts_with("exit") {
                 return Ok(());
             }
 
             write!(stdout, "Unknown input")?;
+            stdout.flush()?;
         }
     }
 }
