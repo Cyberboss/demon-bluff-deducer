@@ -14,6 +14,8 @@ use rten::Model;
 
 const IMAGE_MATCH_PRECISION: f32 = 0.5;
 
+// TODO: Resolution specific regions for reading text
+
 #[derive(Debug, Error)]
 pub enum MainError {
     #[error("Could not get temp path for saving screenshots!")]
@@ -48,6 +50,7 @@ fn main() -> Result<()> {
         .to_str()
         .ok_or(MainError::CouldNotGetTempPath)?;
 
+    // TODO: Train custom model for recognizing game text
     let detection_model = Model::load_file(PathBuf::from(
         "S:/workspace/demon-bluff-bot/text-detection.rten",
     ))?;
