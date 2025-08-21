@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{Expression, affect::Affect, testimony::Testimony};
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct VillagerIndex(pub usize);
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
