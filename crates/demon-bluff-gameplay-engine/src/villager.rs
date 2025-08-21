@@ -5,7 +5,7 @@ use crate::{Expression, affect::Affect, testimony::Testimony};
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct VillagerIndex(pub usize);
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum GoodVillager {
     Alchemist,
     Architect,
@@ -33,7 +33,7 @@ pub enum GoodVillager {
     Witness,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum Outcast {
     Drunk,
     Wretch,
@@ -42,7 +42,7 @@ pub enum Outcast {
     PlagueDoctor,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum Minion {
     Counsellor,
     Witch,
@@ -54,14 +54,14 @@ pub enum Minion {
     Puppet,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum Demon {
     Baa,
     Pooka,
     Lilis,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub enum VillagerArchetype {
     GoodVillager(GoodVillager),
     Outcast(Outcast),

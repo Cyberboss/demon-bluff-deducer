@@ -1,17 +1,42 @@
+use std::collections::HashMap;
 use std::io::prelude::*;
 use std::{env::temp_dir, path::PathBuf};
 
+use demon_bluff_gameplay_engine::villager::{GoodVillager, VillagerArchetype};
 use ocrs::{ImageSource, OcrEngine, OcrEngineParams};
+use rustautogui::errors::AutoGuiError;
+use rustautogui::{MatchMode, RustAutoGui};
 use thiserror::Error;
 
 use anyhow::Result;
 
 use rten::Model;
 
+const IMAGE_MATCH_PRECISION: f32 = 0.5;
+
 #[derive(Debug, Error)]
 pub enum MainError {
     #[error("Could not get temp path for saving screenshots!")]
     CouldNotGetTempPath,
+}
+
+fn load_image(
+    rustautogui: &mut RustAutoGui,
+    lookup: &mut HashMap<VillagerArchetype, String>,
+    archetype: VillagerArchetype,
+    file_name: &str,
+) -> Result<(), AutoGuiError> {
+    lookup.insert(archetype, file_name.to_string());
+    rustautogui.store_template_from_file(
+        format!(
+            "S:/workspace/demon-bluff-bot/crates/demon-bluff-bot/assets/{}.png",
+            file_name
+        )
+        .as_str(),
+        None,
+        MatchMode::Segmented,
+        file_name,
+    )
 }
 
 fn main() -> Result<()> {
@@ -36,6 +61,24 @@ fn main() -> Result<()> {
         ..Default::default()
     })?;
 
+    let mut lookup = HashMap::new();
+
+    // load cards
+    {
+        load_image(
+            &mut rustautogui,
+            &mut lookup,
+            VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
+            "alchemist",
+        )?;
+        load_image(
+            &mut rustautogui,
+            &mut lookup,
+            VillagerArchetype::GoodVillager(GoodVillager::Architect),
+            "architect",
+        )?;
+    }
+
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
 
@@ -43,6 +86,33 @@ fn main() -> Result<()> {
         rustautogui
             .save_screenshot(screenshot_path_str)
             .expect("Screenshot failed!");
+
+        let find = rustautogui.find_stored_image_on_screen(
+            0.2,
+            lookup
+                .get(&VillagerArchetype::GoodVillager(GoodVillager::Alchemist))
+                .expect("Missing alchemist!"),
+        )?;
+
+        if find.is_some() {
+            writeln!(stdout, "Found alchemist")?;
+        } else {
+            writeln!(stdout, "Did not find alchemist")?;
+        }
+
+        let find2 = rustautogui.find_stored_image_on_screen(
+            0.5,
+            lookup
+                .get(&VillagerArchetype::GoodVillager(GoodVillager::Architect))
+                .expect("Missing architect!"),
+        )?;
+
+        if find2.is_some() {
+            writeln!(stdout, "Found architect")?;
+        } else {
+            writeln!(stdout, "Did not find architect")?;
+        }
+        /*
         let img = image::open(&screenshot_path).map(|image| image.into_rgb8())?;
         let img_source = ImageSource::from_bytes(img.as_raw(), img.dimensions())?;
         let ocr_input = engine.prepare_input(img_source)?;
@@ -60,9 +130,9 @@ fn main() -> Result<()> {
             .filter(|l| l.to_string().len() > 1)
         {
             println!("{}", line);
-        }
+        }*/
 
-        write!(stdout, "Type \"next\" for next turn or \"exit\" to quit...")?;
+        writeln!(stdout, "Type \"next\" for next turn or \"exit\" to quit...")?;
         stdout.flush()?;
 
         loop {
