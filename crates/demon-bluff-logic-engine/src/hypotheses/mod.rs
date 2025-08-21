@@ -1,9 +1,11 @@
+use execute::ExecuteHypothesis;
 use master::MasterHypothesis;
 use reveal::RevealHypothesis;
 use reveal_index::RevealIndexHypothesis;
 
 use crate::hypothesis::Hypothesis;
 
+mod execute;
 mod master;
 mod reveal;
 mod reveal_index;
@@ -14,4 +16,5 @@ pub enum HypothesisType {
     Master(MasterHypothesis),
     Reveal(RevealHypothesis),
     RevealIndex(RevealIndexHypothesis),
+    Execute(ExecuteHypothesis),
 }

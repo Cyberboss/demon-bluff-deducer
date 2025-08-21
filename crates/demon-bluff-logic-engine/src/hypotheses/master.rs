@@ -2,9 +2,12 @@ use std::fmt::Display;
 
 use demon_bluff_gameplay_engine::game_state::GameState;
 
-use crate::hypothesis::{
-    Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisReturn,
-    fittest_result,
+use crate::{
+    hypotheses::execute::ExecuteHypothesis,
+    hypothesis::{
+        Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisReturn, fittest_result,
+    },
 };
 
 use super::reveal::RevealHypothesis;
@@ -23,7 +26,7 @@ impl MasterHypothesis {
     ) -> HypothesisReference {
         registrar.register(Self {
             reveal_hypothesis: RevealHypothesis::create(game_state, &mut registrar),
-            execute_hypothesis: todo!(),
+            execute_hypothesis: ExecuteHypothesis::create(game_state, &mut registrar),
             ability_hypothesis: todo!(),
         })
     }

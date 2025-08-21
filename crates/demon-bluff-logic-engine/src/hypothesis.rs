@@ -9,11 +9,14 @@ use crate::{
     player_action::PlayerAction,
 };
 
+/// A reference to a `Hypothesis` in the graph.
 #[derive(Debug, PartialEq, Eq)]
 pub struct HypothesisReference(usize);
 
+/// A repository of hypotheses available to a single `Hypothesis` during evaluation.
 pub struct HypothesisRepository {}
 
+/// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
 pub struct HypothesisEvaluator {}
 
 pub enum EvaluationRequestResult {
@@ -21,23 +24,33 @@ pub enum EvaluationRequestResult {
     BreakCycle(HypothesisEvaluator),
 }
 
+/// The return value of evaluating a single `Hypothesis`.
 pub struct HypothesisReturn {
     result: HypothesisResult,
 }
 
+/// The
 pub enum HypothesisResult {
     Pending(FitnessAndAction),
     Conclusive(FitnessAndAction),
 }
 
+/// Contains the fitness score of a given action set.
+/// Fitness is the probability of how much a given `PlayerAction` will move the `GameState` towards a winning conclusion.
 pub struct FitnessAndAction {
     action: HashSet<PlayerAction>,
     fitness: f64,
 }
 
+/// Contains initial graph data for a `Hypothesis`.
 pub struct HypothesisContainer {
     hypothesis: RefCell<HypothesisType>,
     last_evaluate: Option<FitnessAndAction>,
+}
+
+struct BuiltHypothesis {
+    container: HypothesisContainer,
+    references: Vec<HypothesisReference>,
 }
 
 #[enum_delegate::register]
