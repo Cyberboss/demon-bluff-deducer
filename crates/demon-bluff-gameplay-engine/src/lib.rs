@@ -3,6 +3,9 @@ pub mod game_state;
 pub mod testimony;
 pub mod villager;
 
+pub const VILLAGERS_MIN: usize = 7;
+pub const VILLAGERS_MAX: usize = 9;
+
 #[derive(Clone, Debug)]
 pub enum Expression<Type> {
     Unary(Type),
