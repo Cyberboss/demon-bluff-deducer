@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
 use demon_bluff_gameplay_engine::{
-    game_state::{self, GameState},
+    game_state::GameState,
     villager::{Villager, VillagerIndex},
 };
 
 use crate::hypothesis::{Hypothesis, HypothesisReference, HypothesisRegistrar};
 
+use super::reveal_index::RevealIndexHypothesis;
+
+#[derive(Eq, PartialEq, Debug)]
 pub struct RevealHypothesis {
     revealable_indexes: HashMap<VillagerIndex, HypothesisReference>,
 }
@@ -16,7 +19,7 @@ impl RevealHypothesis {
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar,
     ) -> HypothesisReference {
-        let revealable_indexes = HashMap::new();
+        let mut revealable_indexes = HashMap::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(_) | Villager::Confirmed(_) => {}
             Villager::Hidden(hidden_villager) => {
@@ -24,12 +27,12 @@ impl RevealHypothesis {
                     revealable_indexes.insert(
                         villager_index.clone(),
                         RevealIndexHypothesis::create(game_state, registrar, villager_index),
-                    )
+                    );
                 }
             }
         });
 
-        registrar.register(Box::new(Self { revealable_indexes }))
+        registrar.register(Self { revealable_indexes })
     }
 }
 
@@ -38,11 +41,7 @@ impl Hypothesis for RevealHypothesis {
         &mut self,
         game_state: &demon_bluff_gameplay_engine::game_state::GameState,
         repository: &mut crate::hypothesis::HypothesisRepository,
-    ) -> Option<f64> {
-        todo!()
-    }
-
-    fn action(&self) -> std::collections::HashSet<crate::player_action::PlayerAction> {
+    ) -> crate::hypothesis::HypothesisReturn {
         todo!()
     }
 }

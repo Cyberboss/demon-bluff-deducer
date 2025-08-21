@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 demon-bluff-gameplay-engine = { path = "../demon-bluff-gameplay-engine" }
+enum_delegate = "0.2.0"
 thiserror = "2.0.16"
