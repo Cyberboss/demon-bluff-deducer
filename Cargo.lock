@@ -265,6 +265,7 @@ dependencies = [
  "demon-bluff-gameplay-engine",
  "enum_delegate",
  "force_graph",
+ "log",
  "thiserror 2.0.16",
 ]
 

@@ -6,7 +6,9 @@ use std::{
 };
 
 use demon_bluff_gameplay_engine::game_state::{self, GameState};
-use force_graph::ForceGraph;
+use force_graph::{DefaultNodeIdx, ForceGraph};
+use log::{Log, error, info};
+use thiserror::Error;
 
 use crate::{
     hypotheses::{self, HypothesisType},
@@ -18,16 +20,32 @@ use crate::{
 pub struct HypothesisReference(usize);
 
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
-pub struct HypothesisRepository<'a> {
+pub struct HypothesisRepository<'a, TLog>
+where
+    TLog: Log,
+{
     reference: HypothesisReference,
-    evaluator: HypothesisEvaluator<'a>,
-    must_break: bool,
+    evaluator: HypothesisEvaluator<'a, TLog>,
 }
 
-struct HypothesisInvocation {
+struct StackData<'a, TLog>
+where
+    TLog: Log,
+{
     reference_stack: Vec<HypothesisReference>,
-    hypotheses: Vec<RefCell<HypothesisType>>,
-    data: RefCell<Vec<Option<HypothesisData>>>,
+    log: &'a TLog,
+    game_state: &'a GameState,
+    hypotheses: &'a Vec<RefCell<HypothesisType>>,
+    data: &'a RefCell<Vec<Option<HypothesisData>>>,
+    graph_builder: Option<&'a RefCell<GraphBuilder>>,
+    break_at: &'a Option<HypothesisReference>,
+}
+
+struct HypothesisInvocation<'a, TLog>
+where
+    TLog: Log,
+{
+    inner: StackData<'a, TLog>,
 }
 
 struct HypothesisData {
@@ -36,9 +54,16 @@ struct HypothesisData {
 }
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
-pub struct HypothesisEvaluator<'a> {
-    hypotheses: &'a Vec<RefCell<HypothesisType>>,
-    data: &'a RefCell<Vec<Option<HypothesisData>>>,
+pub struct HypothesisEvaluator<'a, TLog>
+where
+    TLog: Log,
+{
+    inner: StackData<'a, TLog>,
+}
+
+struct GraphBuilder {
+    graph: ForceGraph<GraphNodeData>,
+    node_map: HashMap<HypothesisReference, DefaultNodeIdx>,
 }
 
 /// The return value of evaluating a single `Hypothesis`.
@@ -54,6 +79,7 @@ pub enum HypothesisResult {
 
 /// Contains the fitness score of a given action set.
 /// Fitness is the probability of how much a given `PlayerAction` will move the `GameState` towards a winning conclusion.
+#[derive(Clone)]
 pub struct FitnessAndAction {
     action: HashSet<PlayerAction>,
     fitness: f64,
@@ -66,17 +92,94 @@ pub struct GraphNodeData {
 
 #[enum_delegate::register]
 pub trait Hypothesis {
-    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error>;
+    fn describe(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error>;
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        game_state: &demon_bluff_gameplay_engine::game_state::GameState,
-        repository: crate::hypothesis::HypothesisRepository,
-    ) -> crate::hypothesis::HypothesisReturn;
+        log: &TLog,
+        game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
+        repository: crate::hypothesis::HypothesisRepository<TLog>,
+    ) -> crate::hypothesis::HypothesisReturn
+    where
+        TLog: ::log::Log;
 }
 
 pub struct HypothesisRegistrar {
     registrations: Vec<HypothesisType>,
+}
+
+#[derive(Error)]
+pub enum EvaluationError {
+    #[error("Evaluation could not determine an action to perform!")]
+    ConclusiveNoAction,
+}
+
+impl<'a, TLog> StackData<'a, TLog>
+where
+    TLog: Log,
+{
+    fn new(
+        game_state: &'a GameState,
+        log: &'a TLog,
+        hypotheses: &'a Vec<RefCell<HypothesisType>>,
+        data: &'a RefCell<Vec<Option<HypothesisData>>>,
+        break_at: &'a Option<HypothesisReference>,
+        root_reference: &HypothesisReference,
+        graph_builder: Option<&'a RefCell<GraphBuilder>>,
+    ) -> Self {
+        Self {
+            reference_stack: vec![root_reference.clone()],
+            log,
+            game_state,
+            hypotheses,
+            data,
+            break_at,
+            graph_builder,
+        }
+    }
+
+    fn share(&self) -> Self {
+        let mut reference_stack = Vec::with_capacity(self.reference_stack.len());
+        for mapped_reference in self
+            .reference_stack
+            .iter()
+            .map(|reference| reference.clone())
+        {
+            reference_stack.push(mapped_reference);
+        }
+        Self {
+            reference_stack,
+            log: &self.log,
+            game_state: &self.game_state,
+            hypotheses: &self.hypotheses,
+            data: &self.data,
+            break_at: &self.break_at,
+            graph_builder: self.graph_builder,
+        }
+    }
+
+    fn push(&self, new_reference: HypothesisReference) -> Self {
+        let mut reference_stack = Vec::with_capacity(self.reference_stack.len() + 1);
+        for mapped_reference in self
+            .reference_stack
+            .iter()
+            .map(|reference| reference.clone())
+        {
+            reference_stack.push(mapped_reference);
+        }
+
+        reference_stack.push(new_reference);
+
+        Self {
+            reference_stack,
+            log: &self.log,
+            game_state: &self.game_state,
+            hypotheses: &self.hypotheses,
+            data: &self.data,
+            break_at: &self.break_at,
+            graph_builder: self.graph_builder,
+        }
+    }
 }
 
 impl FitnessAndAction {
@@ -89,10 +192,16 @@ impl FitnessAndAction {
     }
 }
 
-impl<'a> HypothesisRepository<'a> {
+impl<'a, TLog> HypothesisRepository<'a, TLog>
+where
+    TLog: Log,
+{
     /// If a hypothesis has dependencies
-    pub fn require_sub_evaluation(&mut self, initial_fitness: f64) -> &'a mut HypothesisEvaluator {
-        let mut data = self.evaluator.data.borrow_mut();
+    pub fn require_sub_evaluation(
+        &mut self,
+        initial_fitness: f64,
+    ) -> &'a mut HypothesisEvaluator<TLog> {
+        let mut data = self.evaluator.inner.data.borrow_mut();
         match &data[self.reference.0] {
             Some(_) => {}
             None => {
@@ -114,26 +223,66 @@ impl<'a> HypothesisRepository<'a> {
     }
 }
 
-impl HypothesisInvocation {
-    fn top_enter(mut self, game_state: &GameState, root: HypothesisReference) {
-        let mut hypothesis = self.hypotheses[root.0].borrow_mut();
+impl<'a, TLog> HypothesisInvocation<'a, TLog>
+where
+    TLog: Log,
+{
+    fn new(stack_data: StackData<'a, TLog>) -> Self {
+        Self { inner: stack_data }
+    }
+
+    fn enter(self) -> HypothesisResult {
+        let reference = self
+            .inner
+            .reference_stack
+            .last()
+            .expect("There should be at least one reference in the stack!");
+        let mut hypothesis = self.inner.hypotheses[reference.0].borrow_mut();
         let repository = HypothesisRepository {
-            reference: root,
-            must_break: false,
+            reference: reference.clone(),
             evaluator: HypothesisEvaluator {
-                hypotheses: &self.hypotheses,
-                data: &self.data,
+                inner: self.inner.share(),
             },
         };
 
-        let hypo_return = hypothesis.evaluate(game_state, repository);
-        let result = hypo_return.result;
+        let hypo_return = hypothesis.evaluate(self.inner.log, self.inner.game_state, repository);
+        hypo_return.result
     }
 }
 
-impl<'a> HypothesisEvaluator<'a> {
+impl<'a, TLog> HypothesisEvaluator<'a, TLog>
+where
+    TLog: Log,
+{
     pub fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
-        todo!()
+        let data = self.inner.data.borrow();
+        let current_data = data[self
+            .inner
+            .reference_stack
+            .last()
+            .expect("There should be at least one reference in the stack")
+            .0]
+            .as_ref()
+            .expect("How is hypothesis data not present if the reference can't be borrowed?");
+
+        match self.inner.hypotheses[hypothesis_reference.0].try_borrow_mut() {
+            Ok(next_reference) => {
+                let invocation = HypothesisInvocation {
+                    inner: self.inner.push(hypothesis_reference.clone()),
+                };
+
+                invocation.enter()
+            }
+            Err(_) => HypothesisResult::Pending(
+                data[hypothesis_reference.0]
+                    .as_ref()
+                    .expect(
+                        "How is hypothesis data not present if the reference can't be borrowed?",
+                    )
+                    .last_evaluate
+                    .clone(),
+            ),
+        }
     }
 }
 
@@ -161,42 +310,75 @@ impl HypothesisReference {
     }
 }
 
-pub fn evaluate<F1, F2>(
+pub fn evaluate<TLog, F1, F2>(
     game_state: &GameState,
     hypothesis_factory: F1,
+    log: &TLog,
     mut stepper: Option<F2>,
-) -> HashSet<PlayerAction>
+) -> Result<HashSet<PlayerAction>, EvaluationError>
 where
+    TLog: Log,
     F1: FnOnce(&GameState, &mut HypothesisRegistrar) -> HypothesisReference,
-    F2: FnMut(ForceGraph<GraphNodeData>),
+    F2: FnMut(&mut ForceGraph<GraphNodeData>),
 {
     let mut registrar = HypothesisRegistrar {
         registrations: Vec::new(),
     };
 
-    let root = hypothesis_factory(game_state, &mut registrar);
+    info!(logger: log, target: "evaluate", "Execute Hypothesis factory");
+    let root: HypothesisReference = hypothesis_factory(game_state, &mut registrar);
 
+    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", registrar.registrations.len(), registrar.registrations[root.0]);
     let hypotheses: Vec<RefCell<HypothesisType>> = registrar
         .registrations
         .into_iter()
         .map(|hypothesis| RefCell::new(hypothesis))
         .collect();
 
-    let data = Vec::with_capacity(hypotheses.len());
+    let mut data = Vec::with_capacity(hypotheses.len());
     for _ in 0..hypotheses.len() {
         data.push(None);
     }
 
     let data = RefCell::new(data);
+    let mut break_at = None;
 
-    let mut invocation = HypothesisInvocation {
-        reference_stack: vec![root.clone()],
-        hypotheses,
-        data,
-    };
+    let mut iteration = 0;
+    loop {
+        iteration = iteration + 1;
+        info!(logger: log, "Iteration: {}", iteration);
 
-    invocation.enter(game_state, root);
-    todo!();
+        let invocation = HypothesisInvocation::new(StackData::new(
+            game_state,
+            log,
+            &hypotheses,
+            &data,
+            &break_at,
+            &root,
+            None,
+        ));
+
+        let result = invocation.enter();
+        match result {
+            HypothesisResult::Pending(fitness_and_action) => todo!(),
+            HypothesisResult::Conclusive(fitness_and_action) => {
+                if fitness_and_action.action.len() == 0 {
+                    error!(logger: log, "Obtained conclusive result with no actions!");
+                    return Err(EvaluationError::ConclusiveNoAction);
+                }
+
+                info!(logger: log, "Conclusive result obtained. Fitness: {}, Action(s): {}", fitness_and_action.fitness, fitness_and_action.action.len());
+
+                if fitness_and_action.action.len() == 1 {
+                    for action in &fitness_and_action.action {
+                        info!(logger: log, "Conclusive action: {}", action);
+                    }
+                }
+
+                return Ok(fitness_and_action.action);
+            }
+        }
+    }
 }
 
 pub fn fittest_result(

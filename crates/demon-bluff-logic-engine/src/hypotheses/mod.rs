@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use ability::AbilityHypothesis;
 use execute::ExecuteHypothesis;
 use master::MasterHypothesis;
@@ -20,4 +22,10 @@ pub enum HypothesisType {
     RevealIndex(RevealIndexHypothesis),
     Execute(ExecuteHypothesis),
     Ability(AbilityHypothesis),
+}
+
+impl Display for HypothesisType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.describe(f)
+    }
 }

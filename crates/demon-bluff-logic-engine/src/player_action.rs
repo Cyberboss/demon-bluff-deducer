@@ -1,15 +1,16 @@
 use std::collections::HashSet;
+use std::fmt::Display;
 use std::hash::Hash;
 
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
 
-#[derive(Debug, Eq)]
+#[derive(Debug, Eq, Clone)]
 pub struct AbilityAttempt {
     source: VillagerIndex,
     targets: HashSet<VillagerIndex>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum PlayerAction {
     TryReveal(VillagerIndex),
     TryExecute(VillagerIndex),
@@ -33,5 +34,32 @@ impl Hash for AbilityAttempt {
         let mut targets: Vec<VillagerIndex> = self.targets.iter().cloned().collect();
         targets.sort();
         targets.hash(state);
+    }
+}
+
+impl Display for PlayerAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TryReveal(villager_index) => write!(f, "Reveal {}", villager_index),
+            Self::TryExecute(villager_index) => write!(f, "Execute {}", villager_index),
+            Self::Ability(ability_attempt) => {
+                write!(f, "Use {}'s ability on ", ability_attempt.source,)?;
+
+                let length = ability_attempt.targets.len();
+                for (index, target) in ability_attempt.targets.iter().enumerate() {
+                    if index != 0 {
+                        write!(f, ", ")?;
+                    }
+
+                    if index == length && length > 1 {
+                        write!(f, "and {}", target)?;
+                    } else {
+                        write!(f, "{}", target)?
+                    }
+                }
+
+                Ok(())
+            }
+        }
     }
 }
