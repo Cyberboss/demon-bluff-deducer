@@ -20,6 +20,10 @@ impl RevealIndexHypothesis {
 }
 
 impl Hypothesis for RevealIndexHypothesis {
+    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Reveal Villager #{}", self.index.0 + 1)
+    }
+
     fn evaluate(
         &mut self,
         game_state: &GameState,

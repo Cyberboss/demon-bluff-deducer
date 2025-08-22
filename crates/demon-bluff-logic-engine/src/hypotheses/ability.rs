@@ -14,6 +14,10 @@ impl AbilityHypothesis {
 }
 
 impl Hypothesis for AbilityHypothesis {
+    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Ability Decision")
+    }
+
     fn evaluate(
         &mut self,
         game_state: &GameState,

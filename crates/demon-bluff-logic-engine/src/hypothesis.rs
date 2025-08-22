@@ -1,8 +1,12 @@
 use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    fmt::Debug,
+    cell::{Ref, RefCell, RefMut},
+    collections::{HashMap, HashSet, VecDeque},
+    fmt::{Debug, Error, Formatter},
+    result,
 };
+
+use demon_bluff_gameplay_engine::game_state::{self, GameState};
+use force_graph::ForceGraph;
 
 use crate::{
     hypotheses::{self, HypothesisType},
@@ -14,14 +18,31 @@ use crate::{
 pub struct HypothesisReference(usize);
 
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
-pub struct HypothesisRepository {}
+pub struct HypothesisRepository<'a> {
+    reference: HypothesisReference,
+    hypotheses: &'a Vec<RefCell<HypothesisType>>,
+    data: &'a RefCell<Vec<Option<HypothesisData>>>,
+    evaluator: HypothesisEvaluator,
+    must_break: bool,
+}
+
+struct HypothesisInvocation {
+    reference_stack: Vec<HypothesisReference>,
+    hypotheses: Vec<RefCell<HypothesisType>>,
+    data: RefCell<Vec<Option<HypothesisData>>>,
+}
+
+struct HypothesisData {
+    dependencies: Vec<HypothesisReference>,
+    last_evaluate: FitnessAndAction,
+}
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
 pub struct HypothesisEvaluator {}
 
-pub enum EvaluationRequestResult {
-    Approved(HypothesisEvaluator),
-    BreakCycle(HypothesisEvaluator),
+pub enum EvaluationRequestResult<'a> {
+    Approved(&'a mut HypothesisEvaluator),
+    BreakCycle(&'a mut HypothesisEvaluator),
 }
 
 /// The return value of evaluating a single `Hypothesis`.
@@ -42,28 +63,24 @@ pub struct FitnessAndAction {
     fitness: f64,
 }
 
-/// Contains initial graph data for a `Hypothesis`.
-pub struct HypothesisContainer {
-    hypothesis: RefCell<HypothesisType>,
-    last_evaluate: Option<FitnessAndAction>,
-}
-
-struct BuiltHypothesis {
-    container: HypothesisContainer,
-    references: Vec<HypothesisReference>,
+pub struct GraphNodeData {
+    description: String,
+    current_fitness: Option<f64>,
 }
 
 #[enum_delegate::register]
 pub trait Hypothesis {
+    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error>;
+
     fn evaluate(
         &mut self,
         game_state: &demon_bluff_gameplay_engine::game_state::GameState,
-        repository: &mut crate::hypothesis::HypothesisRepository,
+        repository: crate::hypothesis::HypothesisRepository,
     ) -> crate::hypothesis::HypothesisReturn;
 }
 
 pub struct HypothesisRegistrar {
-    hypotheses: Vec<HypothesisContainer>,
+    registrations: Vec<HypothesisType>,
 }
 
 impl FitnessAndAction {
@@ -76,27 +93,58 @@ impl FitnessAndAction {
     }
 }
 
-impl HypothesisRepository {
-    pub fn request_sub_evaluation(&mut self, current_fitness: f64) -> &mut EvaluationRequestResult {
-        todo!()
+impl<'a> HypothesisRepository<'a> {
+    /// If a hypothesis has dependencies
+    pub fn request_sub_evaluation(&mut self, initial_fitness: f64) -> EvaluationRequestResult {
+        let mut data = self.data.borrow_mut();
+        match &data[self.reference.0] {
+            Some(_) => {}
+            None => {
+                data[self.reference.0] = Some(HypothesisData {
+                    dependencies: Vec::new(),
+                    last_evaluate: FitnessAndAction {
+                        action: HashSet::new(),
+                        fitness: initial_fitness,
+                    },
+                });
+            }
+        }
+
+        if self.must_break {
+            EvaluationRequestResult::BreakCycle(&mut self.evaluator)
+        } else {
+            EvaluationRequestResult::Approved(&mut self.evaluator)
+        }
     }
 
-    pub fn require_sub_evaluation(&mut self, current_fitness: f64) -> &mut HypothesisEvaluator {
-        let evaluator_result = self.request_sub_evaluation(current_fitness);
+    pub fn require_sub_evaluation(&mut self, initial_fitness: f64) -> &mut HypothesisEvaluator {
+        let evaluator_result = self.request_sub_evaluation(initial_fitness);
         match evaluator_result {
             EvaluationRequestResult::Approved(hypothesis_evaluator)
             | EvaluationRequestResult::BreakCycle(hypothesis_evaluator) => hypothesis_evaluator,
         }
     }
 
-    pub fn create_return(&mut self, result: HypothesisResult) -> HypothesisReturn {
-        todo!()
+    pub fn create_return(mut self, result: HypothesisResult) -> HypothesisReturn {
+        HypothesisReturn { result }
+    }
+}
+
+impl HypothesisInvocation {
+    fn top_enter(mut self, game_state: &GameState, root: HypothesisReference) {
+        let mut hypothesis = self.hypotheses[root.0].borrow_mut();
+        let repository = HypothesisRepository {
+            hypotheses: &self.hypotheses,
+            data: &self.data,
+        };
+
+        let hypo_return = hypothesis.evaluate(game_state, repository);
+        let result = hypo_return.result;
     }
 }
 
 impl HypothesisEvaluator {
     pub fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
-        todo!()
     }
 }
 
@@ -107,19 +155,59 @@ impl HypothesisRegistrar {
         HypothesisType: From<HypothesisImpl>,
     {
         let hypothesis = hypothesis.into();
-        for (index, existing_container) in self.hypotheses.iter().enumerate() {
-            if hypothesis == *existing_container.hypothesis.borrow() {
+        for (index, existing_container) in self.registrations.iter().enumerate() {
+            if hypothesis == *existing_container {
                 return HypothesisReference(index);
             }
         }
 
-        let container = HypothesisContainer {
-            hypothesis: RefCell::new(hypothesis),
-            last_evaluate: None,
-        };
-        self.hypotheses.push(container);
-        return HypothesisReference(self.hypotheses.len() - 1);
+        self.registrations.push(hypothesis);
+        HypothesisReference(self.registrations.len() - 1)
     }
+}
+
+impl HypothesisReference {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
+pub fn evaluate<F1, F2>(
+    game_state: &GameState,
+    hypothesis_factory: F1,
+    mut stepper: Option<F2>,
+) -> HashSet<PlayerAction>
+where
+    F1: FnOnce(&GameState, &mut HypothesisRegistrar) -> HypothesisReference,
+    F2: FnMut(ForceGraph<GraphNodeData>),
+{
+    let mut registrar = HypothesisRegistrar {
+        registrations: Vec::new(),
+    };
+
+    let root = hypothesis_factory(game_state, &mut registrar);
+
+    let hypotheses: Vec<RefCell<HypothesisType>> = registrar
+        .registrations
+        .into_iter()
+        .map(|hypothesis| RefCell::new(hypothesis))
+        .collect();
+
+    let data = Vec::with_capacity(hypotheses.len());
+    for _ in 0..hypotheses.len() {
+        data.push(None);
+    }
+
+    let data = RefCell::new(data);
+
+    let mut invocation = HypothesisInvocation {
+        reference_stack: vec![root.clone()],
+        hypotheses,
+        data,
+    };
+
+    invocation.enter(game_state, root);
+    todo!();
 }
 
 pub fn fittest_result(

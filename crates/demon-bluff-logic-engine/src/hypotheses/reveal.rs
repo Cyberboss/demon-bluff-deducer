@@ -37,6 +37,10 @@ impl RevealHypothesis {
 }
 
 impl Hypothesis for RevealHypothesis {
+    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Reveal a Villager")
+    }
+
     fn evaluate(
         &mut self,
         game_state: &demon_bluff_gameplay_engine::game_state::GameState,

@@ -14,6 +14,10 @@ impl ExecuteHypothesis {
 }
 
 impl Hypothesis for ExecuteHypothesis {
+    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Execution Decision")
+    }
+
     fn evaluate(
         &mut self,
         game_state: &GameState,

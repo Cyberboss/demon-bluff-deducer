@@ -35,13 +35,11 @@ impl MasterHypothesis {
     }
 }
 
-impl Display for MasterHypothesis {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Hypothesis for MasterHypothesis {
+    fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Master Hypothesis")
     }
-}
 
-impl Hypothesis for MasterHypothesis {
     fn evaluate(
         &mut self,
         _: &GameState,
