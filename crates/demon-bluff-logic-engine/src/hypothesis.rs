@@ -20,9 +20,7 @@ pub struct HypothesisReference(usize);
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
 pub struct HypothesisRepository<'a> {
     reference: HypothesisReference,
-    hypotheses: &'a Vec<RefCell<HypothesisType>>,
-    data: &'a RefCell<Vec<Option<HypothesisData>>>,
-    evaluator: HypothesisEvaluator,
+    evaluator: HypothesisEvaluator<'a>,
     must_break: bool,
 }
 
@@ -38,11 +36,9 @@ struct HypothesisData {
 }
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
-pub struct HypothesisEvaluator {}
-
-pub enum EvaluationRequestResult<'a> {
-    Approved(&'a mut HypothesisEvaluator),
-    BreakCycle(&'a mut HypothesisEvaluator),
+pub struct HypothesisEvaluator<'a> {
+    hypotheses: &'a Vec<RefCell<HypothesisType>>,
+    data: &'a RefCell<Vec<Option<HypothesisData>>>,
 }
 
 /// The return value of evaluating a single `Hypothesis`.
@@ -95,8 +91,8 @@ impl FitnessAndAction {
 
 impl<'a> HypothesisRepository<'a> {
     /// If a hypothesis has dependencies
-    pub fn request_sub_evaluation(&mut self, initial_fitness: f64) -> EvaluationRequestResult {
-        let mut data = self.data.borrow_mut();
+    pub fn require_sub_evaluation(&mut self, initial_fitness: f64) -> &'a mut HypothesisEvaluator {
+        let mut data = self.evaluator.data.borrow_mut();
         match &data[self.reference.0] {
             Some(_) => {}
             None => {
@@ -110,19 +106,7 @@ impl<'a> HypothesisRepository<'a> {
             }
         }
 
-        if self.must_break {
-            EvaluationRequestResult::BreakCycle(&mut self.evaluator)
-        } else {
-            EvaluationRequestResult::Approved(&mut self.evaluator)
-        }
-    }
-
-    pub fn require_sub_evaluation(&mut self, initial_fitness: f64) -> &mut HypothesisEvaluator {
-        let evaluator_result = self.request_sub_evaluation(initial_fitness);
-        match evaluator_result {
-            EvaluationRequestResult::Approved(hypothesis_evaluator)
-            | EvaluationRequestResult::BreakCycle(hypothesis_evaluator) => hypothesis_evaluator,
-        }
+        &mut self.evaluator
     }
 
     pub fn create_return(mut self, result: HypothesisResult) -> HypothesisReturn {
@@ -134,8 +118,12 @@ impl HypothesisInvocation {
     fn top_enter(mut self, game_state: &GameState, root: HypothesisReference) {
         let mut hypothesis = self.hypotheses[root.0].borrow_mut();
         let repository = HypothesisRepository {
-            hypotheses: &self.hypotheses,
-            data: &self.data,
+            reference: root,
+            must_break: false,
+            evaluator: HypothesisEvaluator {
+                hypotheses: &self.hypotheses,
+                data: &self.data,
+            },
         };
 
         let hypo_return = hypothesis.evaluate(game_state, repository);
@@ -143,8 +131,9 @@ impl HypothesisInvocation {
     }
 }
 
-impl HypothesisEvaluator {
+impl<'a> HypothesisEvaluator<'a> {
     pub fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
+        todo!()
     }
 }
 
