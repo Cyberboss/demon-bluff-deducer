@@ -2,12 +2,7 @@ mod hypotheses;
 mod hypothesis;
 pub mod player_action;
 
-use std::collections::HashSet;
-
-use demon_bluff_gameplay_engine::{
-    game_state::GameState,
-    villager::{GoodVillager, Villager, VillagerArchetype, VillagerIndex},
-};
+use demon_bluff_gameplay_engine::game_state::GameState;
 use player_action::PlayerAction;
 use thiserror::Error;
 
@@ -15,7 +10,5 @@ use thiserror::Error;
 pub enum PredictionError {}
 
 pub fn predict(state: &GameState) -> Result<PlayerAction, PredictionError> {
-    let registry = initialize_hypotheses();
-
     todo!()
 }

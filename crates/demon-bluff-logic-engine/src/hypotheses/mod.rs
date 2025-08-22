@@ -1,3 +1,4 @@
+use ability::AbilityHypothesis;
 use execute::ExecuteHypothesis;
 use master::MasterHypothesis;
 use reveal::RevealHypothesis;
@@ -5,6 +6,7 @@ use reveal_index::RevealIndexHypothesis;
 
 use crate::hypothesis::Hypothesis;
 
+mod ability;
 mod execute;
 mod master;
 mod reveal;
@@ -17,4 +19,5 @@ pub enum HypothesisType {
     Reveal(RevealHypothesis),
     RevealIndex(RevealIndexHypothesis),
     Execute(ExecuteHypothesis),
+    Ability(AbilityHypothesis),
 }

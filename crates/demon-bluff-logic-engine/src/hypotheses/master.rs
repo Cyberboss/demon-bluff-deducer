@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::reveal::RevealHypothesis;
+use super::{ability::AbilityHypothesis, reveal::RevealHypothesis};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct MasterHypothesis {
@@ -24,10 +24,13 @@ impl MasterHypothesis {
         game_state: &GameState,
         mut registrar: HypothesisRegistrar,
     ) -> HypothesisReference {
+        let reveal_hypothesis = RevealHypothesis::create(game_state, &mut registrar);
+        let execute_hypothesis = ExecuteHypothesis::create(game_state, &mut registrar);
+        let ability_hypothesis = AbilityHypothesis::create(game_state, &mut registrar);
         registrar.register(Self {
-            reveal_hypothesis: RevealHypothesis::create(game_state, &mut registrar),
-            execute_hypothesis: ExecuteHypothesis::create(game_state, &mut registrar),
-            ability_hypothesis: todo!(),
+            reveal_hypothesis,
+            execute_hypothesis,
+            ability_hypothesis,
         })
     }
 }
