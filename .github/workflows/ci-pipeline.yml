@@ -38,7 +38,7 @@ jobs:
           key: ${{ runner.os }}-cargo-windows-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
-        run: cargo build --release
+        run: cargo build
 
   test:
     name: Test
