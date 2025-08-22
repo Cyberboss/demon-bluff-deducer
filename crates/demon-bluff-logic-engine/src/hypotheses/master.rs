@@ -1,11 +1,12 @@
 use std::fmt::Display;
 
 use demon_bluff_gameplay_engine::game_state::GameState;
+use log::Log;
 
 use crate::{
     hypotheses::execute::ExecuteHypothesis,
     hypothesis::{
-        Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
         HypothesisReturn, fittest_result,
     },
 };
@@ -40,15 +41,21 @@ impl Hypothesis for MasterHypothesis {
         write!(f, "Master Hypothesis")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &GameState,
-        repository: &mut HypothesisRepository,
-    ) -> HypothesisReturn {
+        log: &TLog,
+        depth: Depth,
+        game_state: &GameState,
+        mut repository: HypothesisRepository<TLog>,
+    ) -> HypothesisReturn
+    where
+        TLog: Log,
+    {
         let evaluator = repository.require_sub_evaluation(0.0);
         let mut result = evaluator.sub_evaluate(&self.ability_hypothesis);
         result = fittest_result(evaluator.sub_evaluate(&self.reveal_hypothesis), result);
         result = fittest_result(evaluator.sub_evaluate(&self.execute_hypothesis), result);
+        drop(evaluator);
         repository.create_return(result)
     }
 }

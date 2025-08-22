@@ -4,8 +4,12 @@ use demon_bluff_gameplay_engine::{
     game_state::GameState,
     villager::{Villager, VillagerIndex},
 };
+use log::Log;
 
-use crate::hypothesis::{Hypothesis, HypothesisReference, HypothesisRegistrar};
+use crate::hypothesis::{
+    Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+    HypothesisReturn,
+};
 
 use super::reveal_index::RevealIndexHypothesis;
 
@@ -41,11 +45,16 @@ impl Hypothesis for RevealHypothesis {
         write!(f, "Reveal a Villager")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        game_state: &demon_bluff_gameplay_engine::game_state::GameState,
-        repository: &mut crate::hypothesis::HypothesisRepository,
-    ) -> crate::hypothesis::HypothesisReturn {
+        log: &TLog,
+        depth: Depth,
+        game_state: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisReturn
+    where
+        TLog: Log,
+    {
         todo!()
     }
 }

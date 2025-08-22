@@ -1,7 +1,9 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
+use log::Log;
 
 use crate::hypothesis::{
-    Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisReturn,
+    Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+    HypothesisReturn,
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -18,11 +20,16 @@ impl Hypothesis for AbilityHypothesis {
         write!(f, "Ability Decision")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
+        log: &TLog,
+        depth: Depth,
         game_state: &GameState,
-        repository: &mut HypothesisRepository,
-    ) -> HypothesisReturn {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisReturn
+    where
+        TLog: Log,
+    {
         todo!()
     }
 }

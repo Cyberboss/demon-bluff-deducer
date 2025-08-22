@@ -8,6 +8,8 @@ use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
 
 #[test]
 pub fn test_game_1() {
+    let builder = env_logger::Builder::new();
+
     let mut state = new_game(
         vec![
             VillagerArchetype::GoodVillager(GoodVillager::Druid),
