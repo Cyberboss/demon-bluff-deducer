@@ -4,5 +4,5 @@
 !.gitignore
 !Cargo.lock
 !Cargo.toml
+!/.github/**
 !/crates/**
-!/test_games
