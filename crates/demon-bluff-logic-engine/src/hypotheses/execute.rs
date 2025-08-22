@@ -2,8 +2,8 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::hypothesis::{
-    Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-    HypothesisReturn,
+    Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
+    HypothesisRepository, HypothesisResult, HypothesisReturn,
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -30,6 +30,6 @@ impl Hypothesis for ExecuteHypothesis {
     where
         TLog: Log,
     {
-        todo!()
+        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()))
     }
 }

@@ -10,7 +10,7 @@ use crate::hypothesis::Hypothesis;
 
 mod ability;
 mod execute;
-mod master;
+pub(crate) mod master;
 mod reveal;
 mod reveal_index;
 

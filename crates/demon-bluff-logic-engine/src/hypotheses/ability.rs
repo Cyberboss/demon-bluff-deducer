@@ -1,9 +1,14 @@
-use demon_bluff_gameplay_engine::game_state::GameState;
+use std::collections::HashSet;
+
+use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-    HypothesisReturn,
+use crate::{
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
+    player_action::{AbilityAttempt, PlayerAction},
 };
 
 #[derive(Eq, PartialEq, Debug)]
@@ -30,6 +35,6 @@ impl Hypothesis for AbilityHypothesis {
     where
         TLog: Log,
     {
-        todo!()
+        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()))
     }
 }

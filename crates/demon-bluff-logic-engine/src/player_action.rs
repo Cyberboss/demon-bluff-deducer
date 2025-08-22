@@ -17,6 +17,12 @@ pub enum PlayerAction {
     Ability(AbilityAttempt),
 }
 
+impl AbilityAttempt {
+    pub fn new(source: VillagerIndex, targets: HashSet<VillagerIndex>) -> Self {
+        Self { source, targets }
+    }
+}
+
 impl PartialEq for AbilityAttempt {
     fn eq(&self, other: &Self) -> bool {
         self.source == other.source

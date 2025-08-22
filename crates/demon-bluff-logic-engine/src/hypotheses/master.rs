@@ -23,7 +23,7 @@ pub struct MasterHypothesis {
 impl MasterHypothesis {
     pub fn create(
         game_state: &GameState,
-        mut registrar: HypothesisRegistrar,
+        mut registrar: &mut HypothesisRegistrar,
     ) -> HypothesisReference {
         let reveal_hypothesis = RevealHypothesis::create(game_state, &mut registrar);
         let execute_hypothesis = ExecuteHypothesis::create(game_state, &mut registrar);
@@ -51,11 +51,10 @@ impl Hypothesis for MasterHypothesis {
     where
         TLog: Log,
     {
-        let evaluator = repository.require_sub_evaluation(0.0);
+        let mut evaluator = repository.require_sub_evaluation(0.0);
         let mut result = evaluator.sub_evaluate(&self.ability_hypothesis);
         result = fittest_result(evaluator.sub_evaluate(&self.reveal_hypothesis), result);
         result = fittest_result(evaluator.sub_evaluate(&self.execute_hypothesis), result);
-        drop(evaluator);
-        repository.create_return(result)
+        evaluator.create_return(result)
     }
 }

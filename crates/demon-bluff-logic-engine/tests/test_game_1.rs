@@ -5,10 +5,13 @@ use demon_bluff_gameplay_engine::{
     },
 };
 use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
+use log::{error, info};
 
 #[test]
 pub fn test_game_1() {
-    let builder = env_logger::Builder::new();
+    colog::init();
+
+    let log = log::logger();
 
     let mut state = new_game(
         vec![
@@ -26,9 +29,12 @@ pub fn test_game_1() {
         2,
     );
 
-    let prediction = predict(&state).expect("prediction failed??");
+    let prediction = predict(&log, &state).expect("prediction failed??");
 
-    assert_eq!(PlayerAction::TryReveal(VillagerIndex(0)), prediction);
+    assert_eq!(
+        &PlayerAction::TryReveal(VillagerIndex(0)),
+        prediction.iter().next().unwrap()
+    );
 
     let mut mutation_result = state
         .mutate(Action::TryReveal(RevealResult::new(

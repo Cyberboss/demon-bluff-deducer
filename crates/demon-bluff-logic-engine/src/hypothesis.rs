@@ -11,6 +11,7 @@ use log::{Log, error, info};
 use thiserror::Error;
 
 use crate::{
+    PredictionError,
     hypotheses::{self, HypothesisType},
     player_action::PlayerAction,
 };
@@ -24,8 +25,7 @@ pub struct HypothesisRepository<'a, TLog>
 where
     TLog: Log,
 {
-    reference: HypothesisReference,
-    evaluator: HypothesisEvaluator<'a, TLog>,
+    inner: StackData<'a, TLog>,
 }
 
 struct StackData<'a, TLog>
@@ -118,12 +118,6 @@ pub struct Depth {
     reference: HypothesisReference,
 }
 
-#[derive(Error, Debug)]
-pub enum EvaluationError {
-    #[error("Evaluation could not determine an action to perform!")]
-    ConclusiveNoAction,
-}
-
 impl Display for HypothesisReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -197,12 +191,14 @@ where
         }
     }
 
-    fn depth(&self) -> Depth {
-        let reference = self
-            .reference_stack
+    fn current_reference(&self) -> &HypothesisReference {
+        self.reference_stack
             .last()
             .expect("StackData should have at least one in stack!")
-            .clone();
+    }
+
+    fn depth(&self) -> Depth {
+        let reference = self.current_reference().clone();
         Depth {
             depth: self.reference_stack.len() - 1,
             reference,
@@ -227,7 +223,7 @@ where
 
 impl Display for Depth {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for _ in 1..self.depth {
+        for _ in 0..self.depth {
             write!(f, "  ")?
         }
 
@@ -236,6 +232,22 @@ impl Display for Depth {
 }
 
 impl FitnessAndAction {
+    pub fn new(fitness: f64, action: PlayerAction) -> Self {
+        let mut action_set = HashSet::with_capacity(1);
+        action_set.insert(action);
+        Self {
+            action: action_set,
+            fitness,
+        }
+    }
+
+    pub fn impossible() -> Self {
+        Self {
+            action: HashSet::new(),
+            fitness: 0.0,
+        }
+    }
+
     pub fn fitness(&self) -> f64 {
         self.fitness
     }
@@ -247,6 +259,10 @@ impl FitnessAndAction {
 
 impl Display for FitnessAndAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.fitness == 0.0 {
+            return write!(f, "Impossible");
+        }
+
         write!(f, "{:.2}% - ", self.fitness * 100.0)?;
 
         let length = self.action.len();
@@ -287,10 +303,7 @@ where
 
         info!(logger: self.inner.log, "{} Entering {}", self.inner.depth(), hypothesis);
         let repository = HypothesisRepository {
-            reference: reference.clone(),
-            evaluator: HypothesisEvaluator {
-                inner: self.inner.share(),
-            },
+            inner: self.inner.share(),
         };
 
         let hypo_return = hypothesis.evaluate(
@@ -299,6 +312,16 @@ where
             self.inner.game_state,
             repository,
         );
+
+        match &hypo_return.result {
+            HypothesisResult::Pending(fitness_and_action) => {
+                info!(logger: self.inner.log, "{} Pending result: {}", self.inner.depth(), fitness_and_action)
+            }
+            HypothesisResult::Conclusive(fitness_and_action) => {
+                info!(logger: self.inner.log, "{} Conclusive result: {}", self.inner.depth(), fitness_and_action)
+            }
+        }
+
         hypo_return.result
     }
 }
@@ -308,16 +331,13 @@ where
     TLog: Log,
 {
     /// If a hypothesis has dependencies
-    pub fn require_sub_evaluation(
-        &mut self,
-        initial_fitness: f64,
-    ) -> &'a mut HypothesisEvaluator<TLog> {
-        let mut data = self.evaluator.inner.data.borrow_mut();
-        match &data[self.reference.0] {
+    pub fn require_sub_evaluation(self, initial_fitness: f64) -> HypothesisEvaluator<'a, TLog> {
+        let mut data = self.inner.data.borrow_mut();
+        match &data[self.inner.current_reference().0] {
             Some(_) => {}
             None => {
-                info!(logger: self.evaluator.inner.log, "{} set initial fitness: {}",self.evaluator.inner.depth(), initial_fitness);
-                data[self.reference.0] = Some(HypothesisData {
+                info!(logger: self.inner.log, "{} Set initial fitness: {}",self.inner.depth(), initial_fitness);
+                data[self.inner.current_reference().0] = Some(HypothesisData {
                     dependencies: HashSet::new(),
                     last_evaluate: FitnessAndAction {
                         action: HashSet::new(),
@@ -327,7 +347,7 @@ where
             }
         }
 
-        &mut self.evaluator
+        HypothesisEvaluator { inner: self.inner }
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
@@ -374,6 +394,10 @@ where
                         )
                     }
 
+                    // Important or entering the invocation will BorrowError
+                    drop(next_reference);
+                    drop(data);
+
                     let invocation = HypothesisInvocation {
                         inner: self.inner.push(hypothesis_reference.clone()),
                     };
@@ -403,6 +427,10 @@ where
             last_evaluate
         );
         HypothesisResult::Pending(last_evaluate)
+    }
+
+    pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
+        HypothesisReturn { result }
     }
 }
 
@@ -435,7 +463,7 @@ pub fn evaluate<TLog, F1, F2>(
     hypothesis_factory: F1,
     log: &TLog,
     mut stepper: Option<F2>,
-) -> Result<HashSet<PlayerAction>, EvaluationError>
+) -> Result<HashSet<PlayerAction>, PredictionError>
 where
     TLog: Log,
     F1: FnOnce(&GameState, &mut HypothesisRegistrar) -> HypothesisReference,
@@ -484,7 +512,7 @@ where
             HypothesisResult::Conclusive(fitness_and_action) => {
                 if fitness_and_action.action.len() == 0 {
                     error!(logger: log, "Obtained conclusive result with no actions!");
-                    return Err(EvaluationError::ConclusiveNoAction);
+                    return Err(PredictionError::ConclusiveNoAction);
                 }
 
                 info!(logger: log, "Conclusive result obtained. Fitness: {}", fitness_and_action);
