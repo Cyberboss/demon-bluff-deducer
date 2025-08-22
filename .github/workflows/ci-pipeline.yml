@@ -93,7 +93,7 @@ jobs:
           key: ${{ runner.os }}-cargo-windows-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Test
-        run: cargo clippy
+        run: cargo clippy -- -D warnings
 
   lint:
     name: lint
