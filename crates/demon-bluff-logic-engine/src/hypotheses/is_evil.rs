@@ -6,8 +6,8 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        archetype_in_play::ArchetypeInPlayHypothesis, is_truthful::IsTruthfulHypothesis,
-        negate::NegateHypothesis,
+        archetype_in_play::ArchetypeInPlayHypothesis, is_corrupt::IsCorruptHypothesis,
+        is_truthful::IsTruthfulHypothesis, negate::NegateHypothesis,
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
@@ -47,6 +47,8 @@ impl IsEvilHypothesis {
             IsTruthfulHypothesis::create(game_state, &mut registrar, index.clone());
         let is_lying_hypothesis =
             NegateHypothesis::create(game_state, &mut registrar, is_truthful_hypothesis);
+        let is_corrupt_hypothesis =
+            IsCorruptHypothesis::create(game_state, registrar, index.clone());
 
         registrar.register(Self {
             index,

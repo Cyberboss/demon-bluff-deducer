@@ -1,3 +1,5 @@
+#![feature(gen_blocks)]
+
 use std::fmt::{Display, write};
 
 #[macro_use]
@@ -33,5 +35,36 @@ where
             Expression::And(lhs, rhs) => write!(f, "({} && {})", lhs, rhs),
             Expression::Or(lhs, rhs) => write!(f, "({} || {})", lhs, rhs),
         }
+    }
+}
+
+impl<Type> Expression<Type>
+where
+    Type: Display,
+{
+    pub fn or_from_iterator(iterator: impl Iterator<Item = Type>) -> Option<Self> {
+        let mut expr = None;
+        for item in iterator {
+            let unary_expression = Expression::Unary(item);
+            expr = Some(match expr {
+                Some(expr) => Expression::Or(Box::new(expr), Box::new(unary_expression)),
+                None => unary_expression,
+            });
+        }
+
+        expr
+    }
+
+    pub fn and_from_iterator(iterator: impl Iterator<Item = Type>) -> Option<Self> {
+        let mut expr = None;
+        for item in iterator {
+            let unary_expression = Expression::Unary(item);
+            expr = Some(match expr {
+                Some(expr) => Expression::And(Box::new(expr), Box::new(unary_expression)),
+                None => unary_expression,
+            });
+        }
+
+        expr
     }
 }

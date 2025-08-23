@@ -18,6 +18,7 @@ pub enum ConfessorClaim {
 pub enum Direction {
     Clockwise,
     CounterClockwise,
+    Equidistant,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Display)]
@@ -25,12 +26,6 @@ pub enum ArchitectClaim {
     Left,
     Right,
     Equal,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Display)]
-pub enum EnlightendClaim {
-    Equidistant,
-    Direction(Direction),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Display)]
@@ -78,7 +73,7 @@ pub enum Testimony {
     Architect(ArchitectClaim),
     Baker(BakerClaim),
     Role(RoleClaim),
-    Enlightened(EnlightendClaim),
+    Enlightened(Direction),
     Invincible(VillagerIndex),
     Knitter(EvilPairsClaim),
     Affected(VillagerIndex),
@@ -143,40 +138,31 @@ impl Testimony {
             }
         }
 
+        let mut expr;
         if villagers_cured == 0 {
-            let mut expr = None;
-            for index in &potential_indicies {
-                let unary_expression =
-                    Expression::Unary(Testimony::NotCorrupt(VillagerIndex(*index)));
+            expr = Expression::and_from_iterator(
+                potential_indicies
+                    .iter()
+                    .map(|index| Testimony::NotCorrupt(VillagerIndex(*index))),
+            );
+        } else {
+            expr = None;
+            for combo in potential_indicies.iter().combinations(villagers_cured) {
+                let new_expr = Expression::and_from_iterator(
+                    combo
+                        .iter()
+                        .map(|index| Testimony::Cured(VillagerIndex(**index))),
+                );
+
+                let new_expr =
+                    new_expr.expect("There should have been at least one villager that was cured");
                 expr = Some(match expr {
-                    Some(expr) => Expression::And(Box::new(expr), Box::new(unary_expression)),
-                    None => unary_expression,
+                    Some(old_expr) => Expression::Or(Box::new(old_expr), Box::new(new_expr)),
+                    None => new_expr,
                 });
             }
-
-            return expr.expect("There should have been at least one villager that wasn't cured");
         }
 
-        let mut expr = None;
-        for combo in potential_indicies.iter().combinations(villagers_cured) {
-            let mut new_expr = None;
-            for index in &combo {
-                let unary_expression = Expression::Unary(Testimony::Cured(VillagerIndex(**index)));
-                new_expr = Some(match new_expr {
-                    Some(new_expr) => {
-                        Expression::And(Box::new(new_expr), Box::new(unary_expression))
-                    }
-                    None => unary_expression,
-                });
-            }
-            let new_expr =
-                new_expr.expect("There should have been at least one villager that was cured");
-            expr = Some(match expr {
-                Some(old_expr) => Expression::Or(Box::new(old_expr), Box::new(new_expr)),
-                None => new_expr,
-            });
-        }
-
-        return expr.expect("logic error in cure expression builder");
+        expr.expect("logic error in cure expression builder")
     }
 }

@@ -18,6 +18,7 @@ use crate::{
 
 const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 1000;
 
+pub const FITNESS_UNKNOWN: f64 = 0.5;
 const FITNESS_UNIMPLEMENTED: f64 = 0.123456789;
 
 /// A reference to a `Hypothesis` in the graph.

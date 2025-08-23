@@ -1,8 +1,11 @@
-use itertools::Itertools;
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::{Expression, affect::Affect, testimony::Testimony};
-use std::fmt::Display;
+use crate::{
+    Expression,
+    affect::{Affect, NightEffect, VillagerAffect},
+    testimony::{Direction, Testimony},
+};
+use std::{fmt::Display, thread::yield_now};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct VillagerIndex(pub usize);
@@ -174,6 +177,14 @@ impl VillagerArchetype {
             Self::Demon(demon) => match demon {
                 Demon::Baa | Demon::Pooka | Demon::Lilis => true,
             },
+        }
+    }
+
+    pub fn appears_evil(&self) -> bool {
+        if VillagerArchetype::Outcast(Outcast::Wretch) == *self || self.is_evil() {
+            true
+        } else {
+            false
         }
     }
 
@@ -494,12 +505,89 @@ impl VillagerArchetype {
         }
     }
 
-    pub fn affects(
-        total_villagers: u8,
-        index: VillagerIndex,
-        hidden_villagers: &[VillagerIndex],
-    ) -> Vec<Affect> {
-        todo!()
+    pub fn affects(&self, total_villagers: usize, index: VillagerIndex) -> Option<Affect> {
+        match self {
+            VillagerArchetype::GoodVillager(good_villager) => match good_villager {
+                GoodVillager::Alchemist
+                | GoodVillager::Architect
+                | GoodVillager::Baker
+                | GoodVillager::Bard
+                | GoodVillager::Bishop
+                | GoodVillager::Confessor
+                | GoodVillager::Dreamer
+                | GoodVillager::Druid
+                | GoodVillager::Empress
+                | GoodVillager::Enlightened
+                | GoodVillager::FortuneTeller
+                | GoodVillager::Gemcrafter
+                | GoodVillager::Hunter
+                | GoodVillager::Jester
+                | GoodVillager::Judge
+                | GoodVillager::Knight
+                | GoodVillager::Knitter
+                | GoodVillager::Lover
+                | GoodVillager::Medium
+                | GoodVillager::Oracle
+                | GoodVillager::Poet
+                | GoodVillager::Scout
+                | GoodVillager::Slayer
+                | GoodVillager::Witness => None,
+            },
+            VillagerArchetype::Outcast(outcast) => match outcast {
+                Outcast::Drunk | Outcast::Wretch | Outcast::Bombardier | Outcast::Doppelganger => {
+                    // A doppleganger is a disguise not a dupe
+                    None
+                }
+                Outcast::PlagueDoctor => Expression::or_from_iterator(
+                    other_indicies(&index, total_villagers).map(|other_index| {
+                        VillagerAffect::from_index(&index, &other_index, total_villagers)
+                    }),
+                )
+                .map(|expr| Affect::Corrupt(expr)),
+            },
+            VillagerArchetype::Minion(minion) => match minion {
+                Minion::Counsellor => Some(Affect::Corrupt(Expression::Or(
+                    Box::new(Expression::Unary(VillagerAffect::new(
+                        Direction::Clockwise,
+                        1,
+                    ))),
+                    Box::new(Expression::Unary(VillagerAffect::new(
+                        Direction::CounterClockwise,
+                        1,
+                    ))),
+                ))),
+                Minion::Puppeteer => Some(Affect::Puppet(Expression::Or(
+                    Box::new(Expression::Unary(VillagerAffect::new(
+                        Direction::Clockwise,
+                        1,
+                    ))),
+                    Box::new(Expression::Unary(VillagerAffect::new(
+                        Direction::CounterClockwise,
+                        1,
+                    ))),
+                ))),
+                Minion::Shaman => Some(Affect::DupeVillager),
+                Minion::Witch
+                | Minion::Minion
+                | Minion::Poisoner
+                | Minion::Twinion
+                | Minion::Puppet => None,
+            },
+            VillagerArchetype::Demon(demon) => Some(match demon {
+                Demon::Baa => Affect::FakeOutcast,
+                Demon::Pooka => Affect::Corrupt(Expression::And(
+                    Box::new(Expression::Unary(VillagerAffect::new(
+                        Direction::Clockwise,
+                        1,
+                    ))),
+                    Box::new(Expression::Unary(VillagerAffect::new(
+                        Direction::CounterClockwise,
+                        1,
+                    ))),
+                )),
+                Demon::Lilis => Affect::Night(NightEffect::KillUnrevealed),
+            }),
+        }
     }
 }
 
@@ -672,6 +760,14 @@ impl ConfirmedVillager {
             VillagerArchetype::Demon(demon) => match demon {
                 Demon::Baa | Demon::Pooka | Demon::Lilis => ExecutionResult::EvilKilled,
             },
+        }
+    }
+}
+
+pub gen fn other_indicies(index: &VillagerIndex, total_villagers: usize) -> VillagerIndex {
+    for other_index in 0..total_villagers {
+        if (index.0 != other_index) {
+            yield VillagerIndex(other_index)
         }
     }
 }

@@ -8,7 +8,8 @@ use reveal_index::RevealIndexHypothesis;
 use crate::{
     hypotheses::{
         ability::AbilityHypothesis, archetype_in_play::ArchetypeInPlayHypothesis,
-        execute_index::ExecuteIndexHypothesis, gather_information::GatherInformationHypothesis,
+        corruption_in_play::CorruptionInPlayHypothesis, execute_index::ExecuteIndexHypothesis,
+        gather_information::GatherInformationHypothesis, is_corrupt::IsCorruptHypothesis,
         is_evil::IsEvilHypothesis, is_truthful::IsTruthfulHypothesis,
         need_testimony::NeedTestimonyHypothesis, negate::NegateHypothesis,
         revealing_is_safe::RevealingIsSafeHypothesis, testimony::TestimonyHypothesis,
@@ -19,6 +20,7 @@ use crate::{
 
 mod ability;
 mod archetype_in_play;
+mod corruption_in_play;
 mod execute;
 mod execute_index;
 mod gather_information;
@@ -52,6 +54,8 @@ pub enum HypothesisType {
     GatherInformation(GatherInformationHypothesis),
     Ability(AbilityHypothesis),
     Negate(NegateHypothesis),
+    IsCorrupt(IsCorruptHypothesis),
+    CorruptionInPlay(CorruptionInPlayHypothesis),
 }
 
 impl Display for HypothesisType {
