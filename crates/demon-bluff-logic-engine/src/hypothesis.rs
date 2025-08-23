@@ -1,7 +1,7 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
     collections::{HashMap, HashSet, VecDeque},
-    fmt::{Debug, Display, Error, Formatter},
+    fmt::{Debug, Display, Error, Formatter, write},
     result,
 };
 
@@ -37,6 +37,7 @@ where
     reference_stack: Vec<HypothesisReference>,
     log: &'a TLog,
     game_state: &'a GameState,
+    cycles: &'a RefCell<HashSet<Cycle>>,
     hypotheses: &'a Vec<RefCell<HypothesisType>>,
     dependencies: &'a RefCell<Vec<HashSet<HypothesisReference>>>,
     previous_data: Option<&'a IterationData>,
@@ -47,7 +48,12 @@ where
 
 #[derive(Debug, PartialEq, Clone)]
 struct IterationData {
-    results: Vec<Option<FitnessAndAction>>,
+    results: Vec<Option<HypothesisResult>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct Cycle {
+    order_from_root: Vec<HypothesisReference>,
 }
 
 struct HypothesisInvocation<'a, TLog>
@@ -55,12 +61,6 @@ where
     TLog: Log,
 {
     inner: StackData<'a, TLog>,
-}
-
-#[derive(Debug)]
-struct HypothesisData {
-    dependencies: HashSet<HypothesisReference>,
-    last_evaluate: FitnessAndAction,
 }
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
@@ -83,7 +83,7 @@ pub struct HypothesisReturn {
     result: HypothesisResult,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum HypothesisResult {
     Pending(FitnessAndAction),
     Conclusive(FitnessAndAction),
@@ -133,6 +133,19 @@ impl Display for HypothesisReference {
     }
 }
 
+impl Display for HypothesisResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HypothesisResult::Pending(fitness_and_action) => {
+                write!(f, "Pending: {}", fitness_and_action)
+            }
+            HypothesisResult::Conclusive(fitness_and_action) => {
+                write!(f, "Conclusive: {}", fitness_and_action)
+            }
+        }
+    }
+}
+
 impl<'a, TLog> StackData<'a, TLog>
 where
     TLog: Log,
@@ -141,6 +154,7 @@ where
         game_state: &'a GameState,
         log: &'a TLog,
         hypotheses: &'a Vec<RefCell<HypothesisType>>,
+        cycles: &'a RefCell<HashSet<Cycle>>,
         previous_data: Option<&'a IterationData>,
         dependencies: &'a RefCell<Vec<HashSet<HypothesisReference>>>,
         current_data: &'a RefCell<IterationData>,
@@ -157,8 +171,24 @@ where
             hypotheses,
             current_data,
             break_at,
+            cycles,
             graph_builder,
         }
+    }
+
+    fn into_cycle(&self, locked_reference: &HypothesisReference) -> Cycle {
+        let mut order_from_root = Vec::new();
+        order_from_root.push(locked_reference.clone());
+        let mut adding = false;
+        for trace_reference in &self.reference_stack {
+            if adding {
+                order_from_root.push(trace_reference.clone());
+            } else if trace_reference == locked_reference {
+                adding = true;
+            }
+        }
+
+        Cycle { order_from_root }
     }
 
     fn share(&self) -> Self {
@@ -180,6 +210,7 @@ where
             graph_builder: self.graph_builder,
             previous_data: self.previous_data,
             dependencies: &self.dependencies,
+            cycles: &self.cycles,
         }
     }
 
@@ -205,6 +236,7 @@ where
             graph_builder: self.graph_builder,
             previous_data: self.previous_data,
             dependencies: &self.dependencies,
+            cycles: &self.cycles,
         }
     }
 
@@ -350,14 +382,10 @@ where
             repository,
         );
 
-        match &hypo_return.result {
-            HypothesisResult::Pending(fitness_and_action) => {
-                info!(logger: self.inner.log, "{} Pending result: {}", self.inner.depth(), fitness_and_action)
-            }
-            HypothesisResult::Conclusive(fitness_and_action) => {
-                info!(logger: self.inner.log, "{} Conclusive result: {}", self.inner.depth(), fitness_and_action)
-            }
-        }
+        info!(logger: self.inner.log, "{} Result: {}", self.inner.depth(), hypo_return.result);
+
+        let mut current_data = self.inner.current_data.borrow_mut();
+        current_data.results[self.inner.current_reference().0] = Some(hypo_return.result.clone());
 
         hypo_return.result
     }
@@ -374,10 +402,11 @@ where
             Some(_) => {}
             None => {
                 info!(logger: self.inner.log, "{} Set initial fitness: {}",self.inner.depth(), initial_fitness);
-                data.results[self.inner.current_reference().0] = Some(FitnessAndAction {
-                    action: HashSet::new(),
-                    fitness: initial_fitness,
-                });
+                data.results[self.inner.current_reference().0] =
+                    Some(HypothesisResult::Pending(FitnessAndAction {
+                        action: HashSet::new(),
+                        fitness: initial_fitness,
+                    }));
             }
         }
 
@@ -413,6 +442,7 @@ where
         }
 
         let current_data = self.inner.current_data.borrow();
+        let mut force_conclusive = false;
         if let Some(break_at) = self.inner.break_at
             && break_at == current_reference
         {
@@ -422,6 +452,8 @@ where
                 self.inner.depth(),
                 hypothesis_reference
             );
+
+            force_conclusive = true;
         } else {
             if current_data.results[hypothesis_reference.0]
                 .as_ref()
@@ -448,6 +480,11 @@ where
                             self.inner.depth(),
                             hypothesis_reference
                         );
+
+                        let cycle = self.inner.into_cycle(hypothesis_reference);
+
+                        let mut cycles = self.inner.cycles.borrow_mut();
+                        cycles.insert(cycle);
                     }
                 }
             }
@@ -464,14 +501,24 @@ where
                     .expect("Fitness for cycle break didn't previously exist")
             });
 
-        let last_evaluate = relevant_iteration_data.clone();
+        let mut last_evaluate = relevant_iteration_data.clone();
+
+        if force_conclusive {
+            last_evaluate = HypothesisResult::Conclusive(match last_evaluate {
+                HypothesisResult::Pending(fitness_and_action)
+                | HypothesisResult::Conclusive(fitness_and_action) => fitness_and_action,
+            })
+        }
+
         info!(
             logger: self.inner.log,
-            "{} Returning existing fitness: {}",
+            "{} Using existing {} result: {}",
             self.inner.depth(),
+            hypothesis_reference,
             last_evaluate
         );
-        HypothesisResult::Pending(last_evaluate)
+
+        last_evaluate
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
@@ -545,10 +592,12 @@ where
         iteration = iteration + 1;
         info!(logger: log, "Iteration: {}", iteration);
 
+        let cycles = RefCell::new(HashSet::new());
         let invocation = HypothesisInvocation::new(StackData::new(
             game_state,
             log,
             &hypotheses,
+            &cycles,
             None,
             &dependencies,
             &data,
