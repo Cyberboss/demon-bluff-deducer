@@ -11,22 +11,18 @@ use crate::{
     player_action::{AbilityAttempt, PlayerAction},
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Default)]
 pub struct AbilityHypothesis {}
 
-impl AbilityHypothesis {
-    pub fn create<TLog>(
-        _: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
-    where
-        TLog: Log,
-    {
-        registrar.register(Self {})
-    }
-}
-
 impl Hypothesis for AbilityHypothesis {
+    fn resolve_references<TLog>(
+        &mut self,
+        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) where
+        TLog: ::log::Log,
+    {
+    }
+
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Ability Decision")
     }

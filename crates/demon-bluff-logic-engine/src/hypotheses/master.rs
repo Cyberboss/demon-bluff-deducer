@@ -6,19 +6,16 @@ use log::Log;
 use crate::{
     hypotheses::{execute::ExecuteHypothesis, gather_information::GatherInformationHypothesis},
     hypothesis::{
-        Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-        HypothesisResult, HypothesisReturn, or_result,
+        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
 };
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct MasterHypothesis {
-    info_hypothesis: HypothesisReference,
-    execute_hypothesis: HypothesisReference,
-}
+pub struct MasterHypothesisBuilder {}
 
-impl MasterHypothesis {
-    pub fn create<TLog>(
+impl HypothesisBuilder for MasterHypothesisBuilder {
+    pub fn build<TLog>(
         game_state: &GameState,
         mut registrar: &mut HypothesisRegistrar<TLog>,
     ) -> HypothesisReference
@@ -32,6 +29,12 @@ impl MasterHypothesis {
             execute_hypothesis,
         })
     }
+}
+
+#[derive(Debug)]
+pub struct MasterHypothesis {
+    info_hypothesis: HypothesisReference,
+    execute_hypothesis: HypothesisReference,
 }
 
 impl Hypothesis for MasterHypothesis {

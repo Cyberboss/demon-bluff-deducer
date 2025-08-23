@@ -12,7 +12,7 @@ use thiserror::Error;
 
 use crate::{
     PredictionError,
-    hypotheses::{self, HypothesisType},
+    hypotheses::{self, HypothesisBuilderType, HypothesisType},
     player_action::PlayerAction,
 };
 
@@ -121,17 +121,47 @@ pub trait Hypothesis {
         TLog: ::log::Log;
 }
 
+#[enum_delegate::register]
+pub trait HypothesisBuilder {
+    fn build<TLog>(
+        self,
+        game_state: &GameState,
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> HypothesisReference
+    where
+        TLog: Log;
+}
+
+pub trait HypothesisInput: Eq {}
+
 pub struct HypothesisRegistrar<'a, TLog>
 where
     TLog: Log,
 {
     log: &'a TLog,
-    registrations: Vec<HypothesisType>,
+    builders: Vec<HypothesisBuilderType>,
+    dependencies: Vec<Vec<HypothesisReference>>,
 }
 
 pub struct Depth {
     depth: usize,
     reference: HypothesisReference,
+}
+
+impl HypothesisReference {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+
+    pub fn unresolved() -> Self {
+        Self(usize::MAX)
+    }
+}
+
+impl Default for HypothesisReference {
+    fn default() -> Self {
+        Self::unresolved()
+    }
 }
 
 impl Display for HypothesisReference {
@@ -580,54 +610,86 @@ impl<'a, TLog> HypothesisRegistrar<'a, TLog>
 where
     TLog: Log,
 {
-    pub fn register<HypothesisImpl>(&mut self, hypothesis: HypothesisImpl) -> HypothesisReference
+    fn new(log: &'a TLog) -> Self {
+        Self {
+            log,
+            builders: Vec::new(),
+            dependencies: Vec::new(),
+        }
+    }
+
+    pub fn register<HypothesisBuilderImpl>(
+        &mut self,
+        builder: HypothesisBuilderImpl,
+    ) -> HypothesisReference
     where
-        HypothesisImpl: Hypothesis + 'static,
-        HypothesisType: From<HypothesisImpl>,
+        HypothesisBuilderImpl: HypothesisBuilder + 'static,
+        HypothesisBuilderType: From<HypothesisBuilderImpl>,
     {
-        let hypothesis = hypothesis.into();
-        for (index, existing_container) in self.registrations.iter().enumerate() {
-            if hypothesis == *existing_container {
+        let builder = builder.into();
+        for (index, existing_builder) in self.builders.iter().enumerate() {
+            if builder == *existing_builder {
                 return HypothesisReference(index);
             }
         }
 
-        let reference = HypothesisReference(self.registrations.len());
-        info!(logger: self.log, "Registered {}: {}", reference, hypothesis);
+        let reference = HypothesisReference(self.builders.len());
+        info!(logger: self.log, "- Registered dependency {}",  reference);
 
-        self.registrations.push(hypothesis);
+        self.builders.push(builder);
         reference
     }
-}
 
-impl HypothesisReference {
-    fn clone(&self) -> Self {
-        Self(self.0)
+    fn run<HypothesisBuilderImpl>(
+        mut self,
+        mut builder: HypothesisBuilderImpl,
+    ) -> HypothesisReference
+    where
+        HypothesisBuilderImpl: HypothesisBuilder + 'static,
+        HypothesisBuilderType: From<HypothesisBuilderImpl>,
+    {
+        let mut current_reference = self.builders.len();
+        let reference = HypothesisReference(current_reference);
+        info!(logger: self.log, "Evaluating dependencies of root hypothesis {}", reference);
+        self.builders.push(builder);
+
+        let mut root = true;
+        loop {
+            let current_hypothesis = &mut self.builders[current_reference];
+            if root {
+                root = false;
+            } else {
+                info!(logger: self.log, "Evaluating dependencies of {}: {}", HypothesisReference(current_reference), builder);
+            }
+
+            current_hypothesis.resolve_references(self);
+
+            current_reference = current_reference + 1;
+            if current_reference = self.builders.len() {
+                break;
+            }
+        }
     }
 }
 
 pub fn evaluate<TLog, F1, F2>(
     game_state: &GameState,
-    hypothesis_factory: F1,
+    initial_hypothesis: HypothesisType,
     log: &TLog,
-    mut stepper: Option<F2>,
+    mut stepper: Option<FGraph>,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
     TLog: Log,
-    F1: FnOnce(&GameState, &mut HypothesisRegistrar<TLog>) -> HypothesisReference,
-    F2: FnMut(&mut ForceGraph<GraphNodeData>),
+    FGraph: FnMut(&mut ForceGraph<GraphNodeData>),
 {
-    let mut registrar = HypothesisRegistrar {
-        log,
-        registrations: Vec::new(),
-    };
+    let mut registrar = HypothesisRegistrar::new();
 
-    info!(logger: log, target: "evaluate", "Execute Hypothesis factory");
-    let root: HypothesisReference = hypothesis_factory(game_state, &mut registrar);
+    info!(logger: log, target: "evaluate", "Evaluate dependencies");
+    let root: HypothesisReference = registrar.run_root(initial_hypothesis);
 
-    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", registrar.registrations.len(), registrar.registrations[root.0]);
-    let hypotheses: Vec<RefCell<HypothesisType>> = registrar
-        .registrations
+    let registrations = registrar.finalize();
+    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", registrations.len(), registrations[root.0]);
+    let hypotheses: Vec<RefCell<HypothesisType>> = registrations
         .into_iter()
         .map(|hypothesis| RefCell::new(hypothesis))
         .collect();

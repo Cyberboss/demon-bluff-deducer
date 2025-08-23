@@ -11,11 +11,11 @@ use crate::{
         corruption_in_play::CorruptionInPlayHypothesis, execute_index::ExecuteIndexHypothesis,
         gather_information::GatherInformationHypothesis, is_corrupt::IsCorruptHypothesis,
         is_evil::IsEvilHypothesis, is_truthful::IsTruthfulHypothesis,
-        need_testimony::NeedTestimonyHypothesis, negate::NegateHypothesis,
-        revealing_is_safe::RevealingIsSafeHypothesis, testimony::TestimonyHypothesis,
-        testimony_expression::TestimonyExpressionHypothesis,
+        master::MasterHypothesisBuilder, need_testimony::NeedTestimonyHypothesis,
+        negate::NegateHypothesis, revealing_is_safe::RevealingIsSafeHypothesis,
+        testimony::TestimonyHypothesis, testimony_expression::TestimonyExpressionHypothesis,
     },
-    hypothesis::Hypothesis,
+    hypothesis::{Hypothesis, HypothesisBuilder},
 };
 
 mod ability;
@@ -36,8 +36,14 @@ mod revealing_is_safe;
 mod testimony;
 mod testimony_expression;
 
+#[enum_delegate::implement(HypothesisBuilder)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum HypothesisBuilderType {
+    Master(MasterHypothesisBuilder),
+}
+
 #[enum_delegate::implement(Hypothesis)]
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub enum HypothesisType {
     Master(MasterHypothesis),
     Reveal(RevealHypothesis),
