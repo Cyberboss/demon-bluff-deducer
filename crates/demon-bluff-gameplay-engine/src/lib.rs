@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate enum_display_derive;
+
 pub mod affect;
 pub mod game_state;
 pub mod testimony;

@@ -6,9 +6,16 @@ use master::MasterHypothesis;
 use reveal::RevealHypothesis;
 use reveal_index::RevealIndexHypothesis;
 
-use crate::{hypotheses::revealing_is_safe::RevealingIsSafeHypothesis, hypothesis::Hypothesis};
+use crate::{
+    hypotheses::{
+        archetype_in_play::ArchetypeInPlayHypothesis, need_testimony::NeedTestimonyHypothesis,
+        revealing_is_safe::RevealingIsSafeHypothesis,
+    },
+    hypothesis::Hypothesis,
+};
 
 mod ability;
+mod archetype_in_play;
 mod execute;
 pub(crate) mod master;
 mod need_testimony;
@@ -26,6 +33,7 @@ pub enum HypothesisType {
     Ability(AbilityHypothesis),
     RevealingIsSafe(RevealingIsSafeHypothesis),
     NeedTestimony(NeedTestimonyHypothesis),
+    ArchetypeInPlay(ArchetypeInPlayHypothesis),
 }
 
 impl Display for HypothesisType {

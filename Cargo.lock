@@ -340,6 +340,7 @@ dependencies = [
 name = "demon-bluff-gameplay-engine"
 version = "0.1.0"
 dependencies = [
+ "enum-display-derive",
  "itertools 0.14.0",
  "thiserror 2.0.16",
 ]
@@ -361,6 +362,17 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
+name = "enum-display-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f16ef37b2a9b242295d61a154ee91ae884afff6b8b933b486b12481cc58310ca"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "enum_delegate"

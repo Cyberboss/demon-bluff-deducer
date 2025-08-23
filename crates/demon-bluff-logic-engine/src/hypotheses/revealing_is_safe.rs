@@ -7,7 +7,10 @@ use crate::hypothesis::{
 };
 
 #[derive(Eq, PartialEq, Debug)]
-pub struct RevealingIsSafeHypothesis {}
+pub struct RevealingIsSafeHypothesis {
+    lilis_danger_hypothesis: HypothesisReference,
+    baker_unrevealed_hypothesis: HypothesisReference,
+}
 
 impl RevealingIsSafeHypothesis {
     pub fn create<TLog>(
@@ -17,7 +20,7 @@ impl RevealingIsSafeHypothesis {
     where
         TLog: Log,
     {
-        registrar.register(Self {})
+        todo!()
     }
 }
 
