@@ -2,6 +2,7 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
+    hypotheses::revealing_is_safe::RevealingIsSafeHypothesis,
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
         HypothesisRepository, HypothesisResult, HypothesisReturn,
@@ -12,15 +13,21 @@ use crate::{
 #[derive(Eq, PartialEq, Debug)]
 pub struct RevealIndexHypothesis {
     index: VillagerIndex,
+    revealing_is_safe_hypothesis: HypothesisReference,
 }
 
 impl RevealIndexHypothesis {
     pub fn create(
-        _: &GameState,
-        registrar: &mut HypothesisRegistrar,
+        game_state: &GameState,
+        mut registrar: &mut HypothesisRegistrar,
         index: VillagerIndex,
     ) -> HypothesisReference {
-        registrar.register(Self { index })
+        let revealing_is_safe_hypothesis =
+            RevealingIsSafeHypothesis::create(game_state, &mut registrar);
+        registrar.register(Self {
+            index,
+            revealing_is_safe_hypothesis,
+        })
     }
 }
 
@@ -39,7 +46,20 @@ impl Hypothesis for RevealIndexHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::Conclusive(
+        let mut evaluator = repository.require_sub_evaluation(0.0);
+
+        match evaluator.sub_evaluate(&self.revealing_is_safe_hypothesis) {
+            HypothesisResult::Pending(fitness_and_action) => todo!(),
+            HypothesisResult::Conclusive(fitness_and_action) => {
+                if fitness_and_action.is_certain() {
+                    return evaluator.create_return(HypothesisResult::Conclusive(
+                        FitnessAndAction::certainty(PlayerAction::TryReveal(self.index.clone())),
+                    ));
+                }
+            }
+        }
+
+        evaluator.create_return(HypothesisResult::Conclusive(
             FitnessAndAction::unimplemented(),
         ))
     }

@@ -6,13 +6,14 @@ use master::MasterHypothesis;
 use reveal::RevealHypothesis;
 use reveal_index::RevealIndexHypothesis;
 
-use crate::hypothesis::Hypothesis;
+use crate::{hypotheses::revealing_is_safe::RevealingIsSafeHypothesis, hypothesis::Hypothesis};
 
 mod ability;
 mod execute;
 pub(crate) mod master;
 mod reveal;
 mod reveal_index;
+mod revealing_is_safe;
 
 #[enum_delegate::implement(Hypothesis)]
 #[derive(Eq, PartialEq, Debug)]
@@ -22,6 +23,7 @@ pub enum HypothesisType {
     RevealIndex(RevealIndexHypothesis),
     Execute(ExecuteHypothesis),
     Ability(AbilityHypothesis),
+    RevealingIsSafe(RevealingIsSafeHypothesis),
 }
 
 impl Display for HypothesisType {

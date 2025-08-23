@@ -129,7 +129,7 @@ pub struct Depth {
 
 impl Display for HypothesisReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "H-{}", self.0 + 1)
     }
 }
 
@@ -245,7 +245,7 @@ impl Display for Depth {
             write!(f, "  ")?
         }
 
-        write!(f, "- [{}]", self.reference.0)
+        write!(f, "- [{}]", self.reference)
     }
 }
 
@@ -271,6 +271,14 @@ impl FitnessAndAction {
             action: HashSet::new(),
             fitness: FITNESS_UNIMPLEMENTED,
         }
+    }
+
+    pub fn certainty(action: PlayerAction) -> Self {
+        Self::new(1.0, action)
+    }
+
+    pub fn is_certain(&self) -> bool {
+        self.fitness == 1.0
     }
 
     pub fn fitness(&self) -> f64 {
