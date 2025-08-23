@@ -8,7 +8,8 @@ use reveal_index::RevealIndexHypothesis;
 
 use crate::{
     hypotheses::{
-        archetype_in_play::ArchetypeInPlayHypothesis, need_testimony::NeedTestimonyHypothesis,
+        archetype_in_play::ArchetypeInPlayHypothesis, execute_index::ExecuteIndexHypothesis,
+        is_evil::IsEvilHypothesis, need_testimony::NeedTestimonyHypothesis,
         revealing_is_safe::RevealingIsSafeHypothesis,
     },
     hypothesis::Hypothesis,
@@ -17,6 +18,8 @@ use crate::{
 mod ability;
 mod archetype_in_play;
 mod execute;
+mod execute_index;
+mod is_evil;
 pub(crate) mod master;
 mod need_testimony;
 mod reveal;
@@ -34,6 +37,8 @@ pub enum HypothesisType {
     RevealingIsSafe(RevealingIsSafeHypothesis),
     NeedTestimony(NeedTestimonyHypothesis),
     ArchetypeInPlay(ArchetypeInPlayHypothesis),
+    ExecuteIndex(ExecuteIndexHypothesis),
+    IsEvil(IsEvilHypothesis),
 }
 
 impl Display for HypothesisType {

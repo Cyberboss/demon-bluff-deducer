@@ -7,7 +7,7 @@ use crate::{
     hypotheses::execute::ExecuteHypothesis,
     hypothesis::{
         Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-        HypothesisReturn, fittest_result,
+        HypothesisReturn, or_result,
     },
 };
 
@@ -56,8 +56,8 @@ impl Hypothesis for MasterHypothesis {
     {
         let mut evaluator = repository.require_sub_evaluation(0.0);
         let mut result = evaluator.sub_evaluate(&self.ability_hypothesis);
-        result = fittest_result(evaluator.sub_evaluate(&self.reveal_hypothesis), result);
-        result = fittest_result(evaluator.sub_evaluate(&self.execute_hypothesis), result);
+        result = or_result(evaluator.sub_evaluate(&self.reveal_hypothesis), result);
+        result = or_result(evaluator.sub_evaluate(&self.execute_hypothesis), result);
         evaluator.create_return(result)
     }
 }

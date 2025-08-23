@@ -1,4 +1,4 @@
-use demon_bluff_gameplay_engine::game_state::GameState;
+use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
 use crate::hypothesis::{
@@ -7,23 +7,26 @@ use crate::hypothesis::{
 };
 
 #[derive(Eq, PartialEq, Debug)]
-pub struct RevealingIsSafeHypothesis {}
+pub struct IsEvilHypothesis {
+    index: VillagerIndex,
+}
 
-impl RevealingIsSafeHypothesis {
+impl IsEvilHypothesis {
     pub fn create<TLog>(
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
+        mut registrar: &mut HypothesisRegistrar<TLog>,
+        index: VillagerIndex,
     ) -> HypothesisReference
     where
         TLog: Log,
     {
-        registrar.register(Self {})
+        registrar.register(Self { index })
     }
 }
 
-impl Hypothesis for RevealingIsSafeHypothesis {
+impl Hypothesis for IsEvilHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Revealing Villagers is Safe")
+        write!(f, "{} is evil", self.index)
     }
 
     fn evaluate<TLog>(

@@ -135,7 +135,7 @@ pub struct Depth {
 
 impl Display for HypothesisReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "H-{}", self.0 + 1)
+        write!(f, "H-{:05}", self.0 + 1)
     }
 }
 
@@ -402,7 +402,7 @@ where
 
         let mut hypothesis = self.inner.hypotheses[reference.0].borrow_mut();
 
-        info!(logger: self.inner.log, "{} Entering {}", self.inner.depth(), hypothesis);
+        info!(logger: self.inner.log, "{} Entering: {}", self.inner.depth(), hypothesis);
         let repository = HypothesisRepository {
             inner: self.inner.share(),
         };
@@ -748,13 +748,10 @@ where
     }
 }
 
-pub fn fittest_result(
-    sub_hypothesis_result: HypothesisResult,
-    current_result: HypothesisResult,
-) -> HypothesisResult {
+pub fn and_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
     let new_fitness_and_action;
     let must_be_pending;
-    match sub_hypothesis_result {
+    match lhs {
         HypothesisResult::Pending(fitness_and_action) => {
             must_be_pending = true;
             new_fitness_and_action = fitness_and_action
@@ -764,7 +761,36 @@ pub fn fittest_result(
             new_fitness_and_action = fitness_and_action
         }
     }
-    match current_result {
+    match rhs {
+        HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
+            mult_fitness(current_fitness_and_action, new_fitness_and_action),
+        ),
+        HypothesisResult::Conclusive(current_fitness_and_action) => {
+            let merged = mult_fitness(current_fitness_and_action, new_fitness_and_action);
+
+            if must_be_pending {
+                HypothesisResult::Pending(merged)
+            } else {
+                HypothesisResult::Conclusive(merged)
+            }
+        }
+    }
+}
+
+pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
+    let new_fitness_and_action;
+    let must_be_pending;
+    match lhs {
+        HypothesisResult::Pending(fitness_and_action) => {
+            must_be_pending = true;
+            new_fitness_and_action = fitness_and_action
+        }
+        HypothesisResult::Conclusive(fitness_and_action) => {
+            must_be_pending = false;
+            new_fitness_and_action = fitness_and_action
+        }
+    }
+    match rhs {
         HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
             max_fitness(current_fitness_and_action, new_fitness_and_action),
         ),
@@ -792,4 +818,13 @@ fn max_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAc
 
         lhs
     }
+}
+
+fn mult_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
+    for rh_action in rhs.action {
+        lhs.action.insert(rh_action);
+    }
+
+    lhs.fitness = lhs.fitness * rhs.fitness;
+    lhs
 }

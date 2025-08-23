@@ -7,7 +7,7 @@ use crate::{
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, fittest_result,
+        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
     player_action::PlayerAction,
 };
@@ -42,7 +42,7 @@ impl RevealIndexHypothesis {
 
 impl Hypothesis for RevealIndexHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Reveal Villager #{}", self.index.0 + 1)
+        write!(f, "Reveal {}", self.index)
     }
 
     fn evaluate<TLog>(
@@ -71,7 +71,7 @@ impl Hypothesis for RevealIndexHypothesis {
 
         let info_desire_result = evaluator.sub_evaluate(&self.need_testimony_hypothesis);
 
-        let fittest = fittest_result(reveal_result, info_desire_result);
+        let fittest = or_result(reveal_result, info_desire_result);
 
         evaluator.create_return(fittest)
     }

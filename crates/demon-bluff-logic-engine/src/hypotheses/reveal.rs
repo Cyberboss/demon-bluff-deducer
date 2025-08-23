@@ -8,14 +8,14 @@ use log::{Log, info};
 
 use crate::hypothesis::{
     Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn, fittest_result,
+    HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
 };
 
 use super::reveal_index::RevealIndexHypothesis;
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct RevealHypothesis {
-    revealable_indexes: HashMap<VillagerIndex, HypothesisReference>,
+    revealable_hypotheses: Vec<HypothesisReference>,
 }
 
 impl RevealHypothesis {
@@ -26,26 +26,29 @@ impl RevealHypothesis {
     where
         TLog: Log,
     {
-        let mut revealable_indexes = HashMap::new();
+        let mut revealable_hypotheses = Vec::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(_) | Villager::Confirmed(_) => {}
             Villager::Hidden(hidden_villager) => {
                 if !hidden_villager.cant_reveal() {
-                    revealable_indexes.insert(
-                        villager_index.clone(),
-                        RevealIndexHypothesis::create(game_state, registrar, villager_index),
-                    );
+                    revealable_hypotheses.push(RevealIndexHypothesis::create(
+                        game_state,
+                        registrar,
+                        villager_index,
+                    ));
                 }
             }
         });
 
-        registrar.register(Self { revealable_indexes })
+        registrar.register(Self {
+            revealable_hypotheses,
+        })
     }
 }
 
 impl Hypothesis for RevealHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Reveal Descision")
+        write!(f, "Reveal Decision")
     }
 
     fn evaluate<'a, 'b, TLog>(
@@ -58,17 +61,17 @@ impl Hypothesis for RevealHypothesis {
     where
         TLog: Log,
     {
-        if self.revealable_indexes.is_empty() {
+        if self.revealable_hypotheses.is_empty() {
             return repository
                 .create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
         }
 
         let mut evaluator = repository.require_sub_evaluation(0.0);
         let mut result = None;
-        for (index, reference) in self.revealable_indexes.iter() {
+        for reference in &self.revealable_hypotheses {
             let sub_evaluation = evaluator.sub_evaluate(reference);
             result = Some(match result {
-                Some(existing_fitness) => fittest_result(sub_evaluation, existing_fitness),
+                Some(existing_fitness) => or_result(sub_evaluation, existing_fitness),
                 None => sub_evaluation,
             })
         }
