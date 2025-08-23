@@ -7,7 +7,7 @@ use std::{
 
 use demon_bluff_gameplay_engine::game_state::{self, GameState};
 use force_graph::{DefaultNodeIdx, ForceGraph};
-use log::{Log, error, info};
+use log::{Log, error, info, warn};
 use thiserror::Error;
 
 use crate::{
@@ -15,6 +15,8 @@ use crate::{
     hypotheses::{self, HypothesisType},
     player_action::PlayerAction,
 };
+
+const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 1000;
 
 const FITNESS_UNIMPLEMENTED: f64 = 0.123456789;
 
@@ -586,30 +588,34 @@ where
         .map(|hypothesis| RefCell::new(hypothesis))
         .collect();
 
-    let mut data = Vec::with_capacity(hypotheses.len());
+    let mut previous_results = None;
     let mut dependencies = Vec::with_capacity(hypotheses.len());
     for _ in 0..hypotheses.len() {
-        data.push(None);
         dependencies.push(HashSet::new());
     }
 
-    let data = RefCell::new(IterationData { results: data });
     let dependencies = RefCell::new(dependencies);
 
     let mut break_at = None;
 
     let mut iteration = 0;
+    let mut stability_iteration = 0;
     loop {
         iteration = iteration + 1;
         info!(logger: log, "Iteration: {}", iteration);
 
+        let mut data = Vec::with_capacity(hypotheses.len());
+        for _ in 0..hypotheses.len() {
+            data.push(None);
+        }
+        let data = RefCell::new(IterationData { results: data });
         let cycles = RefCell::new(HashSet::new());
         let invocation = HypothesisInvocation::new(StackData::new(
             game_state,
             log,
             &hypotheses,
             &cycles,
-            None,
+            previous_results.as_ref(),
             &dependencies,
             &data,
             &break_at,
@@ -618,8 +624,33 @@ where
         ));
 
         let result = invocation.enter();
+
+        break_at = None;
+
         match result {
-            HypothesisResult::Pending(fitness_and_action) => todo!(),
+            HypothesisResult::Pending(fitness_and_action) => {
+                let data = data.borrow();
+                if let Some(previous_results) = &previous_results {
+                    let mut graph_stable = *previous_results == *data;
+
+                    stability_iteration = stability_iteration + 1;
+                    if !graph_stable
+                        && stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE
+                    {
+                        warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for cycle breaking", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
+                        graph_stable = true;
+                    }
+
+                    if graph_stable {
+                        stability_iteration = 0;
+                        let cycles = cycles.borrow();
+                        info!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
+                        todo!("Find best point in a cycle to break");
+                    }
+                }
+
+                previous_results = Some(data.clone());
+            }
             HypothesisResult::Conclusive(fitness_and_action) => {
                 if fitness_and_action.action.len() == 0 {
                     error!(logger: log, "Obtained conclusive result with no actions!");
