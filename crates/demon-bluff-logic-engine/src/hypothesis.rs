@@ -792,10 +792,10 @@ pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResu
     }
     match rhs {
         HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
-            max_fitness(current_fitness_and_action, new_fitness_and_action),
+            or_fitness_and_merge(current_fitness_and_action, new_fitness_and_action),
         ),
         HypothesisResult::Conclusive(current_fitness_and_action) => {
-            let merged = max_fitness(current_fitness_and_action, new_fitness_and_action);
+            let merged = or_fitness_and_merge(current_fitness_and_action, new_fitness_and_action);
 
             if must_be_pending {
                 HypothesisResult::Pending(merged)
@@ -806,7 +806,39 @@ pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResu
     }
 }
 
-fn max_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
+pub fn merge_and_use_fittest_value(
+    lhs: HypothesisResult,
+    rhs: HypothesisResult,
+) -> HypothesisResult {
+    let new_fitness_and_action;
+    let must_be_pending;
+    match lhs {
+        HypothesisResult::Pending(fitness_and_action) => {
+            must_be_pending = true;
+            new_fitness_and_action = fitness_and_action
+        }
+        HypothesisResult::Conclusive(fitness_and_action) => {
+            must_be_pending = false;
+            new_fitness_and_action = fitness_and_action
+        }
+    }
+    match rhs {
+        HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
+            max_fitness_and_merge(current_fitness_and_action, new_fitness_and_action),
+        ),
+        HypothesisResult::Conclusive(current_fitness_and_action) => {
+            let merged = max_fitness_and_merge(current_fitness_and_action, new_fitness_and_action);
+
+            if must_be_pending {
+                HypothesisResult::Pending(merged)
+            } else {
+                HypothesisResult::Conclusive(merged)
+            }
+        }
+    }
+}
+
+fn max_fitness_and_merge(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
     if lhs.fitness > rhs.fitness {
         lhs
     } else if rhs.fitness > lhs.fitness {
@@ -825,6 +857,17 @@ fn mult_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndA
         lhs.action.insert(rh_action);
     }
 
+    // P(A and B) = P(A) * P(B)
     lhs.fitness = lhs.fitness * rhs.fitness;
+    lhs
+}
+
+fn or_fitness_and_merge(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
+    for rh_action in rhs.action {
+        lhs.action.insert(rh_action);
+    }
+
+    // P(A or B) = P(A) + P(B) - P(A and B)
+    lhs.fitness = lhs.fitness + rhs.fitness - (lhs.fitness * rhs.fitness);
     lhs
 }

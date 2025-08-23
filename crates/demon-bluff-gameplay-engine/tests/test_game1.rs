@@ -43,10 +43,10 @@ pub fn test_game_1() {
             VillagerIndex(1),
             Some(VillagerInstance::new(
                 VillagerArchetype::GoodVillager(GoodVillager::Medium),
-                Some(Expression::Unary(Testimony::Role(vec![RoleClaim::new(
+                Some(Expression::Unary(Testimony::Role(RoleClaim::new(
                     VillagerIndex(1),
                     VillagerArchetype::GoodVillager(GoodVillager::Architect),
-                )]))),
+                )))),
             )),
         )))
         .expect("malformed game step??");
@@ -56,10 +56,10 @@ pub fn test_game_1() {
         VillagerIndex(1),
         Some(VillagerInstance::new(
             VillagerArchetype::GoodVillager(GoodVillager::Medium),
-            Some(Expression::Unary(Testimony::Role(vec![RoleClaim::new(
+            Some(Expression::Unary(Testimony::Role(RoleClaim::new(
                 VillagerIndex(2),
                 VillagerArchetype::GoodVillager(GoodVillager::Architect),
-            )]))),
+            )))),
         )),
     )));
 
@@ -164,7 +164,7 @@ pub fn test_game_1() {
             VillagerIndex(5),
             Some(VillagerInstance::new(
                 VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
-                Some(Expression::Unary(Testimony::Good(vec![VillagerIndex(0)]))),
+                Some(Expression::Unary(Testimony::Good(VillagerIndex(0)))),
             )),
         )))
         .expect("malformed game step??");
@@ -205,9 +205,7 @@ pub fn test_game_1() {
             VillagerIndex(6),
             Some(VillagerInstance::new(
                 VillagerArchetype::Outcast(Outcast::Bombardier),
-                Some(Expression::Unary(Testimony::SelfDestruct(vec![
-                    VillagerIndex(6),
-                ]))),
+                Some(Expression::Unary(Testimony::SelfDestruct(VillagerIndex(6)))),
             )),
         )))
         .expect("malformed game step??");

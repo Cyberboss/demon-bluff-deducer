@@ -9,8 +9,9 @@ use reveal_index::RevealIndexHypothesis;
 use crate::{
     hypotheses::{
         archetype_in_play::ArchetypeInPlayHypothesis, execute_index::ExecuteIndexHypothesis,
-        is_evil::IsEvilHypothesis, need_testimony::NeedTestimonyHypothesis,
-        revealing_is_safe::RevealingIsSafeHypothesis,
+        is_evil::IsEvilHypothesis, is_truthful::IsTruthfulHypothesis,
+        need_testimony::NeedTestimonyHypothesis, revealing_is_safe::RevealingIsSafeHypothesis,
+        testimony::TestimonyHypothesis, testimony_expression::TestimonyExpressionHypothesis,
     },
     hypothesis::Hypothesis,
 };
@@ -20,11 +21,14 @@ mod archetype_in_play;
 mod execute;
 mod execute_index;
 mod is_evil;
+mod is_truthful;
 pub(crate) mod master;
 mod need_testimony;
 mod reveal;
 mod reveal_index;
 mod revealing_is_safe;
+mod testimony;
+mod testimony_expression;
 
 #[enum_delegate::implement(Hypothesis)]
 #[derive(Eq, PartialEq, Debug)]
@@ -39,6 +43,9 @@ pub enum HypothesisType {
     ArchetypeInPlay(ArchetypeInPlayHypothesis),
     ExecuteIndex(ExecuteIndexHypothesis),
     IsEvil(IsEvilHypothesis),
+    IsTruthful(IsTruthfulHypothesis),
+    TestimonyExpression(TestimonyExpressionHypothesis),
+    Testimony(TestimonyHypothesis),
 }
 
 impl Display for HypothesisType {

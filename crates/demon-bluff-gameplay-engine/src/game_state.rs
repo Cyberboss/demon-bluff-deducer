@@ -277,6 +277,10 @@ impl GameState {
         })
     }
 
+    pub fn villager(&self, index: &VillagerIndex) -> &Villager {
+        &self.villagers[index.0]
+    }
+
     pub fn iter_villagers<'a, F>(&'a self, mut f: F)
     where
         F: FnMut(VillagerIndex, &'a Villager),
