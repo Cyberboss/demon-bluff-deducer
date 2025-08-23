@@ -466,6 +466,11 @@ where
                 .is_some()
             {
                 info!(logger: self.inner.log, "{} Skipping re-evaluation of hypothesis: {}", self.inner.depth(), hypothesis_reference);
+            } else if let Some(previous_data) = self.inner.previous_data
+                && let Some(HypothesisResult::Conclusive(_)) =
+                    &previous_data.results[hypothesis_reference.0]
+            {
+                info!(logger: self.inner.log, "{} Skipping previously concluded hypothesis: {}", self.inner.depth(), hypothesis_reference);
             } else {
                 match self.inner.hypotheses[hypothesis_reference.0].try_borrow_mut() {
                     Ok(next_reference) => {
