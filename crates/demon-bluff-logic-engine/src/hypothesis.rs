@@ -16,6 +16,8 @@ use crate::{
     player_action::PlayerAction,
 };
 
+const FITNESS_UNIMPLEMENTED: f64 = 0.123456789;
+
 /// A reference to a `Hypothesis` in the graph.
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct HypothesisReference(usize);
@@ -248,6 +250,13 @@ impl FitnessAndAction {
         }
     }
 
+    pub fn unimplemented() -> Self {
+        Self {
+            action: HashSet::new(),
+            fitness: FITNESS_UNIMPLEMENTED,
+        }
+    }
+
     pub fn fitness(&self) -> f64 {
         self.fitness
     }
@@ -261,6 +270,10 @@ impl Display for FitnessAndAction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.fitness == 0.0 {
             return write!(f, "Impossible");
+        }
+
+        if self.fitness == FITNESS_UNIMPLEMENTED {
+            return write!(f, "UNIMPLEMENTED");
         }
 
         write!(f, "{:.2}% - ", self.fitness * 100.0)?;

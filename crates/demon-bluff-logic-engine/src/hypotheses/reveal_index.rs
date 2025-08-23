@@ -39,9 +39,8 @@ impl Hypothesis for RevealIndexHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::new(
-            1.0,
-            PlayerAction::TryReveal(self.index.clone()),
-        )))
+        repository.create_return(HypothesisResult::Conclusive(
+            FitnessAndAction::unimplemented(),
+        ))
     }
 }

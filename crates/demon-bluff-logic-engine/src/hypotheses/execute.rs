@@ -30,6 +30,8 @@ impl Hypothesis for ExecuteHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()))
+        repository.create_return(HypothesisResult::Conclusive(
+            FitnessAndAction::unimplemented(),
+        ))
     }
 }

@@ -35,6 +35,8 @@ impl Hypothesis for AbilityHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()))
+        repository.create_return(HypothesisResult::Conclusive(
+            FitnessAndAction::unimplemented(),
+        ))
     }
 }
