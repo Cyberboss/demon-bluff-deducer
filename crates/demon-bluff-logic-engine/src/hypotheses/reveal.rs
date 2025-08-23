@@ -45,7 +45,7 @@ impl RevealHypothesis {
 
 impl Hypothesis for RevealHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Reveal a Villager")
+        write!(f, "Reveal Descision")
     }
 
     fn evaluate<'a, 'b, TLog>(

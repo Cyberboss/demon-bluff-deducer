@@ -26,7 +26,7 @@ impl NeedTestimonyHypothesis {
 
 impl Hypothesis for NeedTestimonyHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Revealing Villagers is Safe")
+        write!(f, "Need Testimony of {}", self.index)
     }
 
     fn evaluate<TLog>(
