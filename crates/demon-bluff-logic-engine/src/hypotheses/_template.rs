@@ -7,20 +7,29 @@ use crate::hypothesis::{
 };
 
 #[derive(Eq, PartialEq, Debug)]
+pub struct TemplateHypothesisBuilder {}
+
+#[derive(Eq, PartialEq, Debug)]
 pub struct TemplateHypothesis {
     sub_hypothesis: HypothesisReference,
 }
 
-impl TemplateHypothesis {
-    pub fn create<TLog>(
-        _: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+impl HypothesisBuilder for TemplateHypothesisBuilder {
+    type HypothesisImpl = TemplateHypothesis;
+
+    fn build<TLog>(
+        self,
+        _: &::demon_bluff_gameplay_engine::game_state::GameState,
+        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis + 'static,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
-        let sub_hypothesis = TemplateHypothesis::create(game_state, &mut registrar);
-        registrar.register(Self { sub_hypothesis })
+        Self::HypothesisImpl {
+            sub_hypothesis: registrar.register(TemplateHypothesisBuilder {}),
+        }
     }
 }
 

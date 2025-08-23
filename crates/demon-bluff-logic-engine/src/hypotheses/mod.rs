@@ -7,13 +7,20 @@ use reveal_index::RevealIndexHypothesis;
 
 use crate::{
     hypotheses::{
-        ability::AbilityHypothesis, archetype_in_play::ArchetypeInPlayHypothesis,
-        corruption_in_play::CorruptionInPlayHypothesis, execute_index::ExecuteIndexHypothesis,
-        gather_information::GatherInformationHypothesis, is_corrupt::IsCorruptHypothesis,
-        is_evil::IsEvilHypothesis, is_truthful::IsTruthfulHypothesis,
-        master::MasterHypothesisBuilder, need_testimony::NeedTestimonyHypothesis,
-        negate::NegateHypothesis, revealing_is_safe::RevealingIsSafeHypothesis,
-        testimony::TestimonyHypothesis, testimony_expression::TestimonyExpressionHypothesis,
+        ability::{AbilityHypothesis, AbilityHypothesisBuilder},
+        archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
+        corruption_in_play::{CorruptionInPlayHypothesis, CorruptionInPlayHypothesisBuilder},
+        execute_index::ExecuteIndexHypothesis,
+        gather_information::GatherInformationHypothesis,
+        is_corrupt::IsCorruptHypothesis,
+        is_evil::IsEvilHypothesis,
+        is_truthful::IsTruthfulHypothesis,
+        master::MasterHypothesisBuilder,
+        need_testimony::NeedTestimonyHypothesis,
+        negate::NegateHypothesis,
+        revealing_is_safe::RevealingIsSafeHypothesis,
+        testimony::TestimonyHypothesis,
+        testimony_expression::TestimonyExpressionHypothesis,
     },
     hypothesis::{Hypothesis, HypothesisBuilder},
 };
@@ -40,6 +47,22 @@ mod testimony_expression;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum HypothesisBuilderType {
     Master(MasterHypothesisBuilder),
+    Reveal(RevealHypothesisBuilder),
+    RevealIndex(RevealIndexHypothesisBuilder),
+    Execute(ExecuteHypothesisBuilder),
+    RevealingIsSafe(RevealingIsSafeHypothesisBuilder),
+    NeedTestimony(NeedTestimonyHypothesisBuilder),
+    ArchetypeInPlay(ArchetypeInPlayHypothesisBuilder),
+    ExecuteIndex(ExecuteIndexHypothesisBuilder),
+    IsEvil(IsEvilHypothesisBuilder),
+    IsTruthful(IsTruthfulHypothesisBuilder),
+    TestimonyExpression(TestimonyExpressionHypothesisBuilder),
+    Testimony(TestimonyHypothesisBuilder),
+    GatherInformation(GatherInformationHypothesisBuilder),
+    Ability(AbilityHypothesisBuilder),
+    Negate(NegateHypothesisBuilder),
+    IsCorrupt(IsCorruptHypothesisBuilder),
+    CorruptionInPlay(CorruptionInPlayHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]

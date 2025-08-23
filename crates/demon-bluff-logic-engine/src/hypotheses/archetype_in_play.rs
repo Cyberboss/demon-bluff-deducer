@@ -5,38 +5,51 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn,
+    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct ArchetypeInPlayHypothesisBuilder {
+    archetype: VillagerArchetype,
+}
+
+#[derive(Debug)]
 pub struct ArchetypeInPlayHypothesis {
     archetype: VillagerArchetype,
     counsellor_in_play_hypothesis: Option<HypothesisReference>,
 }
 
-impl ArchetypeInPlayHypothesis {
-    pub fn create<TLog>(
+impl ArchetypeInPlayHypothesisBuilder {
+    pub fn new(archetype: VillagerArchetype) -> Self {
+        Self { archetype }
+    }
+}
+
+impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
+    type HypothesisImpl = ArchetypeInPlayHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-        archetype: VillagerArchetype,
-    ) -> HypothesisReference
+    ) -> Self::HypothesisImpl
     where
         TLog: Log,
     {
-        let counsellor_in_play_hypothesis = match archetype {
-            VillagerArchetype::GoodVillager(_) => Some(ArchetypeInPlayHypothesis::create(
-                game_state,
-                registrar,
-                VillagerArchetype::Minion(Minion::Counsellor),
-            )),
+        let counsellor_in_play_hypothesis = match self.archetype {
+            VillagerArchetype::GoodVillager(_) => {
+                Some(registrar.register(ArchetypeInPlayHypothesisBuilder::new(
+                    VillagerArchetype::Minion(Minion::Counsellor),
+                )))
+            }
             _ => None,
         };
 
-        registrar.register(Self {
-            archetype,
+        Self::HypothesisImpl {
+            archetype: self.archetype,
             counsellor_in_play_hypothesis,
-        })
+        }
     }
 }
 

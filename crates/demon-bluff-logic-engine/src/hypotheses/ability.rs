@@ -1,17 +1,35 @@
-use std::collections::HashSet;
-
-use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
+use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
+    hypotheses::HypothesisType,
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRepository,
+        HypothesisResult, HypothesisReturn,
     },
-    player_action::{AbilityAttempt, PlayerAction},
 };
 
-#[derive(Eq, PartialEq, Debug, Default)]
+#[derive(Eq, PartialEq, Debug, Default, Clone)]
+pub struct AbilityHypothesisBuilder {}
+
+impl HypothesisBuilder for AbilityHypothesisBuilder {
+    type HypothesisImpl = AbilityHypothesis;
+
+    fn build<TLog>(
+        self,
+        _: &::demon_bluff_gameplay_engine::game_state::GameState,
+        _: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
+    where
+        Self::HypothesisImpl: Hypothesis + 'static,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
+    {
+        Self::HypothesisImpl {}
+    }
+}
+
+#[derive(Debug)]
 pub struct AbilityHypothesis {}
 
 impl Hypothesis for AbilityHypothesis {

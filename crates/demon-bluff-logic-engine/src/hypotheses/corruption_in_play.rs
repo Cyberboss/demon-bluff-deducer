@@ -6,43 +6,52 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    hypotheses::archetype_in_play::ArchetypeInPlayHypothesis,
+    hypotheses::{
+        HypothesisType,
+        archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
+    },
     hypothesis::{
-        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisReturn, or_result,
     },
 };
 
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
+pub struct CorruptionInPlayHypothesisBuilder {}
+
 // Evaluates if corruption is in play
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct CorruptionInPlayHypothesis {
     corrupting_archetype_hypotheses: Vec<HypothesisReference>,
 }
 
-impl CorruptionInPlayHypothesis {
-    pub fn create<TLog>(
-        game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
+    type HypothesisImpl = CorruptionInPlayHypothesis;
+
+    fn build<TLog>(
+        self,
+        game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
+        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis + 'static,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
         let mut corrupting_archetype_hypotheses = Vec::new();
         for archetype in VillagerArchetype::iter() {
             if let Some(Affect::Corrupt(_)) =
                 archetype.affects(game_state.total_villagers(), VillagerIndex(0))
             {
-                corrupting_archetype_hypotheses.push(ArchetypeInPlayHypothesis::create(
-                    game_state,
-                    &mut registrar,
-                    archetype,
-                ));
+                corrupting_archetype_hypotheses
+                    .push(registrar.register(ArchetypeInPlayHypothesisBuilder::new(archetype)));
             }
         }
 
-        registrar.register(Self {
+        Self::HypothesisImpl {
             corrupting_archetype_hypotheses,
-        })
+        }
     }
 }
 
