@@ -38,9 +38,16 @@ where
     log: &'a TLog,
     game_state: &'a GameState,
     hypotheses: &'a Vec<RefCell<HypothesisType>>,
-    data: &'a RefCell<Vec<Option<HypothesisData>>>,
+    dependencies: &'a RefCell<Vec<HashSet<HypothesisReference>>>,
+    previous_data: Option<&'a IterationData>,
+    current_data: &'a RefCell<IterationData>,
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
     break_at: &'a Option<HypothesisReference>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct IterationData {
+    results: Vec<Option<FitnessAndAction>>,
 }
 
 struct HypothesisInvocation<'a, TLog>
@@ -84,7 +91,7 @@ pub enum HypothesisResult {
 
 /// Contains the fitness score of a given action set.
 /// Fitness is the probability of how much a given `PlayerAction` will move the `GameState` towards a winning conclusion.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FitnessAndAction {
     action: HashSet<PlayerAction>,
     fitness: f64,
@@ -134,7 +141,9 @@ where
         game_state: &'a GameState,
         log: &'a TLog,
         hypotheses: &'a Vec<RefCell<HypothesisType>>,
-        data: &'a RefCell<Vec<Option<HypothesisData>>>,
+        previous_data: Option<&'a IterationData>,
+        dependencies: &'a RefCell<Vec<HashSet<HypothesisReference>>>,
+        current_data: &'a RefCell<IterationData>,
         break_at: &'a Option<HypothesisReference>,
         root_reference: &HypothesisReference,
         graph_builder: Option<&'a RefCell<GraphBuilder>>,
@@ -143,8 +152,10 @@ where
             reference_stack: vec![root_reference.clone()],
             log,
             game_state,
+            previous_data,
+            dependencies,
             hypotheses,
-            data,
+            current_data,
             break_at,
             graph_builder,
         }
@@ -164,9 +175,11 @@ where
             log: &self.log,
             game_state: &self.game_state,
             hypotheses: &self.hypotheses,
-            data: &self.data,
+            current_data: &self.current_data,
             break_at: &self.break_at,
             graph_builder: self.graph_builder,
+            previous_data: self.previous_data,
+            dependencies: &self.dependencies,
         }
     }
 
@@ -187,9 +200,11 @@ where
             log: &self.log,
             game_state: &self.game_state,
             hypotheses: &self.hypotheses,
-            data: &self.data,
+            current_data: &self.current_data,
             break_at: &self.break_at,
             graph_builder: self.graph_builder,
+            previous_data: self.previous_data,
+            dependencies: &self.dependencies,
         }
     }
 
@@ -217,7 +232,8 @@ where
             .field("reference_stack", &self.reference_stack)
             .field("game_state", &self.game_state)
             .field("hypotheses", &self.hypotheses)
-            .field("data", &self.data)
+            .field("current_data", &self.current_data)
+            .field("previous_data", &self.previous_data)
             .field("break_at", &self.break_at)
             .finish()
     }
@@ -345,17 +361,14 @@ where
 {
     /// If a hypothesis has dependencies
     pub fn require_sub_evaluation(self, initial_fitness: f64) -> HypothesisEvaluator<'a, TLog> {
-        let mut data = self.inner.data.borrow_mut();
-        match &data[self.inner.current_reference().0] {
+        let mut data = self.inner.current_data.borrow_mut();
+        match &data.results[self.inner.current_reference().0] {
             Some(_) => {}
             None => {
                 info!(logger: self.inner.log, "{} Set initial fitness: {}",self.inner.depth(), initial_fitness);
-                data[self.inner.current_reference().0] = Some(HypothesisData {
-                    dependencies: HashSet::new(),
-                    last_evaluate: FitnessAndAction {
-                        action: HashSet::new(),
-                        fitness: initial_fitness,
-                    },
+                data.results[self.inner.current_reference().0] = Some(FitnessAndAction {
+                    action: HashSet::new(),
+                    fitness: initial_fitness,
                 });
             }
         }
@@ -373,16 +386,25 @@ where
     TLog: Log,
 {
     pub fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
-        let mut data = self.inner.data.borrow_mut();
         let current_reference = self
             .inner
             .reference_stack
             .last()
             .expect("There should be at least one reference in the stack");
-        let current_data = data[current_reference.0]
-            .as_mut()
-            .expect("How is hypothesis data not present if the reference can't be borrowed?");
 
+        {
+            let mut dependencies = self.inner.dependencies.borrow_mut();
+            if dependencies[current_reference.0].insert(hypothesis_reference.clone()) {
+                info!(
+                    logger: self.inner.log,
+                    "{} Established new hypothesis dependency: {}",
+                    self.inner.depth(),
+                    hypothesis_reference
+                )
+            }
+        }
+
+        let current_data = self.inner.current_data.borrow();
         if let Some(break_at) = self.inner.break_at
             && break_at == current_reference
         {
@@ -393,46 +415,48 @@ where
                 hypothesis_reference
             );
         } else {
-            match self.inner.hypotheses[hypothesis_reference.0].try_borrow_mut() {
-                Ok(next_reference) => {
-                    if current_data
-                        .dependencies
-                        .insert(hypothesis_reference.clone())
-                    {
+            if current_data.results[hypothesis_reference.0]
+                .as_ref()
+                .is_some()
+            {
+                info!(logger: self.inner.log, "{} Skipping re-evaluation of hypothesis: {}", self.inner.depth(), hypothesis_reference);
+            } else {
+                match self.inner.hypotheses[hypothesis_reference.0].try_borrow_mut() {
+                    Ok(next_reference) => {
+                        // Important or entering the invocation will BorrowError
+                        drop(current_data);
+                        drop(next_reference);
+
+                        let invocation = HypothesisInvocation {
+                            inner: self.inner.push(hypothesis_reference.clone()),
+                        };
+
+                        return invocation.enter();
+                    }
+                    Err(_) => {
                         info!(
                             logger: self.inner.log,
-                            "{} Established new dependency: {}",
+                            "{} Cycle detected when trying to evaluate reference {}",
                             self.inner.depth(),
-                            next_reference
-                        )
+                            hypothesis_reference
+                        );
                     }
-
-                    // Important or entering the invocation will BorrowError
-                    drop(next_reference);
-                    drop(data);
-
-                    let invocation = HypothesisInvocation {
-                        inner: self.inner.push(hypothesis_reference.clone()),
-                    };
-
-                    return invocation.enter();
-                }
-                Err(_) => {
-                    info!(
-                        logger: self.inner.log,
-                        "{} Cycle detected when trying to evaluate reference {}",
-                        self.inner.depth(),
-                        hypothesis_reference
-                    );
                 }
             }
         }
 
-        let last_evaluate = data[hypothesis_reference.0]
+        let relevant_iteration_data = current_data.results[hypothesis_reference.0]
             .as_ref()
-            .expect("How is hypothesis data not present if the reference can't be borrowed?")
-            .last_evaluate
-            .clone();
+            .unwrap_or_else(|| {
+                self.inner
+                    .previous_data
+                    .expect("We shouldn't be using cached fitness data if none exists")
+                    .results[hypothesis_reference.0]
+                    .as_ref()
+                    .expect("Fitness for cycle break didn't previously exist")
+            });
+
+        let last_evaluate = relevant_iteration_data.clone();
         info!(
             logger: self.inner.log,
             "{} Returning existing fitness: {}",
@@ -497,11 +521,15 @@ where
         .collect();
 
     let mut data = Vec::with_capacity(hypotheses.len());
+    let mut dependencies = Vec::with_capacity(hypotheses.len());
     for _ in 0..hypotheses.len() {
         data.push(None);
+        dependencies.push(HashSet::new());
     }
 
-    let data = RefCell::new(data);
+    let data = RefCell::new(IterationData { results: data });
+    let dependencies = RefCell::new(dependencies);
+
     let mut break_at = None;
 
     let mut iteration = 0;
@@ -513,6 +541,8 @@ where
             game_state,
             log,
             &hypotheses,
+            None,
+            &dependencies,
             &data,
             &break_at,
             &root,
