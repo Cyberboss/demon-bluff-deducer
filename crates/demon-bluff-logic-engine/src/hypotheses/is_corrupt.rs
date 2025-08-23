@@ -9,15 +9,17 @@ use crate::hypothesis::{
 };
 
 #[derive(Eq, PartialEq, Debug)]
-pub struct TestimonyHypothesis {
-    testimony: Testimony,
+pub struct IsCorruptHypothesis {
+    index: VillagerIndex,
+    is_good_hypothesis: HypothesisReference,
+    is_lying_hypothesis: HypothesisReference,
 }
 
-impl TestimonyHypothesis {
+impl IsCorruptHypothesis {
     pub fn create<TLog>(
         game_state: &GameState,
         mut registrar: &mut HypothesisRegistrar<TLog>,
-        testimony: Testimony,
+        index: VillagerIndex,
     ) -> HypothesisReference
     where
         TLog: Log,
@@ -26,9 +28,9 @@ impl TestimonyHypothesis {
     }
 }
 
-impl Hypothesis for TestimonyHypothesis {
+impl Hypothesis for IsCorruptHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Testimony is true: {}", self.testimony)
+        write!(f, "{} is corrupt", self.testimony)
     }
 
     fn evaluate<TLog>(
@@ -41,12 +43,8 @@ impl Hypothesis for TestimonyHypothesis {
     where
         TLog: Log,
     {
-        match &self.testimony {
-            Testimony::Confess(confessor_claim) => repository
-                .create_return(HypothesisResult::Conclusive(FitnessAndAction::certainty())),
-            _ => repository.create_return(HypothesisResult::Conclusive(
-                FitnessAndAction::unimplemented(),
-            )),
-        }
+        repository.create_return(HypothesisResult::Conclusive(
+            FitnessAndAction::unimplemented(),
+        ))
     }
 }

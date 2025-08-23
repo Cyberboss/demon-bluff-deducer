@@ -1,11 +1,13 @@
-use std::fmt::Display;
+use itertools::Itertools;
+use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{Expression, affect::Affect, testimony::Testimony};
+use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct VillagerIndex(pub usize);
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
 pub enum GoodVillager {
     Alchemist,
     Architect,
@@ -33,7 +35,7 @@ pub enum GoodVillager {
     Witness,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
 pub enum Outcast {
     Drunk,
     Wretch,
@@ -42,7 +44,7 @@ pub enum Outcast {
     PlagueDoctor,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
 pub enum Minion {
     Counsellor,
     Witch,
@@ -54,7 +56,7 @@ pub enum Minion {
     Puppet,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
 pub enum Demon {
     Baa,
     Pooka,
@@ -116,6 +118,14 @@ impl Display for VillagerIndex {
 }
 
 impl VillagerArchetype {
+    pub fn iter() -> impl Iterator<Item = VillagerArchetype> {
+        GoodVillager::iter()
+            .map(|good| VillagerArchetype::GoodVillager(good))
+            .chain(Outcast::iter().map(|outcast| VillagerArchetype::Outcast(outcast)))
+            .chain(Minion::iter().map(|minion| VillagerArchetype::Minion(minion)))
+            .chain(Demon::iter().map(|demon| VillagerArchetype::Demon(demon)))
+    }
+
     pub fn is_evil(&self) -> bool {
         match self {
             Self::GoodVillager(good_villager) => match good_villager {

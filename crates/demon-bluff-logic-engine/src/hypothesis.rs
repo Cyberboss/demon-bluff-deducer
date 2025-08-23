@@ -323,6 +323,11 @@ impl FitnessAndAction {
         }
     }
 
+    pub fn invert(mut self) -> Self {
+        self.fitness = 1.0 - self.fitness;
+        self
+    }
+
     pub fn impossible() -> Self {
         Self {
             action: HashSet::new(),
@@ -337,7 +342,14 @@ impl FitnessAndAction {
         }
     }
 
-    pub fn certainty(action: PlayerAction) -> Self {
+    pub fn certainty() -> Self {
+        Self {
+            action: HashSet::new(),
+            fitness: 1.0,
+        }
+    }
+
+    pub fn certainty_with_action(action: PlayerAction) -> Self {
         Self::new(1.0, action)
     }
 

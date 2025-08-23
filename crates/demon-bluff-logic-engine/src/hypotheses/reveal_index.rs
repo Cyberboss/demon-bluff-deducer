@@ -63,7 +63,9 @@ impl Hypothesis for RevealIndexHypothesis {
             HypothesisResult::Conclusive(fitness_and_action) => {
                 if fitness_and_action.is_certain() {
                     return evaluator.create_return(HypothesisResult::Conclusive(
-                        FitnessAndAction::certainty(PlayerAction::TryReveal(self.index.clone())),
+                        FitnessAndAction::certainty_with_action(PlayerAction::TryReveal(
+                            self.index.clone(),
+                        )),
                     ));
                 }
             }

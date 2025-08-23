@@ -9,9 +9,10 @@ use crate::{
     hypotheses::{
         ability::AbilityHypothesis, archetype_in_play::ArchetypeInPlayHypothesis,
         execute_index::ExecuteIndexHypothesis, gather_information::GatherInformationHypothesis,
-        is_evil::IsEvilHypothesis, is_lying::IsLyingHypothesis, is_truthful::IsTruthfulHypothesis,
-        need_testimony::NeedTestimonyHypothesis, revealing_is_safe::RevealingIsSafeHypothesis,
-        testimony::TestimonyHypothesis, testimony_expression::TestimonyExpressionHypothesis,
+        is_evil::IsEvilHypothesis, is_truthful::IsTruthfulHypothesis,
+        need_testimony::NeedTestimonyHypothesis, negate::NegateHypothesis,
+        revealing_is_safe::RevealingIsSafeHypothesis, testimony::TestimonyHypothesis,
+        testimony_expression::TestimonyExpressionHypothesis,
     },
     hypothesis::Hypothesis,
 };
@@ -21,11 +22,12 @@ mod archetype_in_play;
 mod execute;
 mod execute_index;
 mod gather_information;
+mod is_corrupt;
 mod is_evil;
-mod is_lying;
 mod is_truthful;
 pub(crate) mod master;
 mod need_testimony;
+mod negate;
 mod reveal;
 mod reveal_index;
 mod revealing_is_safe;
@@ -47,9 +49,9 @@ pub enum HypothesisType {
     IsTruthful(IsTruthfulHypothesis),
     TestimonyExpression(TestimonyExpressionHypothesis),
     Testimony(TestimonyHypothesis),
-    IsLying(IsLyingHypothesis),
     GatherInformation(GatherInformationHypothesis),
     Ability(AbilityHypothesis),
+    Negate(NegateHypothesis),
 }
 
 impl Display for HypothesisType {

@@ -52,7 +52,11 @@ impl Hypothesis for ExecuteIndexHypothesis {
     where
         TLog: Log,
     {
-        let mut evaluator = repository.require_sub_evaluation(0.0);
+        let estimated_evils =
+            (game_state.draw_stats().demons() + game_state.draw_stats().minions()) as f64;
+        let total_villagers = game_state.draw_stats().total_villagers() as f64;
+
+        let mut evaluator = repository.require_sub_evaluation(estimated_evils / total_villagers);
         let result = match evaluator.sub_evaluate(&self.is_evil_hypothesis) {
             HypothesisResult::Pending(fitness_and_action) => {
                 HypothesisResult::Pending(FitnessAndAction::new(
