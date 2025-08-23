@@ -4,20 +4,17 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    hypotheses::execute::ExecuteHypothesis,
+    hypotheses::{execute::ExecuteHypothesis, gather_information::GatherInformationHypothesis},
     hypothesis::{
         Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-        HypothesisReturn, or_result,
+        HypothesisResult, HypothesisReturn, or_result,
     },
 };
 
-use super::{ability::AbilityHypothesis, reveal::RevealHypothesis};
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct MasterHypothesis {
-    reveal_hypothesis: HypothesisReference,
+    info_hypothesis: HypothesisReference,
     execute_hypothesis: HypothesisReference,
-    ability_hypothesis: HypothesisReference,
 }
 
 impl MasterHypothesis {
@@ -28,13 +25,11 @@ impl MasterHypothesis {
     where
         TLog: Log,
     {
-        let reveal_hypothesis = RevealHypothesis::create(game_state, &mut registrar);
+        let info_hypothesis = GatherInformationHypothesis::create(game_state, &mut registrar);
         let execute_hypothesis = ExecuteHypothesis::create(game_state, &mut registrar);
-        let ability_hypothesis = AbilityHypothesis::create(game_state, &mut registrar);
         registrar.register(Self {
-            reveal_hypothesis,
+            info_hypothesis,
             execute_hypothesis,
-            ability_hypothesis,
         })
     }
 }
@@ -55,8 +50,16 @@ impl Hypothesis for MasterHypothesis {
         TLog: Log,
     {
         let mut evaluator = repository.require_sub_evaluation(0.0);
-        let mut result = evaluator.sub_evaluate(&self.ability_hypothesis);
-        result = or_result(evaluator.sub_evaluate(&self.reveal_hypothesis), result);
+        let mut result = evaluator.sub_evaluate(&self.execute_hypothesis);
+        match &result {
+            HypothesisResult::Pending(_) => {}
+            HypothesisResult::Conclusive(fitness_and_action) => {
+                if fitness_and_action.is_certain() {
+                    return evaluator
+                        .create_return(HypothesisResult::Conclusive(fitness_and_action.clone()));
+                }
+            }
+        }
         result = or_result(evaluator.sub_evaluate(&self.execute_hypothesis), result);
         evaluator.create_return(result)
     }

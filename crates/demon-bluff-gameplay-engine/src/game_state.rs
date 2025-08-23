@@ -27,7 +27,7 @@ pub enum DayCycle {
     Night,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DrawStats {
     villagers: u8,
     outcasts: u8,
@@ -35,7 +35,7 @@ pub struct DrawStats {
     demons: u8,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GameState {
     // TODO: Alignment of cards may affect Architect claim, double check
     next_day: u8,

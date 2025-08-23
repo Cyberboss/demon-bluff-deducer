@@ -69,13 +69,13 @@ pub enum VillagerArchetype {
     Demon(Demon),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ActiveVillager {
     instance: VillagerInstance,
     cant_kill: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HiddenVillager {
     dead: bool,
     cant_reveal: bool,
@@ -89,14 +89,14 @@ pub struct VillagerInstance {
     action_available: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConfirmedVillager {
     instance: VillagerInstance,
     true_identity: Option<VillagerArchetype>,
     corrupted: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Villager {
     Active(ActiveVillager),
     Hidden(HiddenVillager),

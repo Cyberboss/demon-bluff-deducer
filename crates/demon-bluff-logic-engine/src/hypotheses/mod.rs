@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use ability::AbilityHypothesis;
 use execute::ExecuteHypothesis;
 use master::MasterHypothesis;
 use reveal::RevealHypothesis;
@@ -8,8 +7,9 @@ use reveal_index::RevealIndexHypothesis;
 
 use crate::{
     hypotheses::{
-        archetype_in_play::ArchetypeInPlayHypothesis, execute_index::ExecuteIndexHypothesis,
-        is_evil::IsEvilHypothesis, is_truthful::IsTruthfulHypothesis,
+        ability::AbilityHypothesis, archetype_in_play::ArchetypeInPlayHypothesis,
+        execute_index::ExecuteIndexHypothesis, gather_information::GatherInformationHypothesis,
+        is_evil::IsEvilHypothesis, is_lying::IsLyingHypothesis, is_truthful::IsTruthfulHypothesis,
         need_testimony::NeedTestimonyHypothesis, revealing_is_safe::RevealingIsSafeHypothesis,
         testimony::TestimonyHypothesis, testimony_expression::TestimonyExpressionHypothesis,
     },
@@ -20,7 +20,9 @@ mod ability;
 mod archetype_in_play;
 mod execute;
 mod execute_index;
+mod gather_information;
 mod is_evil;
+mod is_lying;
 mod is_truthful;
 pub(crate) mod master;
 mod need_testimony;
@@ -37,7 +39,6 @@ pub enum HypothesisType {
     Reveal(RevealHypothesis),
     RevealIndex(RevealIndexHypothesis),
     Execute(ExecuteHypothesis),
-    Ability(AbilityHypothesis),
     RevealingIsSafe(RevealingIsSafeHypothesis),
     NeedTestimony(NeedTestimonyHypothesis),
     ArchetypeInPlay(ArchetypeInPlayHypothesis),
@@ -46,6 +47,9 @@ pub enum HypothesisType {
     IsTruthful(IsTruthfulHypothesis),
     TestimonyExpression(TestimonyExpressionHypothesis),
     Testimony(TestimonyHypothesis),
+    IsLying(IsLyingHypothesis),
+    GatherInformation(GatherInformationHypothesis),
+    Ability(AbilityHypothesis),
 }
 
 impl Display for HypothesisType {
