@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MasterHypothesisBuilder {}
 
 impl HypothesisBuilder for MasterHypothesisBuilder {

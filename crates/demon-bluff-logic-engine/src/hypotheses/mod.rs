@@ -37,7 +37,7 @@ mod testimony;
 mod testimony_expression;
 
 #[enum_delegate::implement(HypothesisBuilder)]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum HypothesisBuilderType {
     Master(MasterHypothesisBuilder),
 }

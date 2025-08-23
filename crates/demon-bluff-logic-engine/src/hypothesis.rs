@@ -42,7 +42,6 @@ where
     game_state: &'a GameState,
     cycles: &'a RefCell<HashSet<Cycle>>,
     hypotheses: &'a Vec<RefCell<HypothesisType>>,
-    dependencies: &'a RefCell<Vec<HashSet<HypothesisReference>>>,
     previous_data: Option<&'a IterationData>,
     current_data: &'a RefCell<IterationData>,
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
@@ -57,6 +56,12 @@ struct IterationData {
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct Cycle {
     order_from_root: Vec<HypothesisReference>,
+}
+
+struct HypothesisGraph {
+    root: HypothesisReference,
+    hypotheses: Vec<HypothesisType>,
+    dependencies: Vec<Vec<HypothesisReference>>,
 }
 
 struct HypothesisInvocation<'a, TLog>
@@ -123,13 +128,17 @@ pub trait Hypothesis {
 
 #[enum_delegate::register]
 pub trait HypothesisBuilder {
+    type HypothesisImpl;
+
     fn build<TLog>(
         self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+        game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
+        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log;
+        Self::HypothesisImpl: Hypothesis + 'static,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log;
 }
 
 pub trait HypothesisInput: Eq {}
@@ -219,7 +228,6 @@ where
         hypotheses: &'a Vec<RefCell<HypothesisType>>,
         cycles: &'a RefCell<HashSet<Cycle>>,
         previous_data: Option<&'a IterationData>,
-        dependencies: &'a RefCell<Vec<HashSet<HypothesisReference>>>,
         current_data: &'a RefCell<IterationData>,
         break_at: &'a Option<HypothesisReference>,
         root_reference: &HypothesisReference,
@@ -230,7 +238,6 @@ where
             log,
             game_state,
             previous_data,
-            dependencies,
             hypotheses,
             current_data,
             break_at,
@@ -272,7 +279,6 @@ where
             break_at: &self.break_at,
             graph_builder: self.graph_builder,
             previous_data: self.previous_data,
-            dependencies: &self.dependencies,
             cycles: &self.cycles,
         }
     }
@@ -298,7 +304,6 @@ where
             break_at: &self.break_at,
             graph_builder: self.graph_builder,
             previous_data: self.previous_data,
-            dependencies: &self.dependencies,
             cycles: &self.cycles,
         }
     }
@@ -504,18 +509,6 @@ where
             .last()
             .expect("There should be at least one reference in the stack");
 
-        {
-            let mut dependencies = self.inner.dependencies.borrow_mut();
-            if dependencies[current_reference.0].insert(hypothesis_reference.clone()) {
-                info!(
-                    logger: self.inner.log,
-                    "{} Established new hypothesis dependency: {}",
-                    self.inner.depth(),
-                    hypothesis_reference
-                )
-            }
-        }
-
         let current_data = self.inner.current_data.borrow();
         let mut force_conclusive = false;
         if let Some(break_at) = self.inner.break_at
@@ -618,6 +611,7 @@ where
         }
     }
 
+    /// Register a dependency of the currently building [`Hypothesis`]' [`HypothesisBuilder`] and get its [`HypothesisReference`].
     pub fn register<HypothesisBuilderImpl>(
         &mut self,
         builder: HypothesisBuilderImpl,
@@ -626,55 +620,79 @@ where
         HypothesisBuilderImpl: HypothesisBuilder + 'static,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
     {
+        let mut reference = None;
         let builder = builder.into();
         for (index, existing_builder) in self.builders.iter().enumerate() {
             if builder == *existing_builder {
-                return HypothesisReference(index);
+                reference = Some(HypothesisReference(index));
+                break;
             }
         }
 
-        let reference = HypothesisReference(self.builders.len());
-        info!(logger: self.log, "- Registered dependency {}",  reference);
+        let reference = match reference {
+            Some(reference) => reference,
+            None => {
+                let reference = HypothesisReference(self.builders.len());
+                info!(logger: self.log, "- Registered dependency {}",  reference);
 
-        self.builders.push(builder);
+                self.builders.push(builder);
+                reference
+            }
+        };
+
+        self.dependencies[reference.0].push(reference.clone());
         reference
     }
 
     fn run<HypothesisBuilderImpl>(
         mut self,
+        game_state: &GameState,
         mut builder: HypothesisBuilderImpl,
-    ) -> HypothesisReference
+    ) -> HypothesisGraph
     where
         HypothesisBuilderImpl: HypothesisBuilder + 'static,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
     {
         let mut current_reference = self.builders.len();
-        let reference = HypothesisReference(current_reference);
-        info!(logger: self.log, "Evaluating dependencies of root hypothesis {}", reference);
-        self.builders.push(builder);
+        let root_reference = HypothesisReference(current_reference);
+        self.builders.push(builder.into());
 
-        let mut root = true;
+        info!(logger: self.log, "Registering hypotheses and evaluating dependencies");
         loop {
-            let current_hypothesis = &mut self.builders[current_reference];
-            if root {
-                root = false;
-            } else {
-                info!(logger: self.log, "Evaluating dependencies of {}: {}", HypothesisReference(current_reference), builder);
-            }
+            let current_builder = self.builders[current_reference].clone();
 
-            current_hypothesis.resolve_references(self);
+            self.dependencies.push(Vec::new());
+
+            // intentionally dropping the initially built hypotheis
+            _ = current_builder.build(game_state, &mut self);
 
             current_reference = current_reference + 1;
-            if current_reference = self.builders.len() {
+            if current_reference == self.builders.len() {
                 break;
             }
+        }
+
+        info!(logger: self.log, "Building hypotheses");
+        let mut hypotheses = Vec::new();
+        hypotheses.reserve_exact(current_reference);
+
+        let final_builders = self.builders;
+        self.builders = Vec::new();
+        for builder in final_builders {
+            hypotheses.push(builder.build(game_state, &mut self).into());
+        }
+
+        HypothesisGraph {
+            root: root_reference,
+            hypotheses,
+            dependencies: self.dependencies,
         }
     }
 }
 
-pub fn evaluate<TLog, F1, F2>(
+pub fn evaluate<TLog, FGraph>(
     game_state: &GameState,
-    initial_hypothesis: HypothesisType,
+    initial_hypothesis: HypothesisBuilderType,
     log: &TLog,
     mut stepper: Option<FGraph>,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
@@ -682,25 +700,20 @@ where
     TLog: Log,
     FGraph: FnMut(&mut ForceGraph<GraphNodeData>),
 {
-    let mut registrar = HypothesisRegistrar::new();
+    let registrar = HypothesisRegistrar::new(log);
 
     info!(logger: log, target: "evaluate", "Evaluate dependencies");
-    let root: HypothesisReference = registrar.run_root(initial_hypothesis);
+    let graph = registrar.run(game_state, initial_hypothesis);
 
-    let registrations = registrar.finalize();
-    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", registrations.len(), registrations[root.0]);
-    let hypotheses: Vec<RefCell<HypothesisType>> = registrations
+    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", graph.hypotheses.len(), graph.hypotheses[graph.root.0]);
+
+    let hypotheses: Vec<RefCell<HypothesisType>> = graph
+        .hypotheses
         .into_iter()
         .map(|hypothesis| RefCell::new(hypothesis))
         .collect();
 
     let mut previous_results = None;
-    let mut dependencies = Vec::with_capacity(hypotheses.len());
-    for _ in 0..hypotheses.len() {
-        dependencies.push(HashSet::new());
-    }
-
-    let dependencies = RefCell::new(dependencies);
 
     let mut break_at = None;
 
@@ -722,10 +735,9 @@ where
             &hypotheses,
             &cycles,
             previous_results.as_ref(),
-            &dependencies,
             &data,
             &break_at,
-            &root,
+            &graph.root,
             None,
         ));
 
@@ -735,6 +747,8 @@ where
 
         match result {
             HypothesisResult::Pending(fitness_and_action) => {
+                info!(logger: log, "Pending result. Fitness: {}", fitness_and_action);
+
                 let data = data.borrow();
                 if let Some(previous_results) = &previous_results {
                     let mut graph_stable = *previous_results == *data;
@@ -774,7 +788,7 @@ where
                                         } else if fitness > previous_fitness {
                                             (cycle, reference, fitness)
                                         } else {
-                                            // break shortest candidate cycle first for simplicity
+                                            // break shortest fittest candidate cycle first for simplicity
                                             if cycle.order_from_root.len()
                                                 < previous_cycle.order_from_root.len()
                                             {

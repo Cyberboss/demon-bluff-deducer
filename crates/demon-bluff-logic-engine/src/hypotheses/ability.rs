@@ -15,14 +15,6 @@ use crate::{
 pub struct AbilityHypothesis {}
 
 impl Hypothesis for AbilityHypothesis {
-    fn resolve_references<TLog>(
-        &mut self,
-        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) where
-        TLog: ::log::Log,
-    {
-    }
-
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Ability Decision")
     }
