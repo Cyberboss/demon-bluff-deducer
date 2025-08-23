@@ -139,6 +139,32 @@ impl Display for HypothesisReference {
     }
 }
 
+impl Display for Cycle {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut first = true;
+        for reference in &self.order_from_root {
+            if first {
+                first = false;
+            } else {
+                write!(f, " -> ")?;
+            }
+
+            write!(f, "{}", reference)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl HypothesisResult {
+    fn fitness_and_action(&self) -> &FitnessAndAction {
+        match self {
+            HypothesisResult::Pending(fitness_and_action)
+            | HypothesisResult::Conclusive(fitness_and_action) => fitness_and_action,
+        }
+    }
+}
+
 impl Display for HypothesisResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -648,9 +674,55 @@ where
 
                     if graph_stable {
                         stability_iteration = 0;
+
                         let cycles = cycles.borrow();
-                        info!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
-                        todo!("Find best point in a cycle to break");
+                        warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
+
+                        let mut best_break_candidate = None::<(&Cycle, &HypothesisReference, f64)>;
+
+                        for cycle in cycles.iter() {
+                            for reference in &cycle.order_from_root {
+                                let fitness = data.results[reference.0]
+                                    .as_ref()
+                                    .expect("A hypothesis in a cycle should have SOME result")
+                                    .fitness_and_action()
+                                    .fitness;
+
+                                best_break_candidate = Some(match best_break_candidate {
+                                    Some((
+                                        previous_cycle,
+                                        previous_reference,
+                                        previous_fitness,
+                                    )) => {
+                                        if previous_fitness > fitness {
+                                            (previous_cycle, previous_reference, previous_fitness)
+                                        } else if fitness > previous_fitness {
+                                            (cycle, reference, fitness)
+                                        } else {
+                                            // break shortest candidate cycle first for simplicity
+                                            if cycle.order_from_root.len()
+                                                < previous_cycle.order_from_root.len()
+                                            {
+                                                (cycle, reference, fitness)
+                                            } else {
+                                                (
+                                                    previous_cycle,
+                                                    previous_reference,
+                                                    previous_fitness,
+                                                )
+                                            }
+                                        }
+                                    }
+                                    None => (cycle, reference, fitness),
+                                });
+                            }
+                        }
+
+                        let (break_cycle, break_reference, break_fitness) = best_break_candidate
+                            .expect("At least one break candidate should exist");
+                        info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
+
+                        break_at = Some(break_reference.clone());
                     }
                 }
 
