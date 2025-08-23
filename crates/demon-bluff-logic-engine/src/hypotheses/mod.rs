@@ -11,6 +11,7 @@ use crate::{hypotheses::revealing_is_safe::RevealingIsSafeHypothesis, hypothesis
 mod ability;
 mod execute;
 pub(crate) mod master;
+mod need_testimony;
 mod reveal;
 mod reveal_index;
 mod revealing_is_safe;
@@ -24,6 +25,7 @@ pub enum HypothesisType {
     Execute(ExecuteHypothesis),
     Ability(AbilityHypothesis),
     RevealingIsSafe(RevealingIsSafeHypothesis),
+    NeedTestimony(NeedTestimonyHypothesis),
 }
 
 impl Display for HypothesisType {
