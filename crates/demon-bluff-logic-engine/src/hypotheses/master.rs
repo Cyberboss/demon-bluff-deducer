@@ -21,10 +21,13 @@ pub struct MasterHypothesis {
 }
 
 impl MasterHypothesis {
-    pub fn create(
+    pub fn create<TLog>(
         game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar,
-    ) -> HypothesisReference {
+        mut registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> HypothesisReference
+    where
+        TLog: Log,
+    {
         let reveal_hypothesis = RevealHypothesis::create(game_state, &mut registrar);
         let execute_hypothesis = ExecuteHypothesis::create(game_state, &mut registrar);
         let ability_hypothesis = AbilityHypothesis::create(game_state, &mut registrar);

@@ -15,7 +15,13 @@ use crate::{
 pub struct AbilityHypothesis {}
 
 impl AbilityHypothesis {
-    pub fn create(_: &GameState, registrar: &mut HypothesisRegistrar) -> HypothesisReference {
+    pub fn create<TLog>(
+        _: &GameState,
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> HypothesisReference
+    where
+        TLog: Log,
+    {
         registrar.register(Self {})
     }
 }

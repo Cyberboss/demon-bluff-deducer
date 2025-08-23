@@ -17,11 +17,14 @@ pub struct RevealIndexHypothesis {
 }
 
 impl RevealIndexHypothesis {
-    pub fn create(
+    pub fn create<TLog>(
         game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar,
+        mut registrar: &mut HypothesisRegistrar<TLog>,
         index: VillagerIndex,
-    ) -> HypothesisReference {
+    ) -> HypothesisReference
+    where
+        TLog: Log,
+    {
         let revealing_is_safe_hypothesis =
             RevealingIsSafeHypothesis::create(game_state, &mut registrar);
         registrar.register(Self {

@@ -19,10 +19,13 @@ pub struct RevealHypothesis {
 }
 
 impl RevealHypothesis {
-    pub fn create(
+    pub fn create<TLog>(
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar,
-    ) -> HypothesisReference {
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> HypothesisReference
+    where
+        TLog: Log,
+    {
         let mut revealable_indexes = HashMap::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(_) | Villager::Confirmed(_) => {}

@@ -118,7 +118,11 @@ pub trait Hypothesis {
         TLog: ::log::Log;
 }
 
-pub struct HypothesisRegistrar {
+pub struct HypothesisRegistrar<'a, TLog>
+where
+    TLog: Log,
+{
+    log: &'a TLog,
     registrations: Vec<HypothesisType>,
 }
 
@@ -526,7 +530,10 @@ where
     }
 }
 
-impl HypothesisRegistrar {
+impl<'a, TLog> HypothesisRegistrar<'a, TLog>
+where
+    TLog: Log,
+{
     pub fn register<HypothesisImpl>(&mut self, hypothesis: HypothesisImpl) -> HypothesisReference
     where
         HypothesisImpl: Hypothesis + 'static,
@@ -539,8 +546,11 @@ impl HypothesisRegistrar {
             }
         }
 
+        let reference = HypothesisReference(self.registrations.len());
+        info!(logger: self.log, "Registered {}: {}", reference, hypothesis);
+
         self.registrations.push(hypothesis);
-        HypothesisReference(self.registrations.len() - 1)
+        reference
     }
 }
 
@@ -558,10 +568,11 @@ pub fn evaluate<TLog, F1, F2>(
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
     TLog: Log,
-    F1: FnOnce(&GameState, &mut HypothesisRegistrar) -> HypothesisReference,
+    F1: FnOnce(&GameState, &mut HypothesisRegistrar<TLog>) -> HypothesisReference,
     F2: FnMut(&mut ForceGraph<GraphNodeData>),
 {
     let mut registrar = HypothesisRegistrar {
+        log,
         registrations: Vec::new(),
     };
 
