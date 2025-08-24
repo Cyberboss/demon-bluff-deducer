@@ -28,24 +28,21 @@ impl ExecuteIndexHypothesisBuilder {
 }
 
 impl HypothesisBuilder for ExecuteIndexHypothesisBuilder {
-    type HypothesisImpl = ExecuteIndexHypothesis;
-
     fn build<TLog>(
         self,
         _: &GameState,
         mut registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let is_evil_hypothesis =
             registrar.register(IsEvilHypothesisBuilder::new(self.index.clone()));
-        Self::HypothesisImpl {
+        ExecuteIndexHypothesis {
             is_evil_hypothesis,
             index: self.index,
         }
+        .into()
     }
 }
 

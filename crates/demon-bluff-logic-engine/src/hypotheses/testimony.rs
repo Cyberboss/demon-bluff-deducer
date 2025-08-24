@@ -31,21 +31,18 @@ impl TestimonyHypothesisBuilder {
 }
 
 impl HypothesisBuilder for TestimonyHypothesisBuilder {
-    type HypothesisImpl = TestimonyHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
-        Self::HypothesisImpl {
+        TestimonyHypothesis {
             testimony: self.testimony,
         }
+        .into()
     }
 }
 

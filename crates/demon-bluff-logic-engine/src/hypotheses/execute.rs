@@ -18,16 +18,12 @@ pub struct ExecuteHypothesis {
 }
 
 impl HypothesisBuilder for ExecuteHypothesisBuilder {
-    type HypothesisImpl = ExecuteHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut executable_hypotheses = Vec::new();
@@ -49,9 +45,10 @@ impl HypothesisBuilder for ExecuteHypothesisBuilder {
             Villager::Confirmed(_) => {}
         });
 
-        Self::HypothesisImpl {
+        ExecuteHypothesis {
             executable_hypotheses,
         }
+        .into()
     }
 }
 

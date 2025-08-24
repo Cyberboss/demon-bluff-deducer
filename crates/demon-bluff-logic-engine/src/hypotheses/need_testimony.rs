@@ -26,19 +26,15 @@ impl NeedTestimonyHypothesisBuilder {
 }
 
 impl HypothesisBuilder for NeedTestimonyHypothesisBuilder {
-    type HypothesisImpl = NeedTestimonyHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
-        Self::HypothesisImpl { index: self.index }
+        NeedTestimonyHypothesis { index: self.index }.into()
     }
 }
 

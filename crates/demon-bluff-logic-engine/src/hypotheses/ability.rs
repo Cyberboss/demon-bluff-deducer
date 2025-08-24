@@ -13,15 +13,11 @@ use crate::{
 pub struct AbilityHypothesisBuilder {}
 
 impl HypothesisBuilder for AbilityHypothesisBuilder {
-    type HypothesisImpl = AbilityHypothesis;
-
-    fn build<TLog>(self, _: &GameState, _: &mut HypothesisRegistrar<TLog>) -> Self::HypothesisImpl
+    fn build<TLog>(self, _: &GameState, _: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
-        Self::HypothesisImpl {}
+        AbilityHypothesis {}.into()
     }
 }
 

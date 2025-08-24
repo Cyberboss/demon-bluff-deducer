@@ -26,24 +26,21 @@ pub struct GatherInformationHypothesis {
 }
 
 impl HypothesisBuilder for GatherInformationHypothesisBuilder {
-    type HypothesisImpl = GatherInformationHypothesis;
-
     fn build<TLog>(
         self,
         _: &::demon_bluff_gameplay_engine::game_state::GameState,
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let reveal_hypothesis = registrar.register(RevealHypothesisBuilder::default());
         let ability_hypothesis = registrar.register(AbilityHypothesisBuilder::default());
-        Self::HypothesisImpl {
+        GatherInformationHypothesis {
             reveal_hypothesis,
             ability_hypothesis,
         }
+        .into()
     }
 }
 

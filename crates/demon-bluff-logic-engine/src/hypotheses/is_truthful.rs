@@ -31,16 +31,12 @@ impl IsTruthfulHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
-    type HypothesisImpl = IsTruthfulHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let testimony_expression_hypothesis = match game_state.villager(&self.index) {
@@ -54,10 +50,11 @@ impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
             Villager::Hidden(_) | Villager::Confirmed(_) => None,
         };
 
-        Self::HypothesisImpl {
+        IsTruthfulHypothesis {
             index: self.index,
             testimony_expression_hypothesis,
         }
+        .into()
     }
 }
 

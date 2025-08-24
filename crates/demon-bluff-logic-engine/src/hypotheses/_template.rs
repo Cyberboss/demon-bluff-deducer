@@ -15,21 +15,18 @@ pub struct TemplateHypothesis {
 }
 
 impl HypothesisBuilder for TemplateHypothesisBuilder {
-    type HypothesisImpl = TemplateHypothesis;
-
     fn build<TLog>(
         self,
         _: &::demon_bluff_gameplay_engine::game_state::GameState,
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
-        Self::HypothesisImpl {
+        TemplateHypothesis {
             sub_hypothesis: registrar.register(TemplateHypothesisBuilder {}),
         }
+        .into()
     }
 }
 

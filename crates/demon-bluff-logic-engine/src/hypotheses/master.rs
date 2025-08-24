@@ -16,24 +16,17 @@ use crate::{
 pub struct MasterHypothesisBuilder {}
 
 impl HypothesisBuilder for MasterHypothesisBuilder {
-    type HypothesisImpl = MasterHypothesis;
-
-    fn build<TLog>(
-        self,
-        _: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let execute_hypothesis = registrar.register(ExecuteHypothesisBuilder::default());
         let info_hypothesis = registrar.register(GatherInformationHypothesisBuilder::default());
-        Self::HypothesisImpl {
+        MasterHypothesis {
             execute_hypothesis,
             info_hypothesis,
         }
+        .into()
     }
 }
 

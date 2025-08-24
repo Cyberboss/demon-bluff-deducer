@@ -13,6 +13,8 @@ use hypotheses::master::MasterHypothesis;
 use hypothesis::{GraphNodeData, evaluate};
 use player_action::PlayerAction;
 
+use crate::hypotheses::master::MasterHypothesisBuilder;
+
 #[derive(Error, Debug)]
 pub enum PredictionError {
     #[error("Evaluation could not determine an action to perform!")]

@@ -24,16 +24,12 @@ pub struct CorruptionInPlayHypothesis {
 }
 
 impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
-    type HypothesisImpl = CorruptionInPlayHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut corrupting_archetype_hypotheses = Vec::new();
@@ -46,9 +42,10 @@ impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
             }
         }
 
-        Self::HypothesisImpl {
+        CorruptionInPlayHypothesis {
             corrupting_archetype_hypotheses,
         }
+        .into()
     }
 }
 

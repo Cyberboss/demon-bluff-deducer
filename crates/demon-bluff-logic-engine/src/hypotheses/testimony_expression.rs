@@ -46,16 +46,12 @@ impl TestimonyExpressionHypothesisBuilder {
 }
 
 impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
-    type HypothesisImpl = TestimonyExpressionHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let expression_friendly = format!("{}", self.testimony_expression);
@@ -76,10 +72,11 @@ impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
             )),
         };
 
-        Self::HypothesisImpl {
+        TestimonyExpressionHypothesis {
             expression_friendly,
             hypothesis_expression,
         }
+        .into()
     }
 }
 

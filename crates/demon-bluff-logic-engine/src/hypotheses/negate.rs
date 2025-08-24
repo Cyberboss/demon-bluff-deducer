@@ -32,20 +32,16 @@ impl NegateHypothesisBuilder {
 }
 
 impl HypothesisBuilder for NegateHypothesisBuilder {
-    type HypothesisImpl = NegateHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let target_hypothesis = registrar.register_builder_type(*self.target_hypothesis_builder);
-        Self::HypothesisImpl { target_hypothesis }
+        NegateHypothesis { target_hypothesis }.into()
     }
 }
 

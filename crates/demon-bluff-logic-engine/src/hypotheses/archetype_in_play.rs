@@ -30,16 +30,8 @@ impl ArchetypeInPlayHypothesisBuilder {
 }
 
 impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
-    type HypothesisImpl = ArchetypeInPlayHypothesis;
-
-    fn build<TLog>(
-        self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: Log,
     {
         let counsellor_in_play_hypothesis = match self.archetype {
@@ -51,10 +43,11 @@ impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
             _ => None,
         };
 
-        Self::HypothesisImpl {
+        ArchetypeInPlayHypothesis {
             archetype: self.archetype,
             counsellor_in_play_hypothesis,
         }
+        .into()
     }
 }
 

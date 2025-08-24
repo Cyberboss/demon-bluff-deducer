@@ -16,19 +16,15 @@ pub struct RevealingIsSafeHypothesisBuilder {}
 pub struct RevealingIsSafeHypothesis {}
 
 impl HypothesisBuilder for RevealingIsSafeHypothesisBuilder {
-    type HypothesisImpl = RevealingIsSafeHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
-        Self::HypothesisImpl {}
+        RevealingIsSafeHypothesis {}.into()
     }
 }
 

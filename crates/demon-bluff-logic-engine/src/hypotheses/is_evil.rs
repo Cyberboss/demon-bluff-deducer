@@ -38,16 +38,12 @@ impl IsEvilHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsEvilHypothesisBuilder {
-    type HypothesisImpl = IsEvilHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut non_liars_in_play_hypotheses = Vec::new();
@@ -64,12 +60,13 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
         let is_corrupt_hypothesis =
             registrar.register(IsCorruptHypothesisBuilder::new(self.index.clone()));
 
-        Self::HypothesisImpl {
+        IsEvilHypothesis {
             index: self.index,
             non_liars_in_play_hypotheses,
             is_corrupt_hypothesis,
             is_lying_hypothesis,
         }
+        .into()
     }
 }
 

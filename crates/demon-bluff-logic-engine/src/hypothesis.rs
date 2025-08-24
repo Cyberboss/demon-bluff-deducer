@@ -128,16 +128,12 @@ pub trait Hypothesis {
 
 #[enum_delegate::register]
 pub trait HypothesisBuilder {
-    type HypothesisImpl;
-
     fn build<TLog>(
         self,
         game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log;
 }
 
@@ -649,7 +645,7 @@ where
         mut builder: HypothesisBuilderImpl,
     ) -> HypothesisGraph
     where
-        HypothesisBuilderImpl: HypothesisBuilder + 'static,
+        HypothesisBuilderImpl: HypothesisBuilder,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
     {
         let mut current_reference = self.builders.len();

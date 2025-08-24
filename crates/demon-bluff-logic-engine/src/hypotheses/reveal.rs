@@ -18,16 +18,12 @@ pub struct RevealHypothesis {
 }
 
 impl HypothesisBuilder for RevealHypothesisBuilder {
-    type HypothesisImpl = RevealHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut revealable_hypotheses = Vec::new();
@@ -42,9 +38,10 @@ impl HypothesisBuilder for RevealHypothesisBuilder {
             }
         });
 
-        Self::HypothesisImpl {
+        RevealHypothesis {
             revealable_hypotheses,
         }
+        .into()
     }
 }
 

@@ -33,27 +33,24 @@ impl RevealIndexHypothesisBuilder {
 }
 
 impl HypothesisBuilder for RevealIndexHypothesisBuilder {
-    type HypothesisImpl = RevealIndexHypothesis;
-
     fn build<TLog>(
         self,
         game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    ) -> HypothesisType
     where
-        Self::HypothesisImpl: Hypothesis,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let revealing_is_safe_hypothesis =
             registrar.register(RevealingIsSafeHypothesisBuilder::default());
         let need_testimony_hypothesis =
             registrar.register(NeedTestimonyHypothesisBuilder::new(self.index.clone()));
-        Self::HypothesisImpl {
+        RevealIndexHypothesis {
             index: self.index,
             revealing_is_safe_hypothesis,
             need_testimony_hypothesis,
         }
+        .into()
     }
 }
 
