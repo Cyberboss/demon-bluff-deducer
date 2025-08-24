@@ -3,40 +3,54 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        need_testimony::NeedTestimonyHypothesis, revealing_is_safe::RevealingIsSafeHypothesis,
+        need_testimony::{NeedTestimonyHypothesis, NeedTestimonyHypothesisBuilder},
+        revealing_is_safe::RevealingIsSafeHypothesis,
     },
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
     player_action::PlayerAction,
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct RevealIndexHypothesisBuilder {
+    index: VillagerIndex,
+}
+
+#[derive(Debug)]
 pub struct RevealIndexHypothesis {
     index: VillagerIndex,
     revealing_is_safe_hypothesis: HypothesisReference,
     need_testimony_hypothesis: HypothesisReference,
 }
 
-impl RevealIndexHypothesis {
-    pub fn create<TLog>(
-        game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-        index: VillagerIndex,
-    ) -> HypothesisReference
+impl RevealIndexHypothesisBuilder {
+    pub fn new(index: VillagerIndex) -> Self {
+        Self { index }
+    }
+}
+
+impl HypothesisBuilder for RevealIndexHypothesisBuilder {
+    type HypothesisImpl = RevealIndexHypothesis;
+
+    fn build<TLog>(
+        self,
+        game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
+        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        TLog: ::log::Log,
     {
         let revealing_is_safe_hypothesis =
-            RevealingIsSafeHypothesis::create(game_state, &mut registrar);
+            registrar.register(RevealingIsSafeHypothesisBuilder::default());
         let need_testimony_hypothesis =
-            NeedTestimonyHypothesis::create(game_state, &mut registrar, index.clone());
-        registrar.register(Self {
-            index,
+            registrar.register(NeedTestimonyHypothesisBuilder::new(self.index.clone()));
+        Self::HypothesisImpl {
+            index: self.index,
             revealing_is_safe_hypothesis,
             need_testimony_hypothesis,
-        })
+        }
     }
 }
 
@@ -63,9 +77,9 @@ impl Hypothesis for RevealIndexHypothesis {
             HypothesisResult::Conclusive(fitness_and_action) => {
                 if fitness_and_action.is_certain() {
                     return evaluator.create_return(HypothesisResult::Conclusive(
-                        FitnessAndAction::certainty_with_action(PlayerAction::TryReveal(
+                        FitnessAndAction::certainty(Some(PlayerAction::TryReveal(
                             self.index.clone(),
-                        )),
+                        ))),
                     ));
                 }
             }
@@ -79,13 +93,13 @@ impl Hypothesis for RevealIndexHypothesis {
             HypothesisResult::Pending(fitness_and_action) => {
                 HypothesisResult::Pending(FitnessAndAction::new(
                     fitness_and_action.fitness(),
-                    PlayerAction::TryReveal(self.index.clone()),
+                    Some(PlayerAction::TryReveal(self.index.clone())),
                 ))
             }
             HypothesisResult::Conclusive(fitness_and_action) => {
                 HypothesisResult::Conclusive(FitnessAndAction::new(
                     fitness_and_action.fitness(),
-                    PlayerAction::TryReveal(self.index.clone()),
+                    Some(PlayerAction::TryReveal(self.index.clone())),
                 ))
             }
         })

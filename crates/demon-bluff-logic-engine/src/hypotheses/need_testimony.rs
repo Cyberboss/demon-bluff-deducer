@@ -2,25 +2,38 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
+    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
     HypothesisRepository, HypothesisResult, HypothesisReturn,
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NeedTestimonyHypothesisBuilder {
+    index: VillagerIndex,
+}
+
+#[derive(Debug)]
 pub struct NeedTestimonyHypothesis {
     index: VillagerIndex,
 }
 
-impl NeedTestimonyHypothesis {
-    pub fn create<TLog>(
-        _: &GameState,
+impl NeedTestimonyHypothesisBuilder {
+    pub fn new(index: VillagerIndex) -> Self {
+        Self { index }
+    }
+}
+
+impl HypothesisBuilder for NeedTestimonyHypothesisBuilder {
+    type HypothesisImpl = NeedTestimonyHypothesis;
+
+    fn build<TLog>(
+        self,
+        game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-        index: VillagerIndex,
-    ) -> HypothesisReference
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        TLog: ::log::Log,
     {
-        registrar.register(Self { index })
+        Self::HypothesisImpl { index: self.index }
     }
 }
 

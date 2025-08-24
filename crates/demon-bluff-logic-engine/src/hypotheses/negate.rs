@@ -1,26 +1,49 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, Hypothesis, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-    HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::HypothesisType,
+    hypothesis::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct NegateHypothesisBuilder {
+    target_hypothesis_builder: Box<HypothesisType>,
+}
+
+#[derive(Debug)]
 pub struct NegateHypothesis {
     target_hypothesis: HypothesisReference,
 }
 
-impl NegateHypothesis {
-    pub fn create<TLog>(
-        _: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-        target_hypothesis: HypothesisReference,
-    ) -> HypothesisReference
+impl NegateHypothesisBuilder {
+    pub fn new<TBuilder>(builder: TBuilder) -> Self
     where
-        TLog: Log,
+        TBuilder: HypothesisBuilder,
+        HypothesisType: From<TBuilder>,
     {
-        registrar.register(Self { target_hypothesis })
+        Self {
+            target_hypothesis_builder: Box::new(builder.into()),
+        }
+    }
+}
+
+impl HypothesisBuilder for NegateHypothesisBuilder {
+    type HypothesisImpl = NegateHypothesis;
+
+    fn build<TLog>(
+        self,
+        game_state: &GameState,
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
+    where
+        TLog: ::log::Log,
+    {
+        let target_hypothesis = registrar.register(self.target_hypothesis_builder);
+        Self::HypothesisImpl { target_hypothesis }
     }
 }
 
@@ -31,9 +54,9 @@ impl Hypothesis for NegateHypothesis {
 
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where
