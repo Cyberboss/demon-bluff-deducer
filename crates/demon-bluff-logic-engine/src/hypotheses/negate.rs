@@ -4,8 +4,8 @@ use log::Log;
 use crate::{
     hypotheses::{HypothesisBuilderType, HypothesisType},
     hypothesis::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
 };
 

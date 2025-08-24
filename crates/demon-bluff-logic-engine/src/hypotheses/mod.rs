@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder};
+
 use crate::{
     hypotheses::{
         ability::{AbilityHypothesis, AbilityHypothesisBuilder},
@@ -42,6 +44,7 @@ mod reveal_index;
 mod revealing_is_safe;
 mod testimony;
 mod testimony_expression;
+mod true_identity;
 
 #[enum_delegate::implement(HypothesisBuilder)]
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -63,6 +66,7 @@ pub enum HypothesisBuilderType {
     Negate(NegateHypothesisBuilder),
     IsCorrupt(IsCorruptHypothesisBuilder),
     CorruptionInPlay(CorruptionInPlayHypothesisBuilder),
+    TrueIdentity(TrueIdentityHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]
@@ -85,6 +89,7 @@ pub enum HypothesisType {
     Negate(NegateHypothesis),
     IsCorrupt(IsCorruptHypothesis),
     CorruptionInPlay(CorruptionInPlayHypothesis),
+    TrueIdentity(TrueIdentityHypothesis),
 }
 
 impl Display for HypothesisType {

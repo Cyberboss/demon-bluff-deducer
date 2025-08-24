@@ -69,9 +69,7 @@ impl Hypothesis for TestimonyHypothesis {
             Testimony::Confess(confessor_claim) => repository.create_return(
                 HypothesisResult::Conclusive(FitnessAndAction::certainty(None)),
             ),
-            _ => repository.create_return(HypothesisResult::Conclusive(
-                FitnessAndAction::unimplemented(),
-            )),
+            _ => repository.create_return(HypothesisResult::unimplemented()),
         }
     }
 }

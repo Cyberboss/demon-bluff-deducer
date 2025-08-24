@@ -2,24 +2,22 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::hypothesis::{
-    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisReference, HypothesisRegistrar,
-    HypothesisRepository, HypothesisReturn,
+    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
+    HypothesisRegistrar, HypothesisRepository, HypothesisReturn,
 };
 
-#[derive(Eq, PartialEq, Debug)]
+use super::HypothesisType;
+
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct TemplateHypothesisBuilder {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct TemplateHypothesis {
     sub_hypothesis: HypothesisReference,
 }
 
 impl HypothesisBuilder for TemplateHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        _: &::demon_bluff_gameplay_engine::game_state::GameState,
-        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {
@@ -33,6 +31,10 @@ impl HypothesisBuilder for TemplateHypothesisBuilder {
 impl Hypothesis for TemplateHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "REPLACE ME")
+    }
+
+    fn wip(&self) -> bool {
+        true
     }
 
     fn evaluate<TLog>(

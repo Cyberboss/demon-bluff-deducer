@@ -36,11 +36,7 @@ impl IsEvilHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsEvilHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {
@@ -87,8 +83,6 @@ impl Hypothesis for IsEvilHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::Conclusive(
-            FitnessAndAction::unimplemented(),
-        ))
+        repository.create_return(HypothesisResult::unimplemented())
     }
 }

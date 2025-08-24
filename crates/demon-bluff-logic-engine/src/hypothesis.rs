@@ -205,6 +205,10 @@ impl Display for Cycle {
 }
 
 impl HypothesisResult {
+    pub fn unimplemented() -> Self {
+        Self::Conclusive(FitnessAndAction::unimplemented())
+    }
+
     fn fitness_and_action(&self) -> &FitnessAndAction {
         match self {
             HypothesisResult::Pending(fitness_and_action)
