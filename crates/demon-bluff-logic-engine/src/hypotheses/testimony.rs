@@ -15,18 +15,20 @@ use crate::{
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TestimonyHypothesisBuilder {
+    index: VillagerIndex,
     testimony: Testimony,
 }
 
-/// Checks the validity of a [`Testimony`]` regardless of origin
+/// Checks the validity of a [`Testimony`]` from a [`VillagerIndex`]
 #[derive(Debug)]
 pub struct TestimonyHypothesis {
+    index: VillagerIndex,
     testimony: Testimony,
 }
 
 impl TestimonyHypothesisBuilder {
-    pub fn new(testimony: Testimony) -> Self {
-        Self { testimony }
+    pub fn new(index: VillagerIndex, testimony: Testimony) -> Self {
+        Self { index, testimony }
     }
 }
 
@@ -40,6 +42,7 @@ impl HypothesisBuilder for TestimonyHypothesisBuilder {
         TLog: ::log::Log,
     {
         TestimonyHypothesis {
+            index: self.index,
             testimony: self.testimony,
         }
         .into()
@@ -48,7 +51,7 @@ impl HypothesisBuilder for TestimonyHypothesisBuilder {
 
 impl Hypothesis for TestimonyHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Testimony is true: {}", self.testimony)
+        write!(f, "Testimony of {} is true: {}", self.index, self.testimony)
     }
 
     fn wip(&self) -> bool {

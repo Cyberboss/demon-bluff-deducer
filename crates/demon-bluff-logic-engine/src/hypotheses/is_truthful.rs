@@ -41,10 +41,12 @@ impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
     {
         let testimony_expression_hypothesis = match game_state.villager(&self.index) {
             Villager::Active(active_villager) => match active_villager.instance().testimony() {
-                Some(testimony) => Some(
-                    registrar
-                        .register(TestimonyExpressionHypothesisBuilder::new(testimony.clone())),
-                ),
+                Some(testimony) => Some(registrar.register(
+                    TestimonyExpressionHypothesisBuilder::new(
+                        self.index.clone(),
+                        testimony.clone(),
+                    ),
+                )),
                 None => None,
             },
             Villager::Hidden(_) | Villager::Confirmed(_) => None,

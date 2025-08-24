@@ -28,18 +28,21 @@ enum HypothesisExpression {
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TestimonyExpressionHypothesisBuilder {
+    index: VillagerIndex,
     testimony_expression: Expression<Testimony>,
 }
 
 #[derive(Debug)]
 pub struct TestimonyExpressionHypothesis {
+    index: VillagerIndex,
     hypothesis_expression: HypothesisExpression,
     expression_friendly: String,
 }
 
 impl TestimonyExpressionHypothesisBuilder {
-    pub fn new(testimony_expression: Expression<Testimony>) -> Self {
+    pub fn new(index: VillagerIndex, testimony_expression: Expression<Testimony>) -> Self {
         Self {
+            index,
             testimony_expression,
         }
     }
@@ -56,23 +59,36 @@ impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
     {
         let expression_friendly = format!("{}", self.testimony_expression);
         let hypothesis_expression = match self.testimony_expression {
-            Expression::Unary(testimony) => HypothesisExpression::Unary(
-                registrar.register(TestimonyHypothesisBuilder::new(testimony.clone())),
-            ),
+            Expression::Unary(testimony) => HypothesisExpression::Unary(registrar.register(
+                TestimonyHypothesisBuilder::new(self.index.clone(), testimony.clone()),
+            )),
             Expression::Not(expression) => HypothesisExpression::Not(registrar.register(
-                TestimonyExpressionHypothesisBuilder::new(*expression.clone()),
+                TestimonyExpressionHypothesisBuilder::new(self.index.clone(), *expression.clone()),
             )),
             Expression::And(lhs, rhs) => HypothesisExpression::And((
-                registrar.register(TestimonyExpressionHypothesisBuilder::new(*lhs.clone())),
-                registrar.register(TestimonyExpressionHypothesisBuilder::new(*rhs.clone())),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(
+                    self.index.clone(),
+                    *lhs.clone(),
+                )),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(
+                    self.index.clone(),
+                    *rhs.clone(),
+                )),
             )),
             Expression::Or(lhs, rhs) => HypothesisExpression::Or((
-                registrar.register(TestimonyExpressionHypothesisBuilder::new(*lhs.clone())),
-                registrar.register(TestimonyExpressionHypothesisBuilder::new(*rhs.clone())),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(
+                    self.index.clone(),
+                    *lhs.clone(),
+                )),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(
+                    self.index.clone(),
+                    *rhs.clone(),
+                )),
             )),
         };
 
         TestimonyExpressionHypothesis {
+            index: self.index,
             expression_friendly,
             hypothesis_expression,
         }
@@ -84,8 +100,8 @@ impl Hypothesis for TestimonyExpressionHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "Evaluate testimony expression: {}",
-            self.expression_friendly
+            "Evaluate testimony expression from {}: {}",
+            self.index, self.expression_friendly
         )
     }
 
