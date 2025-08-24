@@ -138,15 +138,13 @@ pub trait HypothesisBuilder {
         TLog: ::log::Log;
 }
 
-pub trait HypothesisInput: Eq {}
-
 pub struct HypothesisRegistrar<'a, TLog>
 where
     TLog: Log,
 {
     log: &'a TLog,
     builders: Vec<HypothesisBuilderType>,
-    dependencies: Vec<Vec<HypothesisReference>>,
+    dependencies: Option<Vec<Vec<HypothesisReference>>>,
 }
 
 pub struct Depth {
@@ -598,7 +596,7 @@ where
         Self {
             log,
             builders: Vec::new(),
-            dependencies: Vec::new(),
+            dependencies: Some(Vec::new()),
         }
     }
 
@@ -623,7 +621,6 @@ where
             }
         }
 
-        let dependencies_index = self.dependencies.len() - 1;
         let reference = match reference_option {
             Some(reference) => reference,
             None => {
@@ -633,7 +630,11 @@ where
             }
         };
 
-        self.dependencies[dependencies_index].push(reference.clone());
+        if let Some(dependencies) = &mut self.dependencies {
+            let dependencies_index = dependencies.len() - 1;
+            dependencies[dependencies_index].push(reference.clone());
+        }
+
         reference
     }
 
@@ -654,7 +655,10 @@ where
         loop {
             let current_builder = self.builders[current_reference].clone();
 
-            self.dependencies.push(Vec::new());
+            self.dependencies
+                .as_mut()
+                .expect("Dependencies should exist")
+                .push(Vec::new());
 
             // intentionally dropping the initially built hypotheis
             _ = current_builder.build(game_state, &mut self);
@@ -665,6 +669,11 @@ where
             }
         }
 
+        let dependencies = self
+            .dependencies
+            .take()
+            .expect("Dependencies should still be here at this point");
+
         info!(logger: self.log, "Building hypotheses (Dependencies follow)");
         let mut hypotheses = Vec::new();
         hypotheses.reserve_exact(current_reference);
@@ -672,17 +681,19 @@ where
         for (index, builder) in self.builders.clone().into_iter().enumerate() {
             let hypothesis = builder.build(game_state, &mut self).into();
             info!(logger: self.log, "{}: {}", HypothesisReference(index), hypothesis);
-            for dependency in &self.dependencies[index] {
+            for dependency in &dependencies[index] {
                 info!(logger: self.log, "- {}", dependency);
             }
 
             hypotheses.push(hypothesis);
         }
 
+        info!(logger: self.log, "Hypotheses built");
+
         HypothesisGraph {
             root: root_reference,
             hypotheses,
-            dependencies: self.dependencies,
+            dependencies,
         }
     }
 }
