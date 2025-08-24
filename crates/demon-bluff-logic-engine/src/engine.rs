@@ -243,7 +243,7 @@ impl Display for DesireDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} ({} Producer(s)) {}",
+            "{} ({} Producer(s)){}",
             self.desire,
             self.count,
             if self.used { "" } else { " (UNUSED)" }
