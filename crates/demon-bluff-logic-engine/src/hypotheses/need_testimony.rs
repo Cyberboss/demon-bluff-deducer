@@ -1,3 +1,5 @@
+use std::arch::breakpoint;
+
 use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
@@ -59,6 +61,11 @@ impl Hypothesis for NeedTestimonyHypothesis {
         TLog: Log,
     {
         let result = repository.desire_result(&self.get_testimony_desire);
+
+        if let HypothesisResult::Conclusive(conclusive_result) = &result {
+            breakpoint();
+        }
+
         repository.create_return(result)
     }
 }

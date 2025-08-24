@@ -3,14 +3,15 @@ use std::fmt::Display;
 use std::hash::Hash;
 
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
+use serde::Serialize;
 
-#[derive(Debug, Eq, Clone)]
+#[derive(Debug, Eq, Clone, Serialize)]
 pub struct AbilityAttempt {
     source: VillagerIndex,
     targets: HashSet<VillagerIndex>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize)]
 pub enum PlayerAction {
     TryReveal(VillagerIndex),
     TryExecute(VillagerIndex),

@@ -1,12 +1,15 @@
+use std::io::Write;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet, hash_map::Entry},
     fmt::{Debug, Display, Error, Formatter},
+    fs::File,
 };
 
 use demon_bluff_gameplay_engine::game_state::{self, GameState};
 use force_graph::{DefaultNodeIdx, ForceGraph};
 use log::{Log, error, info, warn};
+use serde::Serialize;
 
 use crate::{
     PredictionError,
@@ -52,7 +55,7 @@ where
     dependencies: &'a DependencyData,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 struct IterationData {
     desires: Vec<DesireData>,
     results: Vec<Option<HypothesisResult>>,
@@ -79,7 +82,7 @@ pub struct DesireConsumerReference(usize);
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DesireProducerReference(usize);
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 struct DesireData {
     pending: usize,
     desired: usize,
@@ -122,7 +125,7 @@ pub struct HypothesisReturn {
     result: HypothesisResult,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum HypothesisResult {
     Pending(FitnessAndAction),
     Conclusive(FitnessAndAction),
@@ -130,7 +133,7 @@ pub enum HypothesisResult {
 
 /// Contains the fitness score of a given action set.
 /// Fitness is the probability of how much a given `PlayerAction` will move the `GameState` towards a winning conclusion.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct FitnessAndAction {
     action: HashSet<PlayerAction>,
     fitness: f64,
@@ -706,7 +709,7 @@ where
             .last()
             .expect("There should be at least one reference in the stack");
 
-        let current_data = self.inner.current_data.borrow();
+        let mut current_data = self.inner.current_data.borrow_mut();
         let mut force_conclusive = false;
         if let Some(break_at) = self.inner.break_at
             && break_at == current_reference
@@ -726,10 +729,13 @@ where
             {
                 info!(logger: self.inner.log, "{} Skipping re-evaluation of hypothesis: {}", self.inner.depth(), hypothesis_reference);
             } else if let Some(previous_data) = self.inner.previous_data
-                && let Some(HypothesisResult::Conclusive(_)) =
+                && let Some(HypothesisResult::Conclusive(previously_conclusive_result)) =
                     &previous_data.results[hypothesis_reference.0]
             {
                 info!(logger: self.inner.log, "{} Skipping previously concluded hypothesis: {}", self.inner.depth(), hypothesis_reference);
+                current_data.results[hypothesis_reference.0] = Some(HypothesisResult::Conclusive(
+                    previously_conclusive_result.clone(),
+                ));
             } else {
                 match self.inner.hypotheses[hypothesis_reference.0].try_borrow_mut() {
                     Ok(next_reference) => {
@@ -1144,8 +1150,27 @@ where
 
                     stability_iteration = stability_iteration + 1;
                     if !graph_stable {
+                        let mut f1 =
+                            File::create("test1.json").expect("Failed to create before file");
+                        let mut f2 =
+                            File::create("test2.json").expect("Failed to create before file");
+
+                        write!(
+                            f1,
+                            "{}",
+                            serde_json::to_string_pretty(previous_results)
+                                .expect("Serialization 1 failed")
+                        )
+                        .expect("File write 1 failed");
+                        write!(
+                            f2,
+                            "{}",
+                            serde_json::to_string_pretty(&*data).expect("Serialization 2 failed")
+                        )
+                        .expect("File write 1 failed");
+                        log.flush();
                         if stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE {
-                            warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for cycle breaking", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
+                            warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for progression", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
                             graph_stable = true;
                         }
                     } else {
@@ -1156,53 +1181,64 @@ where
                         stability_iteration = 0;
 
                         let cycles = cycles.borrow();
-                        warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
+                        if cycles.len() > 0 {
+                            warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
 
-                        let mut best_break_candidate = None::<(&Cycle, &HypothesisReference, f64)>;
+                            let mut best_break_candidate =
+                                None::<(&Cycle, &HypothesisReference, f64)>;
 
-                        for cycle in cycles.iter() {
-                            for reference in &cycle.order_from_root {
-                                let fitness = data.results[reference.0]
-                                    .as_ref()
-                                    .expect("A hypothesis in a cycle should have SOME result")
-                                    .fitness_and_action()
-                                    .fitness;
+                            for cycle in cycles.iter() {
+                                for reference in &cycle.order_from_root {
+                                    let fitness = data.results[reference.0]
+                                        .as_ref()
+                                        .expect("A hypothesis in a cycle should have SOME result")
+                                        .fitness_and_action()
+                                        .fitness;
 
-                                best_break_candidate = Some(match best_break_candidate {
-                                    Some((
-                                        previous_cycle,
-                                        previous_reference,
-                                        previous_fitness,
-                                    )) => {
-                                        if previous_fitness > fitness {
-                                            (previous_cycle, previous_reference, previous_fitness)
-                                        } else if fitness > previous_fitness {
-                                            (cycle, reference, fitness)
-                                        } else {
-                                            // break shortest fittest candidate cycle first for simplicity
-                                            if cycle.order_from_root.len()
-                                                < previous_cycle.order_from_root.len()
-                                            {
-                                                (cycle, reference, fitness)
-                                            } else {
+                                    best_break_candidate = Some(match best_break_candidate {
+                                        Some((
+                                            previous_cycle,
+                                            previous_reference,
+                                            previous_fitness,
+                                        )) => {
+                                            if previous_fitness > fitness {
                                                 (
                                                     previous_cycle,
                                                     previous_reference,
                                                     previous_fitness,
                                                 )
+                                            } else if fitness > previous_fitness {
+                                                (cycle, reference, fitness)
+                                            } else {
+                                                // break shortest fittest candidate cycle first for simplicity
+                                                if cycle.order_from_root.len()
+                                                    < previous_cycle.order_from_root.len()
+                                                {
+                                                    (cycle, reference, fitness)
+                                                } else {
+                                                    (
+                                                        previous_cycle,
+                                                        previous_reference,
+                                                        previous_fitness,
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
-                                    None => (cycle, reference, fitness),
-                                });
+                                        None => (cycle, reference, fitness),
+                                    });
+                                }
                             }
+
+                            let (break_cycle, break_reference, break_fitness) =
+                                best_break_candidate
+                                    .expect("At least one break candidate should exist");
+                            info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
+
+                            break_at = Some(break_reference.clone());
+                        } else {
+                            warn!(logger: log, "We must finalize a desire, of which there are {}", cycles.len());
+                            todo!()
                         }
-
-                        let (break_cycle, break_reference, break_fitness) = best_break_candidate
-                            .expect("At least one break candidate should exist");
-                        info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
-
-                        break_at = Some(break_reference.clone());
                     }
                 }
 

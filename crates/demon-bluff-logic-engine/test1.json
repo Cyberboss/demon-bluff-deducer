@@ -1,0 +1,443 @@
+{
+  "desires": [
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    },
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    },
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    },
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    },
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    },
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    },
+    {
+      "pending": 1,
+      "desired": 0,
+      "undesired": 0
+    }
+  ],
+  "results": [
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryExecute": 0
+          },
+          {
+            "TryExecute": 1
+          },
+          {
+            "TryReveal": 4
+          },
+          {
+            "TryExecute": 6
+          },
+          {
+            "TryReveal": 1
+          },
+          {
+            "TryReveal": 0
+          },
+          {
+            "TryReveal": 6
+          },
+          {
+            "TryReveal": 5
+          },
+          {
+            "TryReveal": 3
+          },
+          {
+            "TryReveal": 2
+          },
+          {
+            "TryExecute": 2
+          },
+          {
+            "TryExecute": 5
+          },
+          {
+            "TryExecute": 3
+          },
+          {
+            "TryExecute": 4
+          }
+        ],
+        "fitness": 0.9922019550962898
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 0
+          },
+          {
+            "TryExecute": 1
+          },
+          {
+            "TryExecute": 2
+          },
+          {
+            "TryExecute": 6
+          },
+          {
+            "TryExecute": 5
+          },
+          {
+            "TryExecute": 3
+          },
+          {
+            "TryExecute": 4
+          }
+        ],
+        "fitness": 0.0008638775156967887
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 6
+          },
+          {
+            "TryReveal": 4
+          },
+          {
+            "TryReveal": 3
+          },
+          {
+            "TryReveal": 1
+          },
+          {
+            "TryReveal": 2
+          },
+          {
+            "TryReveal": 0
+          },
+          {
+            "TryReveal": 5
+          }
+        ],
+        "fitness": 0.9921952127160404
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 0
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 1
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 2
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 3
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 4
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 5
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [
+          {
+            "TryExecute": 6
+          }
+        ],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 6
+          },
+          {
+            "TryReveal": 4
+          },
+          {
+            "TryReveal": 3
+          },
+          {
+            "TryReveal": 1
+          },
+          {
+            "TryReveal": 2
+          },
+          {
+            "TryReveal": 0
+          },
+          {
+            "TryReveal": 5
+          }
+        ],
+        "fitness": 0.9921942490430915
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 0
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 1
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 2
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 3
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 4
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 5
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    {
+      "Pending": {
+        "action": [
+          {
+            "TryReveal": 6
+          }
+        ],
+        "fitness": 0.5000617283945
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    {
+      "Conclusive": {
+        "action": [],
+        "fitness": 0.000123456789
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    {
+      "Pending": {
+        "action": [],
+        "fitness": 0.5
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ]
+}

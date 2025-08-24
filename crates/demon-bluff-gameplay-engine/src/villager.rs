@@ -1,3 +1,4 @@
+use serde::Serialize;
 use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{
@@ -7,7 +8,7 @@ use crate::{
 };
 use std::fmt::Display;
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, Serialize)]
 pub struct VillagerIndex(pub usize);
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
