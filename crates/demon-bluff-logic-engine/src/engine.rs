@@ -656,6 +656,8 @@ where
         } else {
             data.undesired = data.undesired + 1;
         }
+
+        info!(logger: self.inner.log, "{} Set {}: {}. Now {}",self.inner.depth(), desire_reference, desired, data);
     }
 
     pub fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
@@ -1263,6 +1265,14 @@ where
                 return Ok(fitness_and_action.action);
             }
         }
+    }
+}
+
+pub fn decide_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
+    if lhs.fitness_and_action().fitness > rhs.fitness_and_action().fitness {
+        lhs
+    } else {
+        rhs
     }
 }
 

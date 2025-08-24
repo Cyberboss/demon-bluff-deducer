@@ -2,11 +2,11 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    hypotheses::{HypothesisType, execute_index::ExecuteIndexHypothesisBuilder},
     engine::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn, decide_result,
     },
+    hypotheses::{HypothesisType, execute_index::ExecuteIndexHypothesisBuilder},
 };
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
@@ -76,7 +76,7 @@ impl Hypothesis for ExecuteHypothesis {
         for reference in &self.executable_hypotheses {
             let sub_evaluation = evaluator.sub_evaluate(reference);
             result = Some(match result {
-                Some(existing_fitness) => or_result(sub_evaluation, existing_fitness),
+                Some(existing_fitness) => decide_result(sub_evaluation, existing_fitness),
                 None => sub_evaluation,
             })
         }

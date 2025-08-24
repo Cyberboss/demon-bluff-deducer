@@ -2,13 +2,13 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn, decide_result,
+    },
     hypotheses::{
         HypothesisType, execute::ExecuteHypothesisBuilder,
         gather_information::GatherInformationHypothesisBuilder,
-    },
-    engine::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
 };
 
@@ -62,7 +62,7 @@ impl Hypothesis for MasterHypothesis {
                 }
             }
         }
-        result = or_result(evaluator.sub_evaluate(&self.info_hypothesis), result);
+        result = decide_result(evaluator.sub_evaluate(&self.info_hypothesis), result);
         evaluator.create_return(result)
     }
 }

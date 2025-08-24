@@ -1,12 +1,12 @@
-use demon_bluff_gameplay_engine::game_state::GameState;
+use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    hypotheses::HypothesisType,
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
         HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
+    hypotheses::HypothesisType,
 };
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
@@ -47,6 +47,23 @@ impl Hypothesis for RevealingIsSafeHypothesis {
     where
         TLog: Log,
     {
+        let mut all_hidden = true;
+        for villager in game_state.villagers() {
+            match villager {
+                Villager::Hidden(_) => {}
+                Villager::Active(_) | Villager::Confirmed(_) => {
+                    all_hidden = false;
+                    break;
+                }
+            }
+        }
+
+        if all_hidden {
+            return repository.create_return(HypothesisResult::Conclusive(
+                FitnessAndAction::certainty(None),
+            ));
+        }
+
         repository.create_return(HypothesisResult::unimplemented())
     }
 }

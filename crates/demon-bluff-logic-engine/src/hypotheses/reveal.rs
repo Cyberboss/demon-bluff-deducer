@@ -2,11 +2,12 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    hypotheses::{HypothesisType, reveal_index::RevealIndexHypothesisBuilder},
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+        decide_result,
     },
+    hypotheses::{HypothesisType, reveal_index::RevealIndexHypothesisBuilder},
 };
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
@@ -70,7 +71,7 @@ impl Hypothesis for RevealHypothesis {
         for reference in &self.revealable_hypotheses {
             let sub_evaluation = evaluator.sub_evaluate(reference);
             result = Some(match result {
-                Some(existing_fitness) => or_result(sub_evaluation, existing_fitness),
+                Some(existing_fitness) => decide_result(sub_evaluation, existing_fitness),
                 None => sub_evaluation,
             })
         }
