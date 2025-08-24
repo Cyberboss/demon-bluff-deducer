@@ -62,7 +62,7 @@ impl Hypothesis for MasterHypothesis {
                 }
             }
         }
-        result = or_result(evaluator.sub_evaluate(&self.execute_hypothesis), result);
+        result = or_result(evaluator.sub_evaluate(&self.info_hypothesis), result);
         evaluator.create_return(result)
     }
 }

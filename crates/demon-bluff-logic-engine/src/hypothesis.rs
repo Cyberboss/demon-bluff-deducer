@@ -473,7 +473,12 @@ where
         match &data.results[self.inner.current_reference().0] {
             Some(_) => {}
             None => {
-                info!(logger: self.inner.log, "{} Set initial fitness: {}",self.inner.depth(), initial_fitness);
+                if let Some(previous) = self.inner.previous_data
+                    && let Some(_) = &previous.results[self.inner.current_reference().0]
+                {
+                } else {
+                    info!(logger: self.inner.log, "{} Set initial fitness: {}",self.inner.depth(), initial_fitness);
+                }
                 data.results[self.inner.current_reference().0] =
                     Some(HypothesisResult::Pending(FitnessAndAction {
                         action: HashSet::new(),
@@ -616,26 +621,25 @@ where
     }
 
     pub fn register_builder_type(&mut self, builder: HypothesisBuilderType) -> HypothesisReference {
-        let mut reference = None;
+        let mut reference_option = None;
         for (index, existing_builder) in self.builders.iter().enumerate() {
             if builder == *existing_builder {
-                reference = Some(HypothesisReference(index));
+                reference_option = Some(HypothesisReference(index));
                 break;
             }
         }
 
-        let reference = match reference {
+        let dependencies_index = self.dependencies.len() - 1;
+        let reference = match reference_option {
             Some(reference) => reference,
             None => {
                 let reference = HypothesisReference(self.builders.len());
-                info!(logger: self.log, "- Registered dependency {}",  reference);
-
                 self.builders.push(builder);
                 reference
             }
         };
 
-        self.dependencies[reference.0].push(reference.clone());
+        self.dependencies[dependencies_index].push(reference.clone());
         reference
     }
 
@@ -671,9 +675,7 @@ where
         let mut hypotheses = Vec::new();
         hypotheses.reserve_exact(current_reference);
 
-        let final_builders = self.builders;
-        self.builders = Vec::new();
-        for (index, builder) in final_builders.into_iter().enumerate() {
+        for (index, builder) in self.builders.clone().into_iter().enumerate() {
             let hypothesis = builder.build(game_state, &mut self).into();
             info!(logger: self.log, "{}: {}", HypothesisReference(index), hypothesis);
             for dependency in &self.dependencies[index] {
@@ -723,6 +725,7 @@ where
     let mut iteration = 0;
     let mut stability_iteration = 0;
     loop {
+        log.flush();
         iteration = iteration + 1;
         info!(logger: log, "Iteration: {}", iteration);
 
@@ -757,11 +760,13 @@ where
                     let mut graph_stable = *previous_results == *data;
 
                     stability_iteration = stability_iteration + 1;
-                    if !graph_stable
-                        && stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE
-                    {
-                        warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for cycle breaking", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
-                        graph_stable = true;
+                    if !graph_stable {
+                        if stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE {
+                            warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for cycle breaking", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
+                            graph_stable = true;
+                        }
+                    } else {
+                        info!(logger: log, "Graph stable")
                     }
 
                     if graph_stable {
