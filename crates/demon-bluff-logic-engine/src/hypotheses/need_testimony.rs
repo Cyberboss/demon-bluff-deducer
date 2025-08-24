@@ -2,11 +2,12 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
-    hypotheses::HypothesisType,
+    desires::{DesireType, get_testimony::GetTestimonyDesire},
     engine::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, DesireConsumerReference, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
+    hypotheses::HypothesisType,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -17,6 +18,7 @@ pub struct NeedTestimonyHypothesisBuilder {
 #[derive(Debug)]
 pub struct NeedTestimonyHypothesis {
     index: VillagerIndex,
+    get_testimony_desire: DesireConsumerReference,
 }
 
 impl NeedTestimonyHypothesisBuilder {
@@ -26,15 +28,18 @@ impl NeedTestimonyHypothesisBuilder {
 }
 
 impl HypothesisBuilder for NeedTestimonyHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {
-        NeedTestimonyHypothesis { index: self.index }.into()
+        let get_testimony_desire = registrar.register_desire_consumer(DesireType::GetTestimony(
+            GetTestimonyDesire::new(self.index.clone()),
+        ));
+        NeedTestimonyHypothesis {
+            index: self.index,
+            get_testimony_desire,
+        }
+        .into()
     }
 }
 
@@ -43,20 +48,17 @@ impl Hypothesis for NeedTestimonyHypothesis {
         write!(f, "Need testimony of {}", self.index)
     }
 
-    fn wip(&self) -> bool {
-        true
-    }
-
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::unimplemented())
+        let result = repository.desire_result(&self.get_testimony_desire);
+        repository.create_return(result)
     }
 }

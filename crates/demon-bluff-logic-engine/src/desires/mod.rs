@@ -1,13 +1,10 @@
 use std::fmt::Display;
 
-use reveal_villager::RevealVillagerDesire;
-use use_ability::UseAbilityDesire;
+use get_testimony::GetTestimonyDesire;
 
-pub(crate) mod reveal_villager;
-pub(crate) mod use_ability;
+pub(crate) mod get_testimony;
 
 #[derive(PartialEq, Eq, Debug, Display, Clone)]
 pub enum DesireType {
-    RevealVillager(RevealVillagerDesire),
-    UseAbility(UseAbilityDesire),
+    GetTestimony(GetTestimonyDesire),
 }

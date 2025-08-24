@@ -19,7 +19,7 @@ pub const FITNESS_UNKNOWN: f64 = 0.5;
 
 const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 1000;
 
-const FITNESS_UNIMPLEMENTED: f64 = 0.123456789;
+const FITNESS_UNIMPLEMENTED: f64 = 0.000123456789;
 
 /// A reference to a `Hypothesis` in the graph.
 #[derive(Debug, PartialEq, Eq, Hash)]

@@ -2,14 +2,14 @@ use demon_bluff_gameplay_engine::{
     game_state::GameState,
     villager::{Villager, VillagerIndex},
 };
-use log::{Log, info};
+use log::Log;
 
 use crate::{
-    desires::{DesireType, reveal_villager::RevealVillagerDesire, use_ability::UseAbilityDesire},
+    desires::{DesireType, get_testimony::GetTestimonyDesire},
     engine::{
-        Depth, DesireConsumerReference, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction,
-        Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis,
+        HypothesisBuilder, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult, HypothesisReturn,
     },
     hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
 };
@@ -22,8 +22,7 @@ pub struct IsTruthfulHypothesisBuilder {
 #[derive(Debug)]
 enum SubReferenceType {
     CheckTestimony(HypothesisReference),
-    UseAbility(DesireProducerReference),
-    RevealVillager(DesireProducerReference),
+    GetTestimony(DesireProducerReference),
 }
 
 #[derive(Debug)]
@@ -56,22 +55,22 @@ impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
                             testimony.clone(),
                         ),
                     )),
-                    None => SubReferenceType::UseAbility(registrar.register_desire_producer(
-                        DesireType::UseAbility(UseAbilityDesire::new(self.index.clone())),
+                    None => SubReferenceType::GetTestimony(registrar.register_desire_producer(
+                        DesireType::GetTestimony(GetTestimonyDesire::new(self.index.clone())),
                     )),
                 })
             }
-            Villager::Hidden(_) => Some(SubReferenceType::RevealVillager(
-                registrar.register_desire_producer(DesireType::RevealVillager(
-                    RevealVillagerDesire::new(self.index.clone()),
+            Villager::Hidden(_) => Some(SubReferenceType::GetTestimony(
+                registrar.register_desire_producer(DesireType::GetTestimony(
+                    GetTestimonyDesire::new(self.index.clone()),
                 )),
             )),
             Villager::Confirmed(confirmed_villager) => {
                 match confirmed_villager.instance().testimony() {
                     Some(_) => None,
-                    None => Some(SubReferenceType::UseAbility(
-                        registrar.register_desire_producer(DesireType::UseAbility(
-                            UseAbilityDesire::new(self.index.clone()),
+                    None => Some(SubReferenceType::GetTestimony(
+                        registrar.register_desire_producer(DesireType::GetTestimony(
+                            GetTestimonyDesire::new(self.index.clone()),
                         )),
                     )),
                 }
@@ -108,8 +107,7 @@ impl Hypothesis for IsTruthfulHypothesis {
                     let result = evaluator.sub_evaluate(testimony_expression_hypothesis);
                     evaluator.create_return(result)
                 }
-                SubReferenceType::UseAbility(desire_producer_reference)
-                | SubReferenceType::RevealVillager(desire_producer_reference) => {
+                SubReferenceType::GetTestimony(desire_producer_reference) => {
                     repository.set_desire(desire_producer_reference, true);
                     repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::new(
                         FITNESS_UNKNOWN,

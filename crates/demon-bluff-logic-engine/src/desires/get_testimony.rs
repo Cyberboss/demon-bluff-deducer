@@ -3,18 +3,18 @@ use std::fmt::Display;
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct UseAbilityDesire {
+pub struct GetTestimonyDesire {
     index: VillagerIndex,
 }
 
-impl UseAbilityDesire {
+impl GetTestimonyDesire {
     pub fn new(index: VillagerIndex) -> Self {
         Self { index }
     }
 }
 
-impl Display for UseAbilityDesire {
+impl Display for GetTestimonyDesire {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Use {}'s ability", self.index)
+        write!(f, "Get {}'s Testimony", self.index)
     }
 }
