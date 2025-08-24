@@ -34,9 +34,7 @@ impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
     {
         let mut corrupting_archetype_hypotheses = Vec::new();
         for archetype in VillagerArchetype::iter() {
-            if let Some(Affect::Corrupt(_)) =
-                archetype.affect(game_state.total_villagers(), VillagerIndex(0))
-            {
+            if let Some(Affect::Corrupt(_)) = archetype.affect(game_state.total_villagers(), None) {
                 corrupting_archetype_hypotheses
                     .push(registrar.register(ArchetypeInPlayHypothesisBuilder::new(archetype)));
             }

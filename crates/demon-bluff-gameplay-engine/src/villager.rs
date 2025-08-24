@@ -506,7 +506,9 @@ impl VillagerArchetype {
         }
     }
 
-    pub fn affect(&self, total_villagers: usize, index: VillagerIndex) -> Option<Affect> {
+    /// index is only used to calculate positions of the [`VillagerAffect`] if any
+    pub fn affect(&self, total_villagers: usize, index: Option<VillagerIndex>) -> Option<Affect> {
+        let index = index.unwrap_or(VillagerIndex(0));
         match self {
             VillagerArchetype::GoodVillager(good_villager) => match good_villager {
                 GoodVillager::Alchemist

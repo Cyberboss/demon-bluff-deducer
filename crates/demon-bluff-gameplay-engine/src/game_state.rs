@@ -277,6 +277,17 @@ impl GameState {
         })
     }
 
+    pub fn deck(&self) -> &Vec<VillagerArchetype> {
+        &self.deck
+    }
+
+    pub fn villager_indicies(&self) -> impl Iterator<Item = VillagerIndex> {
+        self.villagers
+            .iter()
+            .enumerate()
+            .map(|(index, _)| VillagerIndex(index))
+    }
+
     pub fn villager(&self, index: &VillagerIndex) -> &Villager {
         &self.villagers[index.0]
     }

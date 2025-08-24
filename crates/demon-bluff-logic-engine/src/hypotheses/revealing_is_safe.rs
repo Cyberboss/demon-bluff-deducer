@@ -131,7 +131,7 @@ fn position_unaware_affect(
     game_state: &GameState,
     archetype: &VillagerArchetype,
 ) -> Option<Affect> {
-    archetype.affect(game_state.total_villagers(), VillagerIndex(0))
+    archetype.affect(game_state.total_villagers(), None)
 }
 
 /// If the given [`Affect`] makes revealing unsafe returns the safety probabilty
