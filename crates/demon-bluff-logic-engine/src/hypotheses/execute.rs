@@ -1,58 +1,57 @@
-use std::collections::HashMap;
-
-use demon_bluff_gameplay_engine::{
-    game_state::GameState,
-    villager::{Villager, VillagerIndex},
-};
+use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    hypotheses::execute_index::ExecuteIndexHypothesis,
+    hypotheses::{HypothesisType, execute_index::ExecuteIndexHypothesisBuilder},
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
+pub struct ExecuteHypothesisBuilder {}
+
+#[derive(Debug)]
 pub struct ExecuteHypothesis {
     executable_hypotheses: Vec<HypothesisReference>,
 }
 
-impl ExecuteHypothesis {
-    pub fn create<TLog>(
+impl HypothesisBuilder for ExecuteHypothesisBuilder {
+    type HypothesisImpl = ExecuteHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis + 'static,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
         let mut executable_hypotheses = Vec::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(active_villager) => {
                 if !active_villager.cant_kill() {
-                    executable_hypotheses.push(ExecuteIndexHypothesis::create(
-                        game_state,
-                        registrar,
-                        villager_index,
-                    ));
+                    executable_hypotheses.push(
+                        registrar.register(ExecuteIndexHypothesisBuilder::new(villager_index)),
+                    );
                 }
             }
             Villager::Hidden(hidden_villager) => {
                 if !hidden_villager.cant_kill() {
-                    executable_hypotheses.push(ExecuteIndexHypothesis::create(
-                        game_state,
-                        registrar,
-                        villager_index,
-                    ));
+                    executable_hypotheses.push(
+                        registrar.register(ExecuteIndexHypothesisBuilder::new(villager_index)),
+                    );
                 }
             }
             Villager::Confirmed(_) => {}
         });
 
-        registrar.register(Self {
+        Self::HypothesisImpl {
             executable_hypotheses,
-        })
+        }
     }
 }
 
@@ -63,9 +62,9 @@ impl Hypothesis for ExecuteHypothesis {
 
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where

@@ -4,8 +4,8 @@ use log::Log;
 use crate::{
     hypotheses::HypothesisType,
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRepository,
-        HypothesisResult, HypothesisReturn,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
 };
 
@@ -15,11 +15,7 @@ pub struct AbilityHypothesisBuilder {}
 impl HypothesisBuilder for AbilityHypothesisBuilder {
     type HypothesisImpl = AbilityHypothesis;
 
-    fn build<TLog>(
-        self,
-        _: &::demon_bluff_gameplay_engine::game_state::GameState,
-        _: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> Self::HypothesisImpl
+    fn build<TLog>(self, _: &GameState, _: &mut HypothesisRegistrar<TLog>) -> Self::HypothesisImpl
     where
         Self::HypothesisImpl: Hypothesis + 'static,
         HypothesisType: From<Self::HypothesisImpl>,

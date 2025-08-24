@@ -2,38 +2,50 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
-    hypotheses::{
-        is_evil::IsEvilHypothesis, need_testimony::NeedTestimonyHypothesis,
-        revealing_is_safe::RevealingIsSafeHypothesis,
-    },
+    hypotheses::{HypothesisType, is_evil::IsEvilHypothesisBuilder},
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
     player_action::PlayerAction,
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct ExecuteIndexHypothesisBuilder {
+    index: VillagerIndex,
+}
+
+#[derive(Debug)]
 pub struct ExecuteIndexHypothesis {
     index: VillagerIndex,
     is_evil_hypothesis: HypothesisReference,
 }
 
-impl ExecuteIndexHypothesis {
-    pub fn create<TLog>(
-        game_state: &GameState,
+impl ExecuteIndexHypothesisBuilder {
+    pub fn new(index: VillagerIndex) -> Self {
+        Self { index }
+    }
+}
+
+impl HypothesisBuilder for ExecuteIndexHypothesisBuilder {
+    type HypothesisImpl = ExecuteIndexHypothesis;
+
+    fn build<TLog>(
+        self,
+        _: &GameState,
         mut registrar: &mut HypothesisRegistrar<TLog>,
-        index: VillagerIndex,
-    ) -> HypothesisReference
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis + 'static,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
         let is_evil_hypothesis =
-            IsEvilHypothesis::create(game_state, &mut registrar, index.clone());
-        registrar.register(Self {
-            index,
+            registrar.register(IsEvilHypothesisBuilder::new(self.index.clone()));
+        Self::HypothesisImpl {
             is_evil_hypothesis,
-        })
+            index: self.index,
+        }
     }
 }
 
@@ -44,8 +56,8 @@ impl Hypothesis for ExecuteIndexHypothesis {
 
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
+        _: &TLog,
+        _: Depth,
         game_state: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn

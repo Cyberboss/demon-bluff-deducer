@@ -5,7 +5,7 @@ use crate::{
     affect::{Affect, NightEffect, VillagerAffect},
     testimony::{Direction, Testimony},
 };
-use std::{fmt::Display, thread::yield_now};
+use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub struct VillagerIndex(pub usize);

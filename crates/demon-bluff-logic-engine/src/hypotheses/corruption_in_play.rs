@@ -6,10 +6,7 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    hypotheses::{
-        HypothesisType,
-        archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
-    },
+    hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
     hypothesis::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
@@ -20,7 +17,7 @@ use crate::{
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct CorruptionInPlayHypothesisBuilder {}
 
-// Evaluates if corruption is in play
+/// Evaluates if corruption is in play
 #[derive(Debug)]
 pub struct CorruptionInPlayHypothesis {
     corrupting_archetype_hypotheses: Vec<HypothesisReference>,
@@ -31,8 +28,8 @@ impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
 
     fn build<TLog>(
         self,
-        game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
-        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+        game_state: &GameState,
+        registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
         Self::HypothesisImpl: Hypothesis + 'static,
