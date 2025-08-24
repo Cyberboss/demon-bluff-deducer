@@ -65,6 +65,10 @@ impl Hypothesis for IsTruthfulHypothesis {
         write!(f, "{} is truthful", self.index)
     }
 
+    fn wip(&self) -> bool {
+        true // implement desires
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,
