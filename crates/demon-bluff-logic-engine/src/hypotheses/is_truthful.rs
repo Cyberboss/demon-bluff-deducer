@@ -5,12 +5,13 @@ use demon_bluff_gameplay_engine::{
 use log::{Log, info};
 
 use crate::{
-    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
+    desires::{DesireType, reveal_villager::RevealVillagerDesire, use_ability::UseAbilityDesire},
     engine::{
-        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        HypothesisReturn,
+        Depth, DesireConsumerReference, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction,
+        Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
+    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -19,9 +20,16 @@ pub struct IsTruthfulHypothesisBuilder {
 }
 
 #[derive(Debug)]
+enum SubReferenceType {
+    CheckTestimony(HypothesisReference),
+    UseAbility(DesireProducerReference),
+    RevealVillager(DesireProducerReference),
+}
+
+#[derive(Debug)]
 pub struct IsTruthfulHypothesis {
     index: VillagerIndex,
-    testimony_expression_hypothesis: Option<HypothesisReference>,
+    sub_reference: Option<SubReferenceType>,
 }
 
 impl IsTruthfulHypothesisBuilder {
@@ -39,22 +47,40 @@ impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
     where
         TLog: ::log::Log,
     {
-        let testimony_expression_hypothesis = match game_state.villager(&self.index) {
-            Villager::Active(active_villager) => match active_villager.instance().testimony() {
-                Some(testimony) => Some(registrar.register(
-                    TestimonyExpressionHypothesisBuilder::new(
-                        self.index.clone(),
-                        testimony.clone(),
-                    ),
+        let sub_reference = match game_state.villager(&self.index) {
+            Villager::Active(active_villager) => {
+                Some(match active_villager.instance().testimony() {
+                    Some(testimony) => SubReferenceType::CheckTestimony(registrar.register(
+                        TestimonyExpressionHypothesisBuilder::new(
+                            self.index.clone(),
+                            testimony.clone(),
+                        ),
+                    )),
+                    None => SubReferenceType::UseAbility(registrar.register_desire_producer(
+                        DesireType::UseAbility(UseAbilityDesire::new(self.index.clone())),
+                    )),
+                })
+            }
+            Villager::Hidden(_) => Some(SubReferenceType::RevealVillager(
+                registrar.register_desire_producer(DesireType::RevealVillager(
+                    RevealVillagerDesire::new(self.index.clone()),
                 )),
-                None => None,
-            },
-            Villager::Hidden(_) | Villager::Confirmed(_) => None,
+            )),
+            Villager::Confirmed(confirmed_villager) => {
+                match confirmed_villager.instance().testimony() {
+                    Some(_) => None,
+                    None => Some(SubReferenceType::UseAbility(
+                        registrar.register_desire_producer(DesireType::UseAbility(
+                            UseAbilityDesire::new(self.index.clone()),
+                        )),
+                    )),
+                }
+            }
         };
 
         IsTruthfulHypothesis {
             index: self.index,
-            testimony_expression_hypothesis,
+            sub_reference,
         }
         .into()
     }
@@ -65,32 +91,46 @@ impl Hypothesis for IsTruthfulHypothesis {
         write!(f, "{} is truthful", self.index)
     }
 
-    fn wip(&self) -> bool {
-        true // implement desires
-    }
-
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
+        _: &TLog,
         _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        game_state: &GameState,
+        mut repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where
         TLog: Log,
     {
-        match &self.testimony_expression_hypothesis {
-            Some(testimony_expression_hypothesis) => {
-                let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
-                let result = evaluator.sub_evaluate(testimony_expression_hypothesis);
-                evaluator.create_return(result)
-            }
+        match &self.sub_reference {
+            Some(sub_reference) => match sub_reference {
+                SubReferenceType::CheckTestimony(testimony_expression_hypothesis) => {
+                    let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
+                    let result = evaluator.sub_evaluate(testimony_expression_hypothesis);
+                    evaluator.create_return(result)
+                }
+                SubReferenceType::UseAbility(desire_producer_reference)
+                | SubReferenceType::RevealVillager(desire_producer_reference) => {
+                    repository.set_desire(desire_producer_reference, true);
+                    repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::new(
+                        FITNESS_UNKNOWN,
+                        None,
+                    )))
+                }
+            },
             None => {
-                info!(logger: log, "Cannot evaluate if {} is truthful because they have no testimony!", self.index);
-                repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::new(
-                    FITNESS_UNKNOWN,
-                    None,
-                )))
+                // villager is confirmed
+
+                if let Villager::Confirmed(confirmed_villager) = game_state.villager(&self.index) {
+                    let truthful = !confirmed_villager.true_identity().lies();
+
+                    repository.create_return(HypothesisResult::Conclusive(if truthful {
+                        FitnessAndAction::certainty(None)
+                    } else {
+                        FitnessAndAction::impossible()
+                    }))
+                } else {
+                    panic!("Villager {} should've been confirmed!", self.index)
+                }
             }
         }
     }

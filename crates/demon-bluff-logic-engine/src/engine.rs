@@ -30,7 +30,7 @@ pub struct HypothesisRepository<'a, TLog>
 where
     TLog: Log,
 {
-    set_desires: HashMap<DesireReference, bool>,
+    set_desires: HashMap<DesireProducerReference, bool>,
     inner: StackData<'a, TLog>,
 }
 
@@ -49,6 +49,7 @@ where
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
     break_at: &'a Option<HypothesisReference>,
     desire_definitions: &'a Vec<DesireDefinition>,
+    dependencies: &'a DependencyData,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -72,11 +73,11 @@ struct HypothesisGraph {
 
 /// A reference to a [`DesireType`] that a [`Hypothesis`] uses in its own [`HypothesisResult`] calculation
 #[derive(Debug, PartialEq, Eq)]
-pub struct DesireDependentReference(usize);
+pub struct DesireConsumerReference(usize);
 
 /// A reference to a [`DesireType`] that a [`Hypothesis`] declares a desire for or not
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct DesireReference(usize);
+pub struct DesireProducerReference(usize);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct DesireData {
@@ -105,7 +106,7 @@ pub struct HypothesisEvaluator<'a, TLog>
 where
     TLog: Log,
 {
-    set_desires: HashMap<DesireReference, bool>,
+    set_desires: HashMap<DesireProducerReference, bool>,
     inner: StackData<'a, TLog>,
 }
 
@@ -117,6 +118,7 @@ struct GraphBuilder {
 /// The return value of evaluating a single `Hypothesis`.
 #[derive(Debug)]
 pub struct HypothesisReturn {
+    set_desires: HashMap<DesireProducerReference, bool>,
     result: HypothesisResult,
 }
 
@@ -182,8 +184,8 @@ where
 
 #[derive(Debug)]
 struct DependencyData {
-    desire_producers: Vec<Vec<DesireReference>>,
-    desire_consumers: Vec<Vec<DesireDependentReference>>,
+    desire_producers: Vec<Vec<DesireProducerReference>>,
+    desire_consumers: Vec<Vec<DesireConsumerReference>>,
     hypotheses: Vec<Vec<HypothesisReference>>,
 }
 
@@ -210,19 +212,25 @@ impl Display for DesireData {
     }
 }
 
-impl DesireReference {
+impl DesireProducerReference {
     pub fn clone(&self) -> Self {
         Self(self.0)
     }
 }
 
-impl Display for DesireReference {
+impl Display for DesireProducerReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "D-{:05}", self.0 + 1)
     }
 }
 
-impl Display for DesireDependentReference {
+impl DesireConsumerReference {
+    pub fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
+impl Display for DesireConsumerReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "D-{:05}", self.0 + 1)
     }
@@ -343,6 +351,7 @@ where
         root_reference: &HypothesisReference,
         graph_builder: Option<&'a RefCell<GraphBuilder>>,
         desire_definitions: &'a Vec<DesireDefinition>,
+        dependencies: &'a DependencyData,
     ) -> Self {
         Self {
             reference_stack: vec![root_reference.clone()],
@@ -355,6 +364,7 @@ where
             cycles,
             graph_builder,
             desire_definitions,
+            dependencies,
         }
     }
 
@@ -393,6 +403,7 @@ where
             previous_data: self.previous_data,
             cycles: &self.cycles,
             desire_definitions: self.desire_definitions,
+            dependencies: self.dependencies,
         }
     }
 
@@ -419,6 +430,7 @@ where
             previous_data: self.previous_data,
             cycles: &self.cycles,
             desire_definitions: self.desire_definitions,
+            dependencies: self.dependencies,
         }
     }
 
@@ -559,6 +571,17 @@ where
 
         info!(logger: self.inner.log, "{} Result: {}", self.inner.depth(), hypo_return.result);
 
+        if let HypothesisResult::Conclusive(_) = &hypo_return.result {
+            for producer_reference in &self.inner.dependencies.desire_producers[reference.0] {
+                if !hypo_return.set_desires.contains_key(producer_reference) {
+                    panic!(
+                        "{}: {} was supposed to produce a result for {} before concluding but didn't!",
+                        reference, hypothesis, producer_reference
+                    )
+                }
+            }
+        }
+
         let mut current_data = self.inner.current_data.borrow_mut();
         current_data.results[self.inner.current_reference().0] = Some(hypo_return.result.clone());
 
@@ -596,7 +619,7 @@ where
         }
     }
 
-    pub fn set_desire(&mut self, desire_reference: &DesireReference, desired: bool) {
+    pub fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
         let mut borrow = self.inner.current_data.borrow_mut();
         let data = &mut borrow.desires[desire_reference.0];
 
@@ -632,7 +655,7 @@ where
         }
     }
 
-    pub fn desire_result(&self, desire_reference: &DesireDependentReference) -> HypothesisResult {
+    pub fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
         let definition = &self.inner.desire_definitions[desire_reference.0];
         let data = self
             .inner
@@ -765,7 +788,7 @@ where
         last_evaluate
     }
 
-    pub fn set_desire(&mut self, desire_reference: &DesireReference, desired: bool) {
+    pub fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
         let mut borrow = self.inner.current_data.borrow_mut();
         let data = &mut borrow.desires[desire_reference.0];
 
@@ -801,7 +824,7 @@ where
         }
     }
 
-    pub fn desire_result(&self, desire_reference: &DesireReference) -> HypothesisResult {
+    pub fn desire_result(&self, desire_reference: &DesireProducerReference) -> HypothesisResult {
         let defintion = &self.inner.desire_definitions[desire_reference.0];
         let data = self
             .inner
@@ -898,9 +921,9 @@ where
         reference
     }
 
-    pub fn register_desire_dependency(&mut self, desire: DesireType) -> DesireDependentReference {
+    pub fn register_desire_consumer(&mut self, desire: DesireType) -> DesireConsumerReference {
         let index = self.register_desire_core(desire.clone());
-        let reference = DesireDependentReference(index);
+        let reference = DesireConsumerReference(index);
 
         if let Some(dependencies) = self.dependencies.as_mut() {
             let consumers = dependencies
@@ -913,15 +936,15 @@ where
                 }
             }
 
-            consumers.push(reference);
+            consumers.push(reference.clone());
         }
 
         reference
     }
 
-    pub fn register_desire_producer(&mut self, desire: DesireType) -> DesireReference {
+    pub fn register_desire_producer(&mut self, desire: DesireType) -> DesireProducerReference {
         let index = self.register_desire_core(desire.clone());
-        let reference = DesireReference(index);
+        let reference = DesireProducerReference(index);
 
         if let Some(dependencies) = self.dependencies.as_mut() {
             let producers = dependencies
@@ -934,7 +957,7 @@ where
                 }
             }
 
-            producers.push(reference);
+            producers.push(reference.clone());
         }
 
         reference
@@ -1019,7 +1042,7 @@ where
                     }),
             };
 
-            info!(logger: self.log, "- {}: {}", DesireReference(index), definition);
+            info!(logger: self.log, "- {}: {}", DesireProducerReference(index), definition);
             desire_definitions.push(definition);
         }
 
@@ -1098,6 +1121,7 @@ where
             &graph.root,
             None,
             &graph.desires,
+            &graph.dependencies,
         ));
 
         let result = invocation.enter();
