@@ -29,7 +29,7 @@ where
 {
     evaluate(
         state,
-        |state, registrar| MasterHypothesis::create(state, registrar),
+        MasterHypothesisBuilder::default(),
         log,
         Some(graph_stepper),
     )
@@ -41,7 +41,7 @@ pub fn predict(
 ) -> Result<HashSet<PlayerAction>, PredictionError> {
     evaluate(
         state,
-        |state, registrar| MasterHypothesis::create(state, registrar),
+        MasterHypothesisBuilder::default(),
         log,
         None::<fn(&mut ForceGraph<GraphNodeData>)>,
     )

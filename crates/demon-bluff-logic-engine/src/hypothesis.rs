@@ -136,7 +136,7 @@ pub trait HypothesisBuilder {
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
-        Self::HypothesisImpl: Hypothesis + 'static,
+        Self::HypothesisImpl: Hypothesis,
         HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log;
 }
@@ -381,14 +381,7 @@ impl FitnessAndAction {
         }
     }
 
-    pub fn certainty() -> Self {
-        Self {
-            action: HashSet::new(),
-            fitness: 1.0,
-        }
-    }
-
-    pub fn certainty_with_action(action: PlayerAction) -> Self {
+    pub fn certainty(action: Option<PlayerAction>) -> Self {
         Self::new(1.0, action)
     }
 
@@ -699,20 +692,22 @@ where
     }
 }
 
-pub fn evaluate<TLog, FGraph>(
+pub fn evaluate<TBuilder, TLog, FGraph>(
     game_state: &GameState,
-    initial_hypothesis: HypothesisBuilderType,
+    initial_hypothesis_builder: TBuilder,
     log: &TLog,
     mut stepper: Option<FGraph>,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
+    TBuilder: HypothesisBuilder,
+    HypothesisBuilderType: From<TBuilder>,
     TLog: Log,
     FGraph: FnMut(&mut ForceGraph<GraphNodeData>),
 {
     let registrar = HypothesisRegistrar::new(log);
 
     info!(logger: log, target: "evaluate", "Evaluate dependencies");
-    let graph = registrar.run(game_state, initial_hypothesis);
+    let graph = registrar.run(game_state, initial_hypothesis_builder.into());
 
     info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", graph.hypotheses.len(), graph.hypotheses[graph.root.0]);
 
