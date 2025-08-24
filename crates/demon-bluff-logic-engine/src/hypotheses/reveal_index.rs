@@ -84,19 +84,13 @@ impl Hypothesis for RevealIndexHypothesis {
 
         let fittest = or_result(reveal_result, info_desire_result);
 
-        evaluator.create_return(match fittest {
-            HypothesisResult::Pending(fitness_and_action) => {
-                HypothesisResult::Pending(FitnessAndAction::new(
-                    fitness_and_action.fitness(),
-                    Some(PlayerAction::TryReveal(self.index.clone())),
-                ))
-            }
-            HypothesisResult::Conclusive(fitness_and_action) => {
-                HypothesisResult::Conclusive(FitnessAndAction::new(
-                    fitness_and_action.fitness(),
-                    Some(PlayerAction::TryReveal(self.index.clone())),
-                ))
-            }
-        })
+        let result = fittest.map(|fitness| {
+            FitnessAndAction::new(
+                fitness.fitness(),
+                Some(PlayerAction::TryReveal(self.index.clone())),
+            )
+        });
+
+        evaluator.create_return(result)
     }
 }

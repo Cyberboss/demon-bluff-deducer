@@ -58,7 +58,9 @@ impl Hypothesis for NegateHypothesis {
     {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
-        let result = evaluator.sub_evaluate(&self.target_hypothesis);
+        let result = evaluator
+            .sub_evaluate(&self.target_hypothesis)
+            .map(|fitness_and_action| fitness_and_action.invert());
 
         evaluator.create_return(match result {
             HypothesisResult::Pending(fitness_and_action) => {

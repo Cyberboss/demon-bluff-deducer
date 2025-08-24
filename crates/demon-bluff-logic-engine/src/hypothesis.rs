@@ -209,6 +209,20 @@ impl HypothesisResult {
         Self::Conclusive(FitnessAndAction::unimplemented())
     }
 
+    pub fn impossible() -> Self {
+        Self::Conclusive(FitnessAndAction::impossible())
+    }
+
+    pub fn map<F>(self, mut f: F) -> Self
+    where
+        F: FnMut(FitnessAndAction) -> FitnessAndAction,
+    {
+        match self {
+            Self::Pending(fitness_and_action) => Self::Pending(f(fitness_and_action)),
+            Self::Conclusive(fitness_and_action) => Self::Conclusive(f(fitness_and_action)),
+        }
+    }
+
     fn fitness_and_action(&self) -> &FitnessAndAction {
         match self {
             HypothesisResult::Pending(fitness_and_action)

@@ -68,8 +68,7 @@ impl Hypothesis for ExecuteHypothesis {
         TLog: Log,
     {
         if self.executable_hypotheses.is_empty() {
-            return repository
-                .create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
+            return repository.create_return(HypothesisResult::impossible());
         }
 
         let mut evaluator = repository.require_sub_evaluation(0.0);

@@ -1,5 +1,3 @@
-use std::f128::consts::E;
-
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::GameState,
@@ -127,16 +125,9 @@ impl Hypothesis for TestimonyExpressionHypothesis {
             HypothesisExpression::Unary(hypothesis_reference) => {
                 evaluator.sub_evaluate(hypothesis_reference)
             }
-            HypothesisExpression::Not(hypothesis_reference) => {
-                match evaluator.sub_evaluate(hypothesis_reference) {
-                    HypothesisResult::Pending(fitness_and_action) => {
-                        HypothesisResult::Pending(fitness_and_action.invert())
-                    }
-                    HypothesisResult::Conclusive(fitness_and_action) => {
-                        HypothesisResult::Conclusive(fitness_and_action.invert())
-                    }
-                }
-            }
+            HypothesisExpression::Not(hypothesis_reference) => evaluator
+                .sub_evaluate(hypothesis_reference)
+                .map(|fitness_and_action| fitness_and_action.invert()),
             HypothesisExpression::And((lhs, rhs)) => todo!(),
             HypothesisExpression::Or(_) => todo!(),
         };

@@ -62,20 +62,14 @@ impl Hypothesis for ExecuteIndexHypothesis {
         let total_villagers = game_state.draw_stats().total_villagers() as f64;
 
         let mut evaluator = repository.require_sub_evaluation(estimated_evils / total_villagers);
-        let result = match evaluator.sub_evaluate(&self.is_evil_hypothesis) {
-            HypothesisResult::Pending(fitness_and_action) => {
-                HypothesisResult::Pending(FitnessAndAction::new(
-                    fitness_and_action.fitness(),
+        let result = evaluator
+            .sub_evaluate(&self.is_evil_hypothesis)
+            .map(|fitness| {
+                FitnessAndAction::new(
+                    fitness.fitness(),
                     Some(PlayerAction::TryExecute(self.index.clone())),
-                ))
-            }
-            HypothesisResult::Conclusive(fitness_and_action) => {
-                HypothesisResult::Conclusive(FitnessAndAction::new(
-                    fitness_and_action.fitness(),
-                    Some(PlayerAction::TryExecute(self.index.clone())),
-                ))
-            }
-        };
+                )
+            });
         evaluator.create_return(result)
     }
 }
