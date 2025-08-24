@@ -1,28 +1,51 @@
 use demon_bluff_gameplay_engine::{
-    game_state::GameState, testimony::Testimony, villager::VillagerIndex,
+    game_state::GameState,
+    testimony::{self, Testimony},
+    villager::VillagerIndex,
 };
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesis},
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct TestimonyHypothesisBuilder {
+    testimony: Testimony,
+}
+
+/// Checks the validity of a [`Testimony`]` regardless of origin
+#[derive(Debug)]
 pub struct TestimonyHypothesis {
     testimony: Testimony,
 }
 
-impl TestimonyHypothesis {
-    pub fn create<TLog>(
+impl TestimonyHypothesisBuilder {
+    pub fn new(testimony: Testimony) -> Self {
+        Self { testimony }
+    }
+}
+
+impl HypothesisBuilder for TestimonyHypothesisBuilder {
+    type HypothesisImpl = TestimonyHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-        testimony: Testimony,
-    ) -> HypothesisReference
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
-        registrar.register(Self { testimony })
+        Self::HypothesisImpl {
+            testimony: self.testimony,
+        }
     }
 }
 
@@ -42,8 +65,9 @@ impl Hypothesis for TestimonyHypothesis {
         TLog: Log,
     {
         match &self.testimony {
-            Testimony::Confess(confessor_claim) => repository
-                .create_return(HypothesisResult::Conclusive(FitnessAndAction::certainty())),
+            Testimony::Confess(confessor_claim) => repository.create_return(
+                HypothesisResult::Conclusive(FitnessAndAction::certainty(None)),
+            ),
             _ => repository.create_return(HypothesisResult::Conclusive(
                 FitnessAndAction::unimplemented(),
             )),

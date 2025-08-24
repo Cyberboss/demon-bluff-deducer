@@ -7,7 +7,7 @@ use crate::{
     hypotheses::{
         HypothesisType,
         ability::{AbilityHypothesis, AbilityHypothesisBuilder},
-        reveal::RevealHypothesis,
+        reveal::{RevealHypothesis, RevealHypothesisBuilder},
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -34,6 +34,8 @@ impl HypothesisBuilder for GatherInformationHypothesisBuilder {
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let reveal_hypothesis = registrar.register(RevealHypothesisBuilder::default());

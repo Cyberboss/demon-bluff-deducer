@@ -3,10 +3,11 @@ use log::Log;
 
 use crate::{
     hypotheses::{
+        HypothesisType,
         corruption_in_play::{CorruptionInPlayHypothesis, CorruptionInPlayHypothesisBuilder},
-        is_evil::IsEvilHypothesis,
-        is_truthful::IsTruthfulHypothesis,
-        negate::NegateHypothesis,
+        is_evil::{IsEvilHypothesis, IsEvilHypothesisBuilder},
+        is_truthful::{IsTruthfulHypothesis, IsTruthfulHypothesisBuilder},
+        negate::{NegateHypothesis, NegateHypothesisBuilder},
     },
     hypothesis::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -43,6 +44,8 @@ impl HypothesisBuilder for IsCorruptHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let is_good_hypothesis = registrar.register(NegateHypothesisBuilder::new(

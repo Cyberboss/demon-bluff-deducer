@@ -4,9 +4,13 @@ use demon_bluff_gameplay_engine::{
 };
 use log::{Log, info};
 
-use crate::hypothesis::{
-    Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
+    hypothesis::{
+        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisReturn,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -35,6 +39,8 @@ impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let testimony_expression_hypothesis = match game_state.villager(&self.index) {

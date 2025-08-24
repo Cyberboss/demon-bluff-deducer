@@ -616,8 +616,11 @@ where
         HypothesisBuilderImpl: HypothesisBuilder + 'static,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
     {
+        self.register_builder_type(builder.into())
+    }
+
+    pub fn register_builder_type(&mut self, builder: HypothesisBuilderType) -> HypothesisReference {
         let mut reference = None;
-        let builder = builder.into();
         for (index, existing_builder) in self.builders.iter().enumerate() {
             if builder == *existing_builder {
                 reference = Some(HypothesisReference(index));

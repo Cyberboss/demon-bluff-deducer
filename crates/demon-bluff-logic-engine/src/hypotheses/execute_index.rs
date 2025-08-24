@@ -2,7 +2,7 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
-    hypotheses::is_evil::IsEvilHypothesisBuilder,
+    hypotheses::{HypothesisType, is_evil::IsEvilHypothesisBuilder},
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
@@ -36,6 +36,8 @@ impl HypothesisBuilder for ExecuteIndexHypothesisBuilder {
         mut registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let is_evil_hypothesis =
@@ -71,13 +73,13 @@ impl Hypothesis for ExecuteIndexHypothesis {
             HypothesisResult::Pending(fitness_and_action) => {
                 HypothesisResult::Pending(FitnessAndAction::new(
                     fitness_and_action.fitness(),
-                    PlayerAction::TryExecute(self.index.clone()),
+                    Some(PlayerAction::TryExecute(self.index.clone())),
                 ))
             }
             HypothesisResult::Conclusive(fitness_and_action) => {
                 HypothesisResult::Conclusive(FitnessAndAction::new(
                     fitness_and_action.fitness(),
-                    PlayerAction::TryExecute(self.index.clone()),
+                    Some(PlayerAction::TryExecute(self.index.clone())),
                 ))
             }
         };

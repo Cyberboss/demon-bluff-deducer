@@ -1,9 +1,12 @@
 use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::HypothesisType,
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -31,6 +34,8 @@ impl HypothesisBuilder for NeedTestimonyHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         Self::HypothesisImpl { index: self.index }

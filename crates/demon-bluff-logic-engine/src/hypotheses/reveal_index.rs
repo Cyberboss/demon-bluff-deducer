@@ -3,8 +3,9 @@ use log::Log;
 
 use crate::{
     hypotheses::{
+        HypothesisType,
         need_testimony::{NeedTestimonyHypothesis, NeedTestimonyHypothesisBuilder},
-        revealing_is_safe::RevealingIsSafeHypothesis,
+        revealing_is_safe::{RevealingIsSafeHypothesis, RevealingIsSafeHypothesisBuilder},
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -40,6 +41,8 @@ impl HypothesisBuilder for RevealIndexHypothesisBuilder {
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let revealing_is_safe_hypothesis =

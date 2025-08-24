@@ -1,48 +1,50 @@
-use std::collections::HashMap;
+use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
+use log::Log;
 
-use demon_bluff_gameplay_engine::{
-    game_state::GameState,
-    villager::{Villager, VillagerIndex},
-};
-use log::{Log, info};
-
-use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+use crate::{
+    hypotheses::{HypothesisType, reveal_index::RevealIndexHypothesisBuilder},
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+    },
 };
 
-use super::reveal_index::RevealIndexHypothesis;
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
+pub struct RevealHypothesisBuilder {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct RevealHypothesis {
     revealable_hypotheses: Vec<HypothesisReference>,
 }
 
-impl RevealHypothesis {
-    pub fn create<TLog>(
+impl HypothesisBuilder for RevealHypothesisBuilder {
+    type HypothesisImpl = RevealHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
         let mut revealable_hypotheses = Vec::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(_) | Villager::Confirmed(_) => {}
             Villager::Hidden(hidden_villager) => {
                 if !hidden_villager.cant_reveal() {
-                    revealable_hypotheses.push(RevealIndexHypothesis::create(
-                        game_state,
-                        registrar,
-                        villager_index,
-                    ));
+                    revealable_hypotheses.push(
+                        registrar.register(RevealIndexHypothesisBuilder::new(villager_index)),
+                    );
                 }
             }
         });
 
-        registrar.register(Self {
+        Self::HypothesisImpl {
             revealable_hypotheses,
-        })
+        }
     }
 }
 
@@ -53,9 +55,9 @@ impl Hypothesis for RevealHypothesis {
 
     fn evaluate<'a, 'b, TLog>(
         &'a mut self,
-        log: &'a TLog,
-        depth: Depth,
-        game_state: &'a GameState,
+        _: &'a TLog,
+        _: Depth,
+        _: &'a GameState,
         repository: HypothesisRepository<'b, TLog>,
     ) -> HypothesisReturn
     where

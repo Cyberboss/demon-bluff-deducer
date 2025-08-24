@@ -7,14 +7,18 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    hypotheses::testimony::TestimonyHypothesis,
+    hypotheses::{
+        HypothesisType,
+        testimony::{TestimonyHypothesis, TestimonyHypothesisBuilder},
+        testimony_expression,
+    },
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug)]
 enum HypothesisExpression {
     Unary(HypothesisReference),
     Not(HypothesisReference),
@@ -22,42 +26,60 @@ enum HypothesisExpression {
     Or((HypothesisReference, HypothesisReference)),
 }
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct TestimonyExpressionHypothesisBuilder {
+    testimony_expression: Expression<Testimony>,
+}
+
+#[derive(Debug)]
 pub struct TestimonyExpressionHypothesis {
     hypothesis_expression: HypothesisExpression,
     expression_friendly: String,
 }
 
-impl TestimonyExpressionHypothesis {
-    pub fn create<TLog>(
+impl TestimonyExpressionHypothesisBuilder {
+    pub fn new(testimony_expression: Expression<Testimony>) -> Self {
+        Self {
+            testimony_expression,
+        }
+    }
+}
+
+impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
+    type HypothesisImpl = TestimonyExpressionHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-        expression: &Expression<Testimony>,
-    ) -> HypothesisReference
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
-        let expression_friendly = format!("{}", expression);
-        let hypothesis_expression = match expression {
+        let expression_friendly = format!("{}", self.testimony_expression);
+        let hypothesis_expression = match self.testimony_expression {
             Expression::Unary(testimony) => HypothesisExpression::Unary(
-                TestimonyHypothesis::create(game_state, &mut registrar, testimony.clone()),
+                registrar.register(TestimonyHypothesisBuilder::new(testimony.clone())),
             ),
-            Expression::Not(expression) => HypothesisExpression::Not(
-                TestimonyExpressionHypothesis::create(game_state, registrar, expression),
-            ),
+            Expression::Not(expression) => HypothesisExpression::Not(registrar.register(
+                TestimonyExpressionHypothesisBuilder::new(*expression.clone()),
+            )),
             Expression::And(lhs, rhs) => HypothesisExpression::And((
-                TestimonyExpressionHypothesis::create(game_state, registrar, lhs),
-                TestimonyExpressionHypothesis::create(game_state, registrar, rhs),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(*lhs.clone())),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(*rhs.clone())),
             )),
             Expression::Or(lhs, rhs) => HypothesisExpression::Or((
-                TestimonyExpressionHypothesis::create(game_state, registrar, lhs),
-                TestimonyExpressionHypothesis::create(game_state, registrar, rhs),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(*lhs.clone())),
+                registrar.register(TestimonyExpressionHypothesisBuilder::new(*rhs.clone())),
             )),
         };
-        registrar.register(Self {
-            hypothesis_expression,
+
+        Self::HypothesisImpl {
             expression_friendly,
-        })
+            hypothesis_expression,
+        }
     }
 }
 

@@ -3,7 +3,8 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        execute::ExecuteHypothesisBuilder, gather_information::GatherInformationHypothesisBuilder,
+        HypothesisType, execute::ExecuteHypothesisBuilder,
+        gather_information::GatherInformationHypothesisBuilder,
     },
     hypothesis::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
@@ -23,6 +24,8 @@ impl HypothesisBuilder for MasterHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let execute_hypothesis = registrar.register(ExecuteHypothesisBuilder::default());

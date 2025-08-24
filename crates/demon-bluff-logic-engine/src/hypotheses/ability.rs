@@ -1,9 +1,12 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::HypothesisType,
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, Default, Clone)]
@@ -14,6 +17,8 @@ impl HypothesisBuilder for AbilityHypothesisBuilder {
 
     fn build<TLog>(self, _: &GameState, _: &mut HypothesisRegistrar<TLog>) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         Self::HypothesisImpl {}

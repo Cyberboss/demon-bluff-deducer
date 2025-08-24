@@ -1,23 +1,34 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::HypothesisType,
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
+pub struct RevealingIsSafeHypothesisBuilder {}
+
+#[derive(Debug)]
 pub struct RevealingIsSafeHypothesis {}
 
-impl RevealingIsSafeHypothesis {
-    pub fn create<TLog>(
+impl HypothesisBuilder for RevealingIsSafeHypothesisBuilder {
+    type HypothesisImpl = RevealingIsSafeHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
         registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
+        TLog: ::log::Log,
     {
-        registrar.register(Self {})
+        Self::HypothesisImpl {}
     }
 }
 

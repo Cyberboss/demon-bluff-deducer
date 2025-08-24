@@ -4,9 +4,12 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use crate::hypothesis::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::{
+    hypotheses::HypothesisType,
+    hypothesis::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -35,6 +38,8 @@ impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: Log,
     {
         let counsellor_in_play_hypothesis = match self.archetype {

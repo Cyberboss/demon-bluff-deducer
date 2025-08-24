@@ -2,16 +2,16 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    hypotheses::HypothesisType,
+    hypotheses::{HypothesisBuilderType, HypothesisType},
     hypothesis::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
         HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
 };
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct NegateHypothesisBuilder {
-    target_hypothesis_builder: Box<HypothesisType>,
+    target_hypothesis_builder: Box<HypothesisBuilderType>,
 }
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ impl NegateHypothesisBuilder {
     pub fn new<TBuilder>(builder: TBuilder) -> Self
     where
         TBuilder: HypothesisBuilder,
-        HypothesisType: From<TBuilder>,
+        HypothesisBuilderType: From<TBuilder>,
     {
         Self {
             target_hypothesis_builder: Box::new(builder.into()),
@@ -40,9 +40,11 @@ impl HypothesisBuilder for NegateHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
-        let target_hypothesis = registrar.register(self.target_hypothesis_builder);
+        let target_hypothesis = registrar.register_builder_type(*self.target_hypothesis_builder);
         Self::HypothesisImpl { target_hypothesis }
     }
 }

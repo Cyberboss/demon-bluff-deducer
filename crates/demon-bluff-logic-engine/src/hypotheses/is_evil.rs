@@ -6,10 +6,11 @@ use log::Log;
 
 use crate::{
     hypotheses::{
+        HypothesisType,
         archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
         is_corrupt::{IsCorruptHypothesis, IsCorruptHypothesisBuilder},
-        is_truthful::IsTruthfulHypothesis,
-        negate::NegateHypothesis,
+        is_truthful::{IsTruthfulHypothesis, IsTruthfulHypothesisBuilder},
+        negate::{NegateHypothesis, NegateHypothesisBuilder},
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -30,6 +31,12 @@ pub struct IsEvilHypothesis {
     is_corrupt_hypothesis: HypothesisReference,
 }
 
+impl IsEvilHypothesisBuilder {
+    pub fn new(index: VillagerIndex) -> Self {
+        Self { index }
+    }
+}
+
 impl HypothesisBuilder for IsEvilHypothesisBuilder {
     type HypothesisImpl = IsEvilHypothesis;
 
@@ -39,6 +46,8 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut non_liars_in_play_hypotheses = Vec::new();

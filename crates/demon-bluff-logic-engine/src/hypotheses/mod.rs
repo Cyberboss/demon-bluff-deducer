@@ -19,9 +19,13 @@ use crate::{
         master::MasterHypothesisBuilder,
         need_testimony::{NeedTestimonyHypothesis, NeedTestimonyHypothesisBuilder},
         negate::{NegateHypothesis, NegateHypothesisBuilder},
-        revealing_is_safe::RevealingIsSafeHypothesis,
-        testimony::TestimonyHypothesis,
-        testimony_expression::TestimonyExpressionHypothesis,
+        reveal::RevealHypothesisBuilder,
+        reveal_index::RevealIndexHypothesisBuilder,
+        revealing_is_safe::{RevealingIsSafeHypothesis, RevealingIsSafeHypothesisBuilder},
+        testimony::{TestimonyHypothesis, TestimonyHypothesisBuilder},
+        testimony_expression::{
+            TestimonyExpressionHypothesis, TestimonyExpressionHypothesisBuilder,
+        },
     },
     hypothesis::{Hypothesis, HypothesisBuilder},
 };

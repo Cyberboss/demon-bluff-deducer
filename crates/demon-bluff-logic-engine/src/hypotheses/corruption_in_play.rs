@@ -6,11 +6,11 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    hypotheses::archetype_in_play::ArchetypeInPlayHypothesisBuilder,
+    hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
-        FITNESS_UNKNOWN, or_result,
+        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisReturn, or_result,
     },
 };
 
@@ -32,6 +32,8 @@ impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
+        Self::HypothesisImpl: Hypothesis,
+        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut corrupting_archetype_hypotheses = Vec::new();
