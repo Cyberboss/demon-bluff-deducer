@@ -99,6 +99,7 @@ pub struct HypothesisEvaluator<'a, TLog>
 where
     TLog: Log,
 {
+    set_desires: HashMap<DesireReference, bool>,
     inner: StackData<'a, TLog>,
 }
 
@@ -558,7 +559,10 @@ where
             }
         }
 
-        HypothesisEvaluator { inner: self.inner }
+        HypothesisEvaluator {
+            inner: self.inner,
+            set_desires: self.set_desires,
+        }
     }
 
     pub fn set_desire(&mut self, desire_reference: &DesireReference, desired: bool) {
@@ -721,6 +725,67 @@ where
         );
 
         last_evaluate
+    }
+
+    pub fn set_desire(&mut self, desire_reference: &DesireReference, desired: bool) {
+        let mut borrow = self.inner.current_data.borrow_mut();
+        let data = &mut borrow.desires[desire_reference.0];
+
+        let changed;
+        match self.set_desires.entry(desire_reference.clone()) {
+            Entry::Occupied(mut occupied_entry) => {
+                if occupied_entry.insert(desired) == desired {
+                    return;
+                }
+
+                changed = true;
+            }
+            Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(desired);
+                changed = false;
+            }
+        }
+
+        if changed {
+            if desired {
+                data.undesired = data.undesired - 1;
+            } else {
+                data.desired = data.desired - 1;
+            }
+        } else {
+            data.pending = data.pending - 1;
+        }
+
+        if desired {
+            data.desired = data.desired + 1;
+        } else {
+            data.undesired = data.undesired + 1;
+        }
+    }
+
+    pub fn desire_result(&self, desire_reference: &DesireReference) -> HypothesisResult {
+        let defintion = &self.inner.desire_definitions[desire_reference.0];
+        let data = self
+            .inner
+            .previous_data
+            .map(|previous_data| &previous_data.desires[desire_reference.0]);
+
+        match data {
+            Some(data) => {
+                info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, defintion.desire, data);
+                let total = data.total();
+                let fitness = FitnessAndAction::new((data.desired as f64) / (total as f64), None);
+                if data.pending == 0 || data.pending == total {
+                    HypothesisResult::Conclusive(fitness)
+                } else {
+                    HypothesisResult::Pending(fitness)
+                }
+            }
+            None => {
+                info!(logger: self.inner.log, "{} Established desire {}: {}", self.inner.depth(), desire_reference, defintion);
+                HypothesisResult::Pending(FitnessAndAction::new(FITNESS_UNKNOWN, None))
+            }
+        }
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
