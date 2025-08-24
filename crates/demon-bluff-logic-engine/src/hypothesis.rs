@@ -350,9 +350,12 @@ impl Display for Depth {
 }
 
 impl FitnessAndAction {
-    pub fn new(fitness: f64, action: PlayerAction) -> Self {
+    pub fn new(fitness: f64, action: Option<PlayerAction>) -> Self {
         let mut action_set = HashSet::with_capacity(1);
-        action_set.insert(action);
+        if let Some(action) = action {
+            action_set.insert(action);
+        }
+
         Self {
             action: action_set,
             fitness,
@@ -657,7 +660,7 @@ where
         let root_reference = HypothesisReference(current_reference);
         self.builders.push(builder.into());
 
-        info!(logger: self.log, "Registering hypotheses and evaluating dependencies");
+        info!(logger: self.log, "Registering hypotheses builders");
         loop {
             let current_builder = self.builders[current_reference].clone();
 
@@ -672,14 +675,20 @@ where
             }
         }
 
-        info!(logger: self.log, "Building hypotheses");
+        info!(logger: self.log, "Building hypotheses (Dependencies follow)");
         let mut hypotheses = Vec::new();
         hypotheses.reserve_exact(current_reference);
 
         let final_builders = self.builders;
         self.builders = Vec::new();
-        for builder in final_builders {
-            hypotheses.push(builder.build(game_state, &mut self).into());
+        for (index, builder) in final_builders.into_iter().enumerate() {
+            let hypothesis = builder.build(game_state, &mut self).into();
+            info!(logger: self.log, "{}: {}", HypothesisReference(index), hypothesis);
+            for dependency in &self.dependencies[index] {
+                info!(logger: self.log, "- {}", dependency);
+            }
+
+            hypotheses.push(hypothesis);
         }
 
         HypothesisGraph {

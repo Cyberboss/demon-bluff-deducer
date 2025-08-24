@@ -1,21 +1,28 @@
 use demon_bluff_gameplay_engine::{
     game_state::GameState,
-    villager::{Minion, VillagerArchetype, VillagerIndex},
+    villager::{VillagerArchetype, VillagerIndex},
 };
 use log::Log;
 
 use crate::{
     hypotheses::{
-        archetype_in_play::ArchetypeInPlayHypothesis, is_corrupt::IsCorruptHypothesis,
-        is_truthful::IsTruthfulHypothesis, negate::NegateHypothesis,
+        archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
+        is_corrupt::{IsCorruptHypothesis, IsCorruptHypothesisBuilder},
+        is_truthful::IsTruthfulHypothesis,
+        negate::NegateHypothesis,
     },
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct IsEvilHypothesisBuilder {
+    index: VillagerIndex,
+}
+
+#[derive(Debug)]
 pub struct IsEvilHypothesis {
     index: VillagerIndex,
     non_liars_in_play_hypotheses: Vec<HypothesisReference>,
@@ -23,39 +30,37 @@ pub struct IsEvilHypothesis {
     is_corrupt_hypothesis: HypothesisReference,
 }
 
-impl IsEvilHypothesis {
-    pub fn create<TLog>(
+impl HypothesisBuilder for IsEvilHypothesisBuilder {
+    type HypothesisImpl = IsEvilHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-        index: VillagerIndex,
-    ) -> HypothesisReference
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        TLog: ::log::Log,
     {
         let mut non_liars_in_play_hypotheses = Vec::new();
         for archetype in VillagerArchetype::iter() {
             if archetype.is_evil() && !archetype.lies() {
-                non_liars_in_play_hypotheses.push(ArchetypeInPlayHypothesis::create(
-                    game_state,
-                    &mut registrar,
-                    archetype,
-                ));
+                non_liars_in_play_hypotheses
+                    .push(registrar.register(ArchetypeInPlayHypothesisBuilder::new(archetype)));
             }
         }
 
-        let is_truthful_hypothesis =
-            IsTruthfulHypothesis::create(game_state, &mut registrar, index.clone());
-        let is_lying_hypothesis =
-            NegateHypothesis::create(game_state, &mut registrar, is_truthful_hypothesis);
+        let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
+            IsTruthfulHypothesisBuilder::new(self.index.clone()),
+        ));
         let is_corrupt_hypothesis =
-            IsCorruptHypothesis::create(game_state, registrar, index.clone());
+            registrar.register(IsCorruptHypothesisBuilder::new(self.index.clone()));
 
-        registrar.register(Self {
-            index,
+        Self::HypothesisImpl {
+            index: self.index,
             non_liars_in_play_hypotheses,
             is_corrupt_hypothesis,
             is_lying_hypothesis,
-        })
+        }
     }
 }
 

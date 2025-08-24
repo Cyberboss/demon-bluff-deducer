@@ -2,7 +2,7 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    hypotheses::{HypothesisType, execute_index::ExecuteIndexHypothesisBuilder},
+    hypotheses::execute_index::ExecuteIndexHypothesisBuilder,
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
@@ -26,8 +26,6 @@ impl HypothesisBuilder for ExecuteHypothesisBuilder {
         registrar: &mut HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
-        Self::HypothesisImpl: Hypothesis + 'static,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         let mut executable_hypotheses = Vec::new();

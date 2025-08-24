@@ -1,33 +1,36 @@
-use std::fmt::Display;
-
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    hypotheses::{execute::ExecuteHypothesis, gather_information::GatherInformationHypothesis},
+    hypotheses::{
+        execute::ExecuteHypothesisBuilder, gather_information::GatherInformationHypothesisBuilder,
+    },
     hypothesis::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
         HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct MasterHypothesisBuilder {}
 
 impl HypothesisBuilder for MasterHypothesisBuilder {
-    pub fn build<TLog>(
-        game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+    type HypothesisImpl = MasterHypothesis;
+
+    fn build<TLog>(
+        self,
+        _: &GameState,
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        TLog: ::log::Log,
     {
-        let info_hypothesis = GatherInformationHypothesis::create(game_state, &mut registrar);
-        let execute_hypothesis = ExecuteHypothesis::create(game_state, &mut registrar);
-        registrar.register(Self {
-            info_hypothesis,
+        let execute_hypothesis = registrar.register(ExecuteHypothesisBuilder::default());
+        let info_hypothesis = registrar.register(GatherInformationHypothesisBuilder::default());
+        Self::HypothesisImpl {
             execute_hypothesis,
-        })
+            info_hypothesis,
+        }
     }
 }
 
@@ -44,10 +47,10 @@ impl Hypothesis for MasterHypothesis {
 
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
-        mut repository: HypothesisRepository<TLog>,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where
         TLog: Log,

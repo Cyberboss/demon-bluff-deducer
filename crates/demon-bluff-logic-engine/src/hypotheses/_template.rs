@@ -23,8 +23,6 @@ impl HypothesisBuilder for TemplateHypothesisBuilder {
         registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
     ) -> Self::HypothesisImpl
     where
-        Self::HypothesisImpl: Hypothesis + 'static,
-        HypothesisType: From<Self::HypothesisImpl>,
         TLog: ::log::Log,
     {
         Self::HypothesisImpl {

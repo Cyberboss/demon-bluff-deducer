@@ -3,17 +3,24 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        corruption_in_play::CorruptionInPlayHypothesis, is_evil::IsEvilHypothesis,
-        is_truthful::IsTruthfulHypothesis, negate::NegateHypothesis,
+        corruption_in_play::{CorruptionInPlayHypothesis, CorruptionInPlayHypothesisBuilder},
+        is_evil::IsEvilHypothesis,
+        is_truthful::IsTruthfulHypothesis,
+        negate::NegateHypothesis,
     },
     hypothesis::{
-        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisReturn, and_result,
+        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisReturn, and_result,
     },
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IsCorruptHypothesisBuilder {
+    index: VillagerIndex,
+}
+
 /// Check if a given [`VillagerIndex`] is corrupt
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub struct IsCorruptHypothesis {
     index: VillagerIndex,
     is_good_hypothesis: HypothesisReference,
@@ -21,31 +28,38 @@ pub struct IsCorruptHypothesis {
     corruption_in_play_hypothesis: HypothesisReference,
 }
 
-impl IsCorruptHypothesis {
-    pub fn create<TLog>(
+impl IsCorruptHypothesisBuilder {
+    pub fn new(index: VillagerIndex) -> Self {
+        Self { index }
+    }
+}
+
+impl HypothesisBuilder for IsCorruptHypothesisBuilder {
+    type HypothesisImpl = IsCorruptHypothesis;
+
+    fn build<TLog>(
+        self,
         game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-        index: VillagerIndex,
-    ) -> HypothesisReference
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        TLog: ::log::Log,
     {
-        let is_evil_hypothesis =
-            IsEvilHypothesis::create(game_state, &mut registrar, index.clone());
-        let is_good_hypothesis =
-            NegateHypothesis::create(game_state, &mut registrar, is_evil_hypothesis);
-        let is_truthful_hypothesis =
-            IsTruthfulHypothesis::create(game_state, &mut registrar, index.clone());
-        let is_lying_hypothesis =
-            NegateHypothesis::create(game_state, &mut registrar, is_truthful_hypothesis);
+        let is_good_hypothesis = registrar.register(NegateHypothesisBuilder::new(
+            IsEvilHypothesisBuilder::new(self.index.clone()),
+        ));
+        let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
+            IsTruthfulHypothesisBuilder::new(self.index.clone()),
+        ));
         let corruption_in_play_hypothesis =
-            CorruptionInPlayHypothesis::create(game_state, &mut registrar);
-        registrar.register(Self {
-            index,
-            is_good_hypothesis,
+            registrar.register(CorruptionInPlayHypothesisBuilder::default());
+
+        Self::HypothesisImpl {
+            index: self.index,
             is_lying_hypothesis,
+            is_good_hypothesis,
             corruption_in_play_hypothesis,
-        })
+        }
     }
 }
 

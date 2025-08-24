@@ -4,34 +4,44 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
-    hypotheses::{ability::AbilityHypothesis, reveal::RevealHypothesis},
+    hypotheses::{
+        HypothesisType,
+        ability::{AbilityHypothesis, AbilityHypothesisBuilder},
+        reveal::RevealHypothesis,
+    },
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
     player_action::{AbilityAttempt, PlayerAction},
 };
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(PartialEq, Eq, Clone, Default, Debug)]
+pub struct GatherInformationHypothesisBuilder {}
+
+#[derive(Debug)]
 pub struct GatherInformationHypothesis {
     reveal_hypothesis: HypothesisReference,
     ability_hypothesis: HypothesisReference,
 }
 
-impl GatherInformationHypothesis {
-    pub fn create<TLog>(
-        game_state: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisReference
+impl HypothesisBuilder for GatherInformationHypothesisBuilder {
+    type HypothesisImpl = GatherInformationHypothesis;
+
+    fn build<TLog>(
+        self,
+        _: &::demon_bluff_gameplay_engine::game_state::GameState,
+        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+    ) -> Self::HypothesisImpl
     where
-        TLog: Log,
+        TLog: ::log::Log,
     {
-        let reveal_hypothesis = RevealHypothesis::create(game_state, &mut registrar);
-        let ability_hypothesis = AbilityHypothesis::create(game_state, &mut registrar);
-        registrar.register(Self {
+        let reveal_hypothesis = registrar.register(RevealHypothesisBuilder::default());
+        let ability_hypothesis = registrar.register(AbilityHypothesisBuilder::default());
+        Self::HypothesisImpl {
             reveal_hypothesis,
             ability_hypothesis,
-        })
+        }
     }
 }
 
@@ -42,9 +52,9 @@ impl Hypothesis for GatherInformationHypothesis {
 
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where
