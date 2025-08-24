@@ -568,11 +568,8 @@ impl VillagerArchetype {
                     ))),
                 ))),
                 Minion::Shaman => Some(Affect::DupeVillager),
-                Minion::Witch
-                | Minion::Minion
-                | Minion::Poisoner
-                | Minion::Twinion
-                | Minion::Puppet => None,
+                Minion::Witch => Some(Affect::BlockLastNReveals(1)),
+                Minion::Minion | Minion::Poisoner | Minion::Twinion | Minion::Puppet => None,
             },
             VillagerArchetype::Demon(demon) => Some(match demon {
                 Demon::Baa => Affect::FakeOutcast,

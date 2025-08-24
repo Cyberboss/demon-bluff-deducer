@@ -21,6 +21,7 @@ pub enum Affect {
     Night(NightEffect),
     DupeVillager,
     FakeOutcast,
+    BlockLastNReveals(u8),
 }
 
 impl VillagerAffect {
