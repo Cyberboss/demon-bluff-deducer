@@ -66,8 +66,8 @@ impl Hypothesis for IsTruthfulHypothesis {
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where

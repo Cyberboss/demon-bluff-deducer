@@ -56,6 +56,10 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
         write!(f, "{} in play", self.archetype)
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,

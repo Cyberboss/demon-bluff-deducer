@@ -51,6 +51,10 @@ impl Hypothesis for TestimonyHypothesis {
         write!(f, "Testimony is true: {}", self.testimony)
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,

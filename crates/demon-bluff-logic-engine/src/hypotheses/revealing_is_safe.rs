@@ -33,6 +33,10 @@ impl Hypothesis for RevealingIsSafeHypothesis {
         write!(f, "Revealing Villagers is Safe")
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,

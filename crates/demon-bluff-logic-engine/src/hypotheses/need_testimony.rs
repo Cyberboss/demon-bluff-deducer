@@ -43,6 +43,10 @@ impl Hypothesis for NeedTestimonyHypothesis {
         write!(f, "Need testimony of {}", self.index)
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,

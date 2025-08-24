@@ -54,6 +54,10 @@ impl Hypothesis for CorruptionInPlayHypothesis {
         write!(f, "Corruption in play")
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         _: &TLog,

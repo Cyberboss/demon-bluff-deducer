@@ -6,11 +6,9 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        HypothesisType,
-        archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
-        is_corrupt::{IsCorruptHypothesis, IsCorruptHypothesisBuilder},
-        is_truthful::{IsTruthfulHypothesis, IsTruthfulHypothesisBuilder},
-        negate::{NegateHypothesis, NegateHypothesisBuilder},
+        HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
+        is_corrupt::IsCorruptHypothesisBuilder, is_truthful::IsTruthfulHypothesisBuilder,
+        negate::NegateHypothesisBuilder,
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -73,6 +71,10 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 impl Hypothesis for IsEvilHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{} is evil", self.index)
+    }
+
+    fn wip(&self) -> bool {
+        true
     }
 
     fn evaluate<TLog>(

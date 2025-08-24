@@ -1,26 +1,21 @@
 use std::fmt::Display;
 
-use execute::ExecuteHypothesis;
-use master::MasterHypothesis;
-use reveal::RevealHypothesis;
-use reveal_index::RevealIndexHypothesis;
-
 use crate::{
     hypotheses::{
         ability::{AbilityHypothesis, AbilityHypothesisBuilder},
         archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
         corruption_in_play::{CorruptionInPlayHypothesis, CorruptionInPlayHypothesisBuilder},
-        execute::ExecuteHypothesisBuilder,
+        execute::{ExecuteHypothesis, ExecuteHypothesisBuilder},
         execute_index::{ExecuteIndexHypothesis, ExecuteIndexHypothesisBuilder},
         gather_information::{GatherInformationHypothesis, GatherInformationHypothesisBuilder},
         is_corrupt::{IsCorruptHypothesis, IsCorruptHypothesisBuilder},
         is_evil::{IsEvilHypothesis, IsEvilHypothesisBuilder},
         is_truthful::{IsTruthfulHypothesis, IsTruthfulHypothesisBuilder},
-        master::MasterHypothesisBuilder,
+        master::{MasterHypothesis, MasterHypothesisBuilder},
         need_testimony::{NeedTestimonyHypothesis, NeedTestimonyHypothesisBuilder},
         negate::{NegateHypothesis, NegateHypothesisBuilder},
-        reveal::RevealHypothesisBuilder,
-        reveal_index::RevealIndexHypothesisBuilder,
+        reveal::{RevealHypothesis, RevealHypothesisBuilder},
+        reveal_index::{RevealIndexHypothesis, RevealIndexHypothesisBuilder},
         revealing_is_safe::{RevealingIsSafeHypothesis, RevealingIsSafeHypothesisBuilder},
         testimony::{TestimonyHypothesis, TestimonyHypothesisBuilder},
         testimony_expression::{
@@ -94,6 +89,7 @@ pub enum HypothesisType {
 
 impl Display for HypothesisType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.describe(f)
+        self.describe(f)?;
+        write!(f, "{}", if self.wip() { " (WIP)" } else { "" })
     }
 }

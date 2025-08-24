@@ -28,11 +28,7 @@ impl ExecuteIndexHypothesisBuilder {
 }
 
 impl HypothesisBuilder for ExecuteIndexHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        _: &GameState,
-        mut registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {

@@ -32,11 +32,7 @@ impl NegateHypothesisBuilder {
 }
 
 impl HypothesisBuilder for NegateHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {

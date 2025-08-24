@@ -125,6 +125,10 @@ pub trait Hypothesis {
     ) -> crate::hypothesis::HypothesisReturn
     where
         TLog: ::log::Log;
+
+    fn wip(&self) -> bool {
+        false
+    }
 }
 
 #[enum_delegate::register]

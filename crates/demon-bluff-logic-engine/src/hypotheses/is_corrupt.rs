@@ -3,11 +3,9 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        HypothesisType,
-        corruption_in_play::{CorruptionInPlayHypothesis, CorruptionInPlayHypothesisBuilder},
-        is_evil::{IsEvilHypothesis, IsEvilHypothesisBuilder},
-        is_truthful::{IsTruthfulHypothesis, IsTruthfulHypothesisBuilder},
-        negate::{NegateHypothesis, NegateHypothesisBuilder},
+        HypothesisType, corruption_in_play::CorruptionInPlayHypothesisBuilder,
+        is_evil::IsEvilHypothesisBuilder, is_truthful::IsTruthfulHypothesisBuilder,
+        negate::NegateHypothesisBuilder,
     },
     hypothesis::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -36,11 +34,7 @@ impl IsCorruptHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsCorruptHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {

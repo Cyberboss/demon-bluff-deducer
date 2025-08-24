@@ -3,9 +3,8 @@ use log::Log;
 
 use crate::{
     hypotheses::{
-        HypothesisType,
-        need_testimony::{NeedTestimonyHypothesis, NeedTestimonyHypothesisBuilder},
-        revealing_is_safe::{RevealingIsSafeHypothesis, RevealingIsSafeHypothesisBuilder},
+        HypothesisType, need_testimony::NeedTestimonyHypothesisBuilder,
+        revealing_is_safe::RevealingIsSafeHypothesisBuilder,
     },
     hypothesis::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
@@ -33,11 +32,7 @@ impl RevealIndexHypothesisBuilder {
 }
 
 impl HypothesisBuilder for RevealIndexHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
-        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {
@@ -61,9 +56,9 @@ impl Hypothesis for RevealIndexHypothesis {
 
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where

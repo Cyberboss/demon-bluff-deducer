@@ -29,6 +29,10 @@ impl Hypothesis for AbilityHypothesis {
         write!(f, "Ability Decision")
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,

@@ -89,6 +89,10 @@ impl Hypothesis for TestimonyExpressionHypothesis {
         )
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,

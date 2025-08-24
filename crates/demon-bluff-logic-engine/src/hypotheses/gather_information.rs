@@ -1,19 +1,14 @@
-use std::collections::HashSet;
-
-use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
+use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
     hypotheses::{
-        HypothesisType,
-        ability::{AbilityHypothesis, AbilityHypothesisBuilder},
-        reveal::{RevealHypothesis, RevealHypothesisBuilder},
+        HypothesisType, ability::AbilityHypothesisBuilder, reveal::RevealHypothesisBuilder,
     },
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
+        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRepository,
+        HypothesisReturn, or_result,
     },
-    player_action::{AbilityAttempt, PlayerAction},
 };
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
