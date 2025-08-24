@@ -688,7 +688,10 @@ where
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
-        HypothesisReturn { result }
+        HypothesisReturn {
+            result,
+            set_desires: self.set_desires,
+        }
     }
 }
 
@@ -850,7 +853,10 @@ where
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
-        HypothesisReturn { result }
+        HypothesisReturn {
+            result,
+            set_desires: self.set_desires,
+        }
     }
 }
 
