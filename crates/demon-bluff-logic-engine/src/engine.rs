@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map::Entry},
     fmt::{Debug, Display, Error, Formatter},
 };
 
@@ -30,6 +30,7 @@ pub struct HypothesisRepository<'a, TLog>
 where
     TLog: Log,
 {
+    set_desires: HashMap<DesireReference, bool>,
     inner: StackData<'a, TLog>,
 }
 
@@ -69,7 +70,7 @@ struct HypothesisGraph {
     desires: Vec<DesireDefinition>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct DesireReference(usize);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -513,6 +514,7 @@ where
 
         info!(logger: self.inner.log, "{} Entering: {}", self.inner.depth(), hypothesis);
         let repository = HypothesisRepository {
+            set_desires: HashMap::new(),
             inner: self.inner.share(),
         };
 
@@ -557,6 +559,42 @@ where
         }
 
         HypothesisEvaluator { inner: self.inner }
+    }
+
+    pub fn set_desire(&mut self, desire_reference: &DesireReference, desired: bool) {
+        let mut borrow = self.inner.current_data.borrow_mut();
+        let data = &mut borrow.desires[desire_reference.0];
+
+        let changed;
+        match self.set_desires.entry(desire_reference.clone()) {
+            Entry::Occupied(mut occupied_entry) => {
+                if occupied_entry.insert(desired) == desired {
+                    return;
+                }
+
+                changed = true;
+            }
+            Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(desired);
+                changed = false;
+            }
+        }
+
+        if changed {
+            if desired {
+                data.undesired = data.undesired - 1;
+            } else {
+                data.desired = data.desired - 1;
+            }
+        } else {
+            data.pending = data.pending - 1;
+        }
+
+        if desired {
+            data.desired = data.desired + 1;
+        } else {
+            data.undesired = data.undesired + 1;
+        }
     }
 
     pub fn desire_result(&self, desire_reference: &DesireReference) -> HypothesisResult {
