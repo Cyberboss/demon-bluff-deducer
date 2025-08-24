@@ -506,7 +506,7 @@ impl VillagerArchetype {
         }
     }
 
-    pub fn affects(&self, total_villagers: usize, index: VillagerIndex) -> Option<Affect> {
+    pub fn affect(&self, total_villagers: usize, index: VillagerIndex) -> Option<Affect> {
         match self {
             VillagerArchetype::GoodVillager(good_villager) => match good_villager {
                 GoodVillager::Alchemist

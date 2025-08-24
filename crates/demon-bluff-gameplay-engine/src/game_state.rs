@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-const DAYS_BEFORE_NIGHT: u8 = 4;
+pub const DAYS_BEFORE_NIGHT: u8 = 4;
 
 pub enum DayCycle {
     Day1,
@@ -38,7 +38,7 @@ pub struct DrawStats {
 #[derive(Debug, Clone)]
 pub struct GameState {
     // TODO: Alignment of cards may affect Architect claim, double check
-    next_day: u8,
+    next_day: Option<u8>,
     draw_stats: DrawStats,
     deck: Vec<VillagerArchetype>,
     villagers: Vec<Villager>,
@@ -241,7 +241,7 @@ impl DrawStats {
 
 impl GameState {
     pub fn new(
-        next_day: u8,
+        next_day: Option<u8>,
         draw_stats: DrawStats,
         deck: Vec<VillagerArchetype>,
         villagers: Vec<Villager>,
@@ -308,6 +308,14 @@ impl GameState {
 
     pub fn reveal_order(&self) -> &Vec<VillagerIndex> {
         &self.reveal_order
+    }
+
+    pub fn current_day(&self) -> Option<u8> {
+        self.next_day.map(|day| day - 1)
+    }
+
+    pub fn night_actions_in_play(&self) -> bool {
+        self.next_day.is_some()
     }
 
     pub fn witch_block_active(&self) -> bool {
@@ -388,7 +396,10 @@ impl GameState {
         &mut self,
         action: Action,
     ) -> Result<GameStateMutationResult, GameStateMutationError> {
-        let must_be_night = self.next_day > DAYS_BEFORE_NIGHT;
+        let must_be_night = match self.next_day {
+            Some(next_day) => next_day > DAYS_BEFORE_NIGHT,
+            None => false,
+        };
         let mut health_deduction = 0;
         let mut reset_cant_kills = false;
         let mut revealed = None;
@@ -766,10 +777,15 @@ impl GameState {
     }
 }
 
-pub fn new_game(deck: Vec<VillagerArchetype>, draw_stats: DrawStats, total_evils: u8) -> GameState {
+pub fn new_game(
+    deck: Vec<VillagerArchetype>,
+    draw_stats: DrawStats,
+    total_evils: u8,
+    night_effects_active: bool,
+) -> GameState {
     let total_villagers = draw_stats.total_villagers();
     GameState::new(
-        1,
+        if night_effects_active { Some(1) } else { None },
         draw_stats,
         deck,
         repeat(0)

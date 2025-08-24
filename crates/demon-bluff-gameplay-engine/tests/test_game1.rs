@@ -26,6 +26,7 @@ pub fn test_game_1() {
         ],
         DrawStats::new(4, 1, 1, 1),
         2,
+        false,
     );
 
     let mut mutation_result = state

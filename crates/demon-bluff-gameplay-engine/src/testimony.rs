@@ -14,7 +14,7 @@ pub enum ConfessorClaim {
     Dizzy,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Hash)]
 pub enum Direction {
     Clockwise,
     CounterClockwise,

@@ -2,19 +2,19 @@ use std::{fmt::Display, num::NonZeroU8};
 
 use crate::{Expression, testimony::Direction, villager::VillagerIndex};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct VillagerAffect {
     direction: Direction,
     distance: u8,
 }
 
-#[derive(Debug, Eq, PartialEq, Display)]
+#[derive(Debug, Eq, PartialEq, Display, Hash)]
 pub enum NightEffect {
     KillUnrevealed,
 }
 
-/// An Affect is a permanant state change a [`crate::villager::VillagerArchetype`] does without testifying it
-#[derive(Debug, Eq, PartialEq, Display)]
+/// An Affect is a state change a [`crate::villager::VillagerArchetype`] does without testifying it
+#[derive(Debug, Eq, PartialEq, Display, Hash)]
 pub enum Affect {
     Corrupt(Expression<VillagerAffect>),
     Puppet(Expression<VillagerAffect>),

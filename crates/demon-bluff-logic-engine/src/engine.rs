@@ -1295,10 +1295,10 @@ pub fn and_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisRes
     }
     match rhs {
         HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
-            mult_fitness(current_fitness_and_action, new_fitness_and_action),
+            and_fitness(current_fitness_and_action, new_fitness_and_action),
         ),
         HypothesisResult::Conclusive(current_fitness_and_action) => {
-            let merged = mult_fitness(current_fitness_and_action, new_fitness_and_action);
+            let merged = and_fitness(current_fitness_and_action, new_fitness_and_action);
 
             if must_be_pending {
                 HypothesisResult::Pending(merged)
@@ -1324,10 +1324,10 @@ pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResu
     }
     match rhs {
         HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
-            or_fitness_and_merge(current_fitness_and_action, new_fitness_and_action),
+            or_fitness(current_fitness_and_action, new_fitness_and_action),
         ),
         HypothesisResult::Conclusive(current_fitness_and_action) => {
-            let merged = or_fitness_and_merge(current_fitness_and_action, new_fitness_and_action);
+            let merged = or_fitness(current_fitness_and_action, new_fitness_and_action);
 
             if must_be_pending {
                 HypothesisResult::Pending(merged)
@@ -1338,7 +1338,7 @@ pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResu
     }
 }
 
-fn mult_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
+pub fn and_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
     for rh_action in rhs.action {
         lhs.action.insert(rh_action);
     }
@@ -1348,7 +1348,7 @@ fn mult_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndA
     lhs
 }
 
-fn or_fitness_and_merge(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
+pub fn or_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
     for rh_action in rhs.action {
         lhs.action.insert(rh_action);
     }

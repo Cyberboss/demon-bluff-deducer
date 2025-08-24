@@ -6,12 +6,12 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
         HypothesisReturn, or_result,
     },
+    hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
 };
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
@@ -35,7 +35,7 @@ impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
         let mut corrupting_archetype_hypotheses = Vec::new();
         for archetype in VillagerArchetype::iter() {
             if let Some(Affect::Corrupt(_)) =
-                archetype.affects(game_state.total_villagers(), VillagerIndex(0))
+                archetype.affect(game_state.total_villagers(), VillagerIndex(0))
             {
                 corrupting_archetype_hypotheses
                     .push(registrar.register(ArchetypeInPlayHypothesisBuilder::new(archetype)));
