@@ -1,3 +1,5 @@
+use std::f128::consts::E;
+
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::GameState,
@@ -13,8 +15,9 @@ use crate::{
         testimony_expression,
     },
     hypothesis::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisReturn,
     },
 };
 
@@ -119,6 +122,25 @@ impl Hypothesis for TestimonyExpressionHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::unimplemented())
+        let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
+        let result = match &self.hypothesis_expression {
+            HypothesisExpression::Unary(hypothesis_reference) => {
+                evaluator.sub_evaluate(hypothesis_reference)
+            }
+            HypothesisExpression::Not(hypothesis_reference) => {
+                match evaluator.sub_evaluate(hypothesis_reference) {
+                    HypothesisResult::Pending(fitness_and_action) => {
+                        HypothesisResult::Pending(fitness_and_action.invert())
+                    }
+                    HypothesisResult::Conclusive(fitness_and_action) => {
+                        HypothesisResult::Conclusive(fitness_and_action.invert())
+                    }
+                }
+            }
+            HypothesisExpression::And((lhs, rhs)) => todo!(),
+            HypothesisExpression::Or(_) => todo!(),
+        };
+
+        evaluator.create_return(result)
     }
 }
