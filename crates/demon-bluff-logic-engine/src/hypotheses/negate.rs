@@ -56,7 +56,7 @@ impl Hypothesis for NegateHypothesis {
     where
         TLog: Log,
     {
-        let mut evaluator = repository.require_sub_evaluation(0.0);
+        let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
         let result = evaluator.sub_evaluate(&self.target_hypothesis);
 

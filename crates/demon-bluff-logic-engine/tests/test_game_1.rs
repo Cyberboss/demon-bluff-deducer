@@ -5,7 +5,6 @@ use demon_bluff_gameplay_engine::{
     },
 };
 use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
-use log::{error, info};
 
 #[test]
 pub fn test_game_1() {
