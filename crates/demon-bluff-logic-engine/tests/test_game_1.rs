@@ -8,8 +8,6 @@ use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
 
 #[test]
 pub fn test_game_1() {
-    colog::init();
-
     let log = log::logger();
 
     let mut state = new_game(
@@ -29,11 +27,11 @@ pub fn test_game_1() {
         false,
     );
 
-    let prediction = predict(&log, &state).expect("prediction failed??");
+    let prediction_1 = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
         &PlayerAction::TryReveal(VillagerIndex(0)),
-        prediction.iter().next().unwrap()
+        prediction_1.iter().next().unwrap()
     );
 
     let mut mutation_result = state
@@ -46,6 +44,15 @@ pub fn test_game_1() {
         )))
         .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    colog::init();
+    let log = log::logger();
+    let prediction_2 = predict(&log, &state).expect("prediction failed??");
+
+    assert_eq!(
+        &PlayerAction::TryReveal(VillagerIndex(1)),
+        prediction_2.iter().next().unwrap()
+    );
 
     todo!("rest of the fucking owl")
 }
