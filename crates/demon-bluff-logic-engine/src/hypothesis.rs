@@ -33,6 +33,7 @@ where
     inner: StackData<'a, TLog>,
 }
 
+#[derive(Debug)]
 struct StackData<'a, TLog>
 where
     TLog: Log,
@@ -172,6 +173,15 @@ impl Default for HypothesisReference {
 impl Display for HypothesisReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "H-{:05}", self.0 + 1)
+    }
+}
+
+impl Debug for GraphBuilder {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GraphBuilder")
+            //.field("graph", &self.graph)
+            .field("node_map", &self.node_map)
+            .finish()
     }
 }
 
@@ -316,22 +326,6 @@ where
             depth: self.reference_stack.len() - 1,
             reference,
         }
-    }
-}
-
-impl<'a, TLog> Debug for StackData<'a, TLog>
-where
-    TLog: Log,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StackData")
-            .field("reference_stack", &self.reference_stack)
-            .field("game_state", &self.game_state)
-            .field("hypotheses", &self.hypotheses)
-            .field("current_data", &self.current_data)
-            .field("previous_data", &self.previous_data)
-            .field("break_at", &self.break_at)
-            .finish()
     }
 }
 
