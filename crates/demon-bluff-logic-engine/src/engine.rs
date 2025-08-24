@@ -243,7 +243,7 @@ impl Display for DesireDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} N={}{}",
+            "{} ({} Producer(s)) {}",
             self.desire,
             self.count,
             if self.used { "" } else { " (UNUSED)" }
@@ -1150,6 +1150,7 @@ where
 
                     stability_iteration = stability_iteration + 1;
                     if !graph_stable {
+                        /*
                         let mut f1 =
                             File::create("test1.json").expect("Failed to create before file");
                         let mut f2 =
@@ -1169,6 +1170,7 @@ where
                         )
                         .expect("File write 1 failed");
                         log.flush();
+                        */
                         if stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE {
                             warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for progression", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
                             graph_stable = true;
@@ -1236,7 +1238,7 @@ where
 
                             break_at = Some(break_reference.clone());
                         } else {
-                            warn!(logger: log, "We must finalize a desire, of which there are {}", cycles.len());
+                            warn!(logger: log, "We must finalize an incomplete desire, of which there are {}", data.desires.iter().filter(|desire| desire.pending > 0).count());
                             todo!()
                         }
                     }
