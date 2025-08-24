@@ -58,6 +58,7 @@ impl Hypothesis for RevealingIsSafeHypothesis {
             }
         }
 
+        // first reveal is always required, so call it safe even if it isn't
         if all_hidden {
             return repository.create_return(HypothesisResult::Conclusive(
                 FitnessAndAction::certainty(None),
