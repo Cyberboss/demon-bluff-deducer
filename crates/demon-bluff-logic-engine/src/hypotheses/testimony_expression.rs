@@ -15,7 +15,7 @@ use crate::{
     hypothesis::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        HypothesisReturn,
+        HypothesisReturn, and_result, or_result,
     },
 };
 
@@ -50,11 +50,7 @@ impl TestimonyExpressionHypothesisBuilder {
 }
 
 impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
-    fn build<TLog>(
-        self,
-        game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
+    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
     where
         TLog: ::log::Log,
     {
@@ -106,15 +102,11 @@ impl Hypothesis for TestimonyExpressionHypothesis {
         )
     }
 
-    fn wip(&self) -> bool {
-        true
-    }
-
     fn evaluate<TLog>(
         &mut self,
-        log: &TLog,
-        depth: Depth,
-        game_state: &GameState,
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisReturn
     where
@@ -128,8 +120,12 @@ impl Hypothesis for TestimonyExpressionHypothesis {
             HypothesisExpression::Not(hypothesis_reference) => evaluator
                 .sub_evaluate(hypothesis_reference)
                 .map(|fitness_and_action| fitness_and_action.invert()),
-            HypothesisExpression::And((lhs, rhs)) => todo!(),
-            HypothesisExpression::Or(_) => todo!(),
+            HypothesisExpression::And((lhs, rhs)) => {
+                and_result(evaluator.sub_evaluate(lhs), evaluator.sub_evaluate(rhs))
+            }
+            HypothesisExpression::Or((lhs, rhs)) => {
+                or_result(evaluator.sub_evaluate(lhs), evaluator.sub_evaluate(rhs))
+            }
         };
 
         evaluator.create_return(result)
