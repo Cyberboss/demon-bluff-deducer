@@ -1185,64 +1185,68 @@ where
                         stability_iteration = 0;
 
                         let cycles = cycles.borrow();
-                        if cycles.len() > 0 {
-                            warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
+                        if cycles.len() == 0 {
+                            panic!(
+                                "We have a stagnate graph due to one of the following desires not concluding: {}",
+                                data.desires
+                                    .iter()
+                                    .filter(|desire| desire.pending > 0)
+                                    .enumerate()
+                                    .map(|(index, data)| {
+                                        format!("{}: {}", DesireProducerReference(index), data)
+                                    })
+                                    .collect::<Vec<String>>()
+                                    .join(", ")
+                            )
+                        }
 
-                            let mut best_break_candidate =
-                                None::<(&Cycle, &HypothesisReference, f64)>;
+                        warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
 
-                            for cycle in cycles.iter() {
-                                for reference in &cycle.order_from_root {
-                                    let fitness = data.results[reference.0]
-                                        .as_ref()
-                                        .expect("A hypothesis in a cycle should have SOME result")
-                                        .fitness_and_action()
-                                        .fitness;
+                        let mut best_break_candidate = None::<(&Cycle, &HypothesisReference, f64)>;
 
-                                    best_break_candidate = Some(match best_break_candidate {
-                                        Some((
-                                            previous_cycle,
-                                            previous_reference,
-                                            previous_fitness,
-                                        )) => {
-                                            if previous_fitness > fitness {
+                        for cycle in cycles.iter() {
+                            for reference in &cycle.order_from_root {
+                                let fitness = data.results[reference.0]
+                                    .as_ref()
+                                    .expect("A hypothesis in a cycle should have SOME result")
+                                    .fitness_and_action()
+                                    .fitness;
+
+                                best_break_candidate = Some(match best_break_candidate {
+                                    Some((
+                                        previous_cycle,
+                                        previous_reference,
+                                        previous_fitness,
+                                    )) => {
+                                        if previous_fitness > fitness {
+                                            (previous_cycle, previous_reference, previous_fitness)
+                                        } else if fitness > previous_fitness {
+                                            (cycle, reference, fitness)
+                                        } else {
+                                            // break shortest fittest candidate cycle first for simplicity
+                                            if cycle.order_from_root.len()
+                                                < previous_cycle.order_from_root.len()
+                                            {
+                                                (cycle, reference, fitness)
+                                            } else {
                                                 (
                                                     previous_cycle,
                                                     previous_reference,
                                                     previous_fitness,
                                                 )
-                                            } else if fitness > previous_fitness {
-                                                (cycle, reference, fitness)
-                                            } else {
-                                                // break shortest fittest candidate cycle first for simplicity
-                                                if cycle.order_from_root.len()
-                                                    < previous_cycle.order_from_root.len()
-                                                {
-                                                    (cycle, reference, fitness)
-                                                } else {
-                                                    (
-                                                        previous_cycle,
-                                                        previous_reference,
-                                                        previous_fitness,
-                                                    )
-                                                }
                                             }
                                         }
-                                        None => (cycle, reference, fitness),
-                                    });
-                                }
+                                    }
+                                    None => (cycle, reference, fitness),
+                                });
                             }
-
-                            let (break_cycle, break_reference, break_fitness) =
-                                best_break_candidate
-                                    .expect("At least one break candidate should exist");
-                            info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
-
-                            break_at = Some(break_reference.clone());
-                        } else {
-                            warn!(logger: log, "We must finalize an incomplete desire, of which there are {}", data.desires.iter().filter(|desire| desire.pending > 0).count());
-                            todo!()
                         }
+
+                        let (break_cycle, break_reference, break_fitness) = best_break_candidate
+                            .expect("At least one break candidate should exist");
+                        info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
+
+                        break_at = Some(break_reference.clone());
                     }
                 }
 
