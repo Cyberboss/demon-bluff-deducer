@@ -352,6 +352,7 @@ version = "0.1.0"
 dependencies = [
  "colog",
  "demon-bluff-gameplay-engine",
+ "enum-display-derive",
  "enum_delegate",
  "force_graph",
  "log",

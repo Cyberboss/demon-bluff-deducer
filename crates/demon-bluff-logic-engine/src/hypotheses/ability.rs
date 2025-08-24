@@ -2,11 +2,11 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    hypotheses::HypothesisType,
-    hypothesis::{
+    engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisRegistrar,
         HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
+    hypotheses::HypothesisType,
 };
 
 #[derive(Eq, PartialEq, Debug, Default, Clone)]

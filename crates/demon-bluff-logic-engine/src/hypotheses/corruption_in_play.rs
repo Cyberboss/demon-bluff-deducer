@@ -7,7 +7,7 @@ use log::Log;
 
 use crate::{
     hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
-    hypothesis::{
+    engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
         HypothesisReturn, or_result,

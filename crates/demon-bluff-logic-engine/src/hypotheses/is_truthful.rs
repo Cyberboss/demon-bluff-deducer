@@ -6,7 +6,7 @@ use log::{Log, info};
 
 use crate::{
     hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
-    hypothesis::{
+    engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
         HypothesisReturn,

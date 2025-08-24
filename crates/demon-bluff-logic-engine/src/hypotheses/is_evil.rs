@@ -10,7 +10,7 @@ use crate::{
         is_corrupt::IsCorruptHypothesisBuilder, is_truthful::IsTruthfulHypothesisBuilder,
         negate::NegateHypothesisBuilder,
     },
-    hypothesis::{
+    engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },

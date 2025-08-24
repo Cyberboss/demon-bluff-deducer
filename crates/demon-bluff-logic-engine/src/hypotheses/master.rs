@@ -6,7 +6,7 @@ use crate::{
         HypothesisType, execute::ExecuteHypothesisBuilder,
         gather_information::GatherInformationHypothesisBuilder,
     },
-    hypothesis::{
+    engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
         HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },

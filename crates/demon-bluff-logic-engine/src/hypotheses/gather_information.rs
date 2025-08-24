@@ -5,7 +5,7 @@ use crate::{
     hypotheses::{
         HypothesisType, ability::AbilityHypothesisBuilder, reveal::RevealHypothesisBuilder,
     },
-    hypothesis::{
+    engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRepository,
         HypothesisReturn, or_result,
     },
@@ -24,7 +24,7 @@ impl HypothesisBuilder for GatherInformationHypothesisBuilder {
     fn build<TLog>(
         self,
         _: &::demon_bluff_gameplay_engine::game_state::GameState,
-        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+        registrar: &mut crate::engine::HypothesisRegistrar<TLog>,
     ) -> HypothesisType
     where
         TLog: ::log::Log,

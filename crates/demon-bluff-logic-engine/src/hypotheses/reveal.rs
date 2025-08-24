@@ -3,7 +3,7 @@ use log::Log;
 
 use crate::{
     hypotheses::{HypothesisType, reveal_index::RevealIndexHypothesisBuilder},
-    hypothesis::{
+    engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },

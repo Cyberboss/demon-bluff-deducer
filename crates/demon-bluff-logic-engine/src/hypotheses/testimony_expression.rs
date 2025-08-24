@@ -7,15 +7,15 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
+    engine::{
+        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisReturn, and_result, or_result,
+    },
     hypotheses::{
         HypothesisType,
         testimony::{TestimonyHypothesis, TestimonyHypothesisBuilder},
         testimony_expression,
-    },
-    hypothesis::{
-        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        HypothesisReturn, and_result, or_result,
     },
 };
 

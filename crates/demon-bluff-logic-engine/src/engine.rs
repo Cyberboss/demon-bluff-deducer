@@ -10,13 +10,15 @@ use log::{Log, error, info, warn};
 
 use crate::{
     PredictionError,
+    desires::{self, DesireType},
     hypotheses::{self, HypothesisBuilderType, HypothesisType},
     player_action::PlayerAction,
 };
 
+pub const FITNESS_UNKNOWN: f64 = 0.5;
+
 const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 1000;
 
-pub const FITNESS_UNKNOWN: f64 = 0.5;
 const FITNESS_UNIMPLEMENTED: f64 = 0.123456789;
 
 /// A reference to a `Hypothesis` in the graph.
@@ -45,10 +47,12 @@ where
     current_data: &'a RefCell<IterationData>,
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
     break_at: &'a Option<HypothesisReference>,
+    desire_definitions: &'a Vec<DesireDefinition>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 struct IterationData {
+    desires: Vec<DesireData>,
     results: Vec<Option<HypothesisResult>>,
 }
 
@@ -57,10 +61,28 @@ struct Cycle {
     order_from_root: Vec<HypothesisReference>,
 }
 
+#[derive(Debug)]
 struct HypothesisGraph {
     root: HypothesisReference,
     hypotheses: Vec<HypothesisType>,
     dependencies: Vec<Vec<HypothesisReference>>,
+    desires: Vec<DesireDefinition>,
+}
+
+#[derive(Debug)]
+pub struct DesireReference(usize);
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+struct DesireData {
+    pending: u32,
+    desired: u32,
+    undesired: u32,
+}
+
+#[derive(Debug)]
+struct DesireDefinition {
+    desire: DesireType,
+    count: u32,
 }
 
 struct HypothesisInvocation<'a, TLog>
@@ -117,10 +139,10 @@ pub trait Hypothesis {
     fn evaluate<TLog>(
         &mut self,
         log: &TLog,
-        depth: crate::hypothesis::Depth,
+        depth: crate::engine::Depth,
         game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
-        repository: crate::hypothesis::HypothesisRepository<TLog>,
-    ) -> crate::hypothesis::HypothesisReturn
+        repository: crate::engine::HypothesisRepository<TLog>,
+    ) -> crate::engine::HypothesisReturn
     where
         TLog: ::log::Log;
 
@@ -134,7 +156,7 @@ pub trait HypothesisBuilder {
     fn build<TLog>(
         self,
         game_state: &::demon_bluff_gameplay_engine::game_state::GameState,
-        registrar: &mut crate::hypothesis::HypothesisRegistrar<TLog>,
+        registrar: &mut crate::engine::HypothesisRegistrar<TLog>,
     ) -> HypothesisType
     where
         TLog: ::log::Log;
@@ -147,11 +169,42 @@ where
     log: &'a TLog,
     builders: Vec<HypothesisBuilderType>,
     dependencies: Option<Vec<Vec<HypothesisReference>>>,
+    desires: Vec<DesireDefinition>,
 }
 
 pub struct Depth {
     depth: usize,
     reference: HypothesisReference,
+}
+
+impl DesireData {
+    fn total(&self) -> u32 {
+        self.undesired + self.pending + self.desired
+    }
+}
+
+impl Display for DesireData {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.desired, self.total())?;
+
+        if self.pending > 0 {
+            write!(f, " ({} Pending)", self.pending)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Display for DesireReference {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "D-{:05}", self.0 + 1)
+    }
+}
+
+impl Display for DesireDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} N={}", self.desire, self.count)
+    }
 }
 
 impl HypothesisReference {
@@ -256,6 +309,7 @@ where
         break_at: &'a Option<HypothesisReference>,
         root_reference: &HypothesisReference,
         graph_builder: Option<&'a RefCell<GraphBuilder>>,
+        desire_definitions: &'a Vec<DesireDefinition>,
     ) -> Self {
         Self {
             reference_stack: vec![root_reference.clone()],
@@ -267,6 +321,7 @@ where
             break_at,
             cycles,
             graph_builder,
+            desire_definitions,
         }
     }
 
@@ -304,6 +359,7 @@ where
             graph_builder: self.graph_builder,
             previous_data: self.previous_data,
             cycles: &self.cycles,
+            desire_definitions: self.desire_definitions,
         }
     }
 
@@ -329,6 +385,7 @@ where
             graph_builder: self.graph_builder,
             previous_data: self.previous_data,
             cycles: &self.cycles,
+            desire_definitions: self.desire_definitions,
         }
     }
 
@@ -502,6 +559,31 @@ where
         HypothesisEvaluator { inner: self.inner }
     }
 
+    pub fn desire_result(&self, desire_reference: &DesireReference) -> HypothesisResult {
+        let defintion = &self.inner.desire_definitions[desire_reference.0];
+        let data = self
+            .inner
+            .previous_data
+            .map(|previous_data| &previous_data.desires[desire_reference.0]);
+
+        match data {
+            Some(data) => {
+                info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, defintion.desire, data);
+                let total = data.total();
+                let fitness = FitnessAndAction::new((data.desired as f64) / (total as f64), None);
+                if data.pending == 0 || data.pending == total {
+                    HypothesisResult::Conclusive(fitness)
+                } else {
+                    HypothesisResult::Pending(fitness)
+                }
+            }
+            None => {
+                info!(logger: self.inner.log, "{} Established desire {}: {}", self.inner.depth(), desire_reference, defintion);
+                HypothesisResult::Pending(FitnessAndAction::new(FITNESS_UNKNOWN, None))
+            }
+        }
+    }
+
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
         HypothesisReturn { result }
     }
@@ -617,6 +699,7 @@ where
             log,
             builders: Vec::new(),
             dependencies: Some(Vec::new()),
+            desires: Vec::new(),
         }
     }
 
@@ -626,7 +709,7 @@ where
         builder: HypothesisBuilderImpl,
     ) -> HypothesisReference
     where
-        HypothesisBuilderImpl: HypothesisBuilder + 'static,
+        HypothesisBuilderImpl: HypothesisBuilder,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
     {
         self.register_builder_type(builder.into())
@@ -655,6 +738,19 @@ where
             dependencies[dependencies_index].push(reference.clone());
         }
 
+        reference
+    }
+
+    pub fn register_desire(&mut self, desire: DesireType) -> DesireReference {
+        for (index, existing_desire) in self.desires.iter_mut().enumerate() {
+            if desire == existing_desire.desire {
+                existing_desire.count = existing_desire.count + 1;
+                return DesireReference(index);
+            }
+        }
+
+        let reference = DesireReference(self.desires.len());
+        self.desires.push(DesireDefinition { desire, count: 1 });
         reference
     }
 
@@ -695,8 +791,7 @@ where
             .expect("Dependencies should still be here at this point");
 
         info!(logger: self.log, "Building hypotheses (Dependencies follow)");
-        let mut hypotheses = Vec::new();
-        hypotheses.reserve_exact(current_reference);
+        let mut hypotheses = Vec::with_capacity(current_reference);
 
         for (index, builder) in self.builders.clone().into_iter().enumerate() {
             let hypothesis = builder.build(game_state, &mut self).into();
@@ -710,10 +805,16 @@ where
 
         info!(logger: self.log, "Hypotheses built");
 
+        info!(logger: self.log, "{} Desires:", self.desires.len());
+        for (index, desire) in self.desires.iter().enumerate() {
+            info!(logger: self.log, "- {}: {}", DesireReference(index), desire)
+        }
+
         HypothesisGraph {
             root: root_reference,
             hypotheses,
             dependencies,
+            desires: self.desires,
         }
     }
 }
@@ -758,7 +859,20 @@ where
         for _ in 0..hypotheses.len() {
             data.push(None);
         }
-        let data = RefCell::new(IterationData { results: data });
+
+        let mut desires = Vec::with_capacity(graph.desires.len());
+        for definition in &graph.desires {
+            desires.push(DesireData {
+                pending: definition.count,
+                desired: 0,
+                undesired: 0,
+            });
+        }
+
+        let data = RefCell::new(IterationData {
+            results: data,
+            desires,
+        });
         let cycles = RefCell::new(HashSet::new());
         let invocation = HypothesisInvocation::new(StackData::new(
             game_state,
@@ -770,6 +884,7 @@ where
             &break_at,
             &graph.root,
             None,
+            &graph.desires,
         ));
 
         let result = invocation.enter();

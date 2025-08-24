@@ -1,5 +1,9 @@
+#[macro_use]
+extern crate enum_display_derive;
+
+mod desires;
+mod engine;
 mod hypotheses;
-mod hypothesis;
 pub mod player_action;
 
 use std::collections::HashSet;
@@ -9,8 +13,8 @@ use log::Log;
 use thiserror::Error;
 
 use demon_bluff_gameplay_engine::game_state::GameState;
+use engine::{GraphNodeData, evaluate};
 use hypotheses::master::MasterHypothesis;
-use hypothesis::{GraphNodeData, evaluate};
 use player_action::PlayerAction;
 
 use crate::hypotheses::master::MasterHypothesisBuilder;

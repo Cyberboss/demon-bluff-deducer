@@ -4,7 +4,7 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use crate::hypothesis::{
+use crate::engine::{
     Depth, Hypothesis, HypothesisBuilder, HypothesisRegistrar, HypothesisRepository,
     HypothesisResult, HypothesisReturn,
 };

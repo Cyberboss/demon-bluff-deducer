@@ -6,7 +6,7 @@ use crate::{
         HypothesisType, need_testimony::NeedTestimonyHypothesisBuilder,
         revealing_is_safe::RevealingIsSafeHypothesisBuilder,
     },
-    hypothesis::{
+    engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },

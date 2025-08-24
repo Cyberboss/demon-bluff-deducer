@@ -24,7 +24,7 @@ use crate::{
             TestimonyExpressionHypothesis, TestimonyExpressionHypothesisBuilder,
         },
     },
-    hypothesis::{Hypothesis, HypothesisBuilder},
+    engine::{Hypothesis, HypothesisBuilder},
 };
 
 mod ability;
