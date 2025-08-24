@@ -66,24 +66,30 @@ struct Cycle {
 struct HypothesisGraph {
     root: HypothesisReference,
     hypotheses: Vec<HypothesisType>,
-    dependencies: Vec<Vec<HypothesisReference>>,
+    dependencies: DependencyData,
     desires: Vec<DesireDefinition>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+/// A reference to a [`DesireType`] that a [`Hypothesis`] uses in its own [`HypothesisResult`] calculation
+#[derive(Debug, PartialEq, Eq)]
+pub struct DesireDependentReference(usize);
+
+/// A reference to a [`DesireType`] that a [`Hypothesis`] declares a desire for or not
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DesireReference(usize);
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct DesireData {
-    pending: u32,
-    desired: u32,
-    undesired: u32,
+    pending: usize,
+    desired: usize,
+    undesired: usize,
 }
 
 #[derive(Debug)]
 struct DesireDefinition {
     desire: DesireType,
-    count: u32,
+    count: usize,
+    used: bool,
 }
 
 struct HypothesisInvocation<'a, TLog>
@@ -170,8 +176,15 @@ where
 {
     log: &'a TLog,
     builders: Vec<HypothesisBuilderType>,
-    dependencies: Option<Vec<Vec<HypothesisReference>>>,
-    desires: Vec<DesireDefinition>,
+    desires: Vec<DesireType>,
+    dependencies: Option<DependencyData>,
+}
+
+#[derive(Debug)]
+struct DependencyData {
+    desire_producers: Vec<Vec<DesireReference>>,
+    desire_consumers: Vec<Vec<DesireDependentReference>>,
+    hypotheses: Vec<Vec<HypothesisReference>>,
 }
 
 pub struct Depth {
@@ -180,7 +193,7 @@ pub struct Depth {
 }
 
 impl DesireData {
-    fn total(&self) -> u32 {
+    fn total(&self) -> usize {
         self.undesired + self.pending + self.desired
     }
 }
@@ -197,7 +210,19 @@ impl Display for DesireData {
     }
 }
 
+impl DesireReference {
+    pub fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
 impl Display for DesireReference {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "D-{:05}", self.0 + 1)
+    }
+}
+
+impl Display for DesireDependentReference {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "D-{:05}", self.0 + 1)
     }
@@ -205,7 +230,13 @@ impl Display for DesireReference {
 
 impl Display for DesireDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} N={}", self.desire, self.count)
+        write!(
+            f,
+            "{} N={}{}",
+            self.desire,
+            self.count,
+            if self.used { "" } else { " (UNUSED)" }
+        )
     }
 }
 
@@ -601,8 +632,8 @@ where
         }
     }
 
-    pub fn desire_result(&self, desire_reference: &DesireReference) -> HypothesisResult {
-        let defintion = &self.inner.desire_definitions[desire_reference.0];
+    pub fn desire_result(&self, desire_reference: &DesireDependentReference) -> HypothesisResult {
+        let definition = &self.inner.desire_definitions[desire_reference.0];
         let data = self
             .inner
             .previous_data
@@ -610,17 +641,24 @@ where
 
         match data {
             Some(data) => {
-                info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, defintion.desire, data);
+                info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, definition.desire, data);
                 let total = data.total();
-                let fitness = FitnessAndAction::new((data.desired as f64) / (total as f64), None);
-                if data.pending == 0 || data.pending == total {
+                let fitness = FitnessAndAction::new(
+                    if data.desired == 0 {
+                        0.0 // stop divide by 0
+                    } else {
+                        (data.desired as f64) / (total as f64)
+                    },
+                    None,
+                );
+                if data.pending == 0 {
                     HypothesisResult::Conclusive(fitness)
                 } else {
                     HypothesisResult::Pending(fitness)
                 }
             }
             None => {
-                info!(logger: self.inner.log, "{} Established desire {}: {}", self.inner.depth(), desire_reference, defintion);
+                info!(logger: self.inner.log, "{} Established desire dependency {}: {}", self.inner.depth(), desire_reference, definition);
                 HypothesisResult::Pending(FitnessAndAction::new(FITNESS_UNKNOWN, None))
             }
         }
@@ -801,7 +839,11 @@ where
         Self {
             log,
             builders: Vec::new(),
-            dependencies: Some(Vec::new()),
+            dependencies: Some(DependencyData {
+                hypotheses: Vec::new(),
+                desire_consumers: Vec::new(),
+                desire_producers: Vec::new(),
+            }),
             desires: Vec::new(),
         }
     }
@@ -837,23 +879,64 @@ where
         };
 
         if let Some(dependencies) = &mut self.dependencies {
-            let dependencies_index = dependencies.len() - 1;
-            dependencies[dependencies_index].push(reference.clone());
+            let dependencies_index = dependencies.hypotheses.len() - 1;
+            dependencies.hypotheses[dependencies_index].push(reference.clone());
         }
 
         reference
     }
 
-    pub fn register_desire(&mut self, desire: DesireType) -> DesireReference {
-        for (index, existing_desire) in self.desires.iter_mut().enumerate() {
-            if desire == existing_desire.desire {
-                existing_desire.count = existing_desire.count + 1;
-                return DesireReference(index);
+    fn register_desire_core(&mut self, desire: DesireType) -> usize {
+        for (index, existing_desire) in self.desires.iter().enumerate() {
+            if desire == *existing_desire {
+                return index;
             }
         }
 
-        let reference = DesireReference(self.desires.len());
-        self.desires.push(DesireDefinition { desire, count: 1 });
+        let reference = self.desires.len();
+        self.desires.push(desire);
+        reference
+    }
+
+    pub fn register_desire_dependency(&mut self, desire: DesireType) -> DesireDependentReference {
+        let index = self.register_desire_core(desire.clone());
+        let reference = DesireDependentReference(index);
+
+        if let Some(dependencies) = self.dependencies.as_mut() {
+            let consumers = dependencies
+                .desire_consumers
+                .last_mut()
+                .expect("Consumer entry should exist!");
+            for existing_reference in consumers.iter() {
+                if reference == *existing_reference {
+                    return reference;
+                }
+            }
+
+            consumers.push(reference);
+        }
+
+        reference
+    }
+
+    pub fn register_desire_producer(&mut self, desire: DesireType) -> DesireReference {
+        let index = self.register_desire_core(desire.clone());
+        let reference = DesireReference(index);
+
+        if let Some(dependencies) = self.dependencies.as_mut() {
+            let producers = dependencies
+                .desire_producers
+                .last_mut()
+                .expect("Producer entry should exist!");
+            for existing_reference in producers.iter() {
+                if reference == *existing_reference {
+                    return reference;
+                }
+            }
+
+            producers.push(reference);
+        }
+
         reference
     }
 
@@ -874,10 +957,14 @@ where
         loop {
             let current_builder = self.builders[current_reference].clone();
 
-            self.dependencies
+            let dependency_data = self
+                .dependencies
                 .as_mut()
-                .expect("Dependencies should exist")
-                .push(Vec::new());
+                .expect("Dependencies should exist");
+
+            dependency_data.hypotheses.push(Vec::new());
+            dependency_data.desire_consumers.push(Vec::new());
+            dependency_data.desire_producers.push(Vec::new());
 
             // intentionally dropping the initially built hypotheis
             _ = current_builder.build(game_state, &mut self);
@@ -899,7 +986,7 @@ where
         for (index, builder) in self.builders.clone().into_iter().enumerate() {
             let hypothesis = builder.build(game_state, &mut self).into();
             info!(logger: self.log, "{}: {}", HypothesisReference(index), hypothesis);
-            for dependency in &dependencies[index] {
+            for dependency in &dependencies.hypotheses[index] {
                 info!(logger: self.log, "- {}", dependency);
             }
 
@@ -909,15 +996,38 @@ where
         info!(logger: self.log, "Hypotheses built");
 
         info!(logger: self.log, "{} Desires:", self.desires.len());
-        for (index, desire) in self.desires.iter().enumerate() {
-            info!(logger: self.log, "- {}: {}", DesireReference(index), desire)
+        let mut desire_definitions = Vec::with_capacity(self.desires.len());
+        for (index, desire) in self.desires.into_iter().enumerate() {
+            let definition = DesireDefinition {
+                desire: desire,
+                count: dependencies
+                    .desire_producers
+                    .iter()
+                    .filter(|producer_references| {
+                        producer_references
+                            .iter()
+                            .any(|reference| reference.0 == index)
+                    })
+                    .count(),
+                used: dependencies
+                    .desire_consumers
+                    .iter()
+                    .any(|consumer_references| {
+                        consumer_references
+                            .iter()
+                            .any(|reference| reference.0 == index)
+                    }),
+            };
+
+            info!(logger: self.log, "- {}: {}", DesireReference(index), definition);
+            desire_definitions.push(definition);
         }
 
         HypothesisGraph {
             root: root_reference,
             hypotheses,
             dependencies,
-            desires: self.desires,
+            desires: desire_definitions,
         }
     }
 }
@@ -1143,52 +1253,6 @@ pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResu
                 HypothesisResult::Conclusive(merged)
             }
         }
-    }
-}
-
-pub fn merge_and_use_fittest_value(
-    lhs: HypothesisResult,
-    rhs: HypothesisResult,
-) -> HypothesisResult {
-    let new_fitness_and_action;
-    let must_be_pending;
-    match lhs {
-        HypothesisResult::Pending(fitness_and_action) => {
-            must_be_pending = true;
-            new_fitness_and_action = fitness_and_action
-        }
-        HypothesisResult::Conclusive(fitness_and_action) => {
-            must_be_pending = false;
-            new_fitness_and_action = fitness_and_action
-        }
-    }
-    match rhs {
-        HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
-            max_fitness_and_merge(current_fitness_and_action, new_fitness_and_action),
-        ),
-        HypothesisResult::Conclusive(current_fitness_and_action) => {
-            let merged = max_fitness_and_merge(current_fitness_and_action, new_fitness_and_action);
-
-            if must_be_pending {
-                HypothesisResult::Pending(merged)
-            } else {
-                HypothesisResult::Conclusive(merged)
-            }
-        }
-    }
-}
-
-fn max_fitness_and_merge(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
-    if lhs.fitness > rhs.fitness {
-        lhs
-    } else if rhs.fitness > lhs.fitness {
-        rhs
-    } else {
-        for rh_action in rhs.action {
-            lhs.action.insert(rh_action);
-        }
-
-        lhs
     }
 }
 
