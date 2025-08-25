@@ -1,7 +1,7 @@
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::{Action, DrawStats, GameStateMutationResult, RevealResult, new_game},
-    testimony::{ALCHEMIST_CURE_RANGE, RoleClaim, Testimony},
+    testimony::{ALCHEMIST_CURE_RANGE, ArchitectClaim, RoleClaim, Testimony},
     villager::{
         Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
@@ -68,8 +68,6 @@ pub fn test_game_1() {
         .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
-    colog::init();
-    let log = log::logger();
     prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
@@ -79,15 +77,12 @@ pub fn test_game_1() {
 
     mutation_result = state
         .mutate(Action::TryReveal(RevealResult::new(
-            VillagerIndex(2),
+            VillagerIndex(3),
             Some(VillagerInstance::new(
-                VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
-                Some(Testimony::cure(
-                    VillagerIndex(2),
-                    2,
-                    state.total_villagers(),
-                    ALCHEMIST_CURE_RANGE,
-                )),
+                VillagerArchetype::GoodVillager(GoodVillager::Architect),
+                Some(Expression::Unary(Testimony::Architect(
+                    ArchitectClaim::Right,
+                ))),
             )),
         )))
         .expect("malformed game step??");
