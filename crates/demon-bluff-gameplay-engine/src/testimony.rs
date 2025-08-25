@@ -221,6 +221,79 @@ impl Testimony {
             None => evil_or,
         }
     }
+
+    pub fn lover(
+        start_index: &VillagerIndex,
+        amount: usize,
+        total_villagers: usize,
+    ) -> Expression<Testimony> {
+        if amount > 2 {
+            panic!("Invalid amount of lover evils");
+        }
+
+        if amount == 2 {
+            Expression::And(
+                Box::new(Expression::Unary(Testimony::Evil(index_offset(
+                    start_index,
+                    total_villagers,
+                    1,
+                    true,
+                )))),
+                Box::new(Expression::Unary(Testimony::Evil(index_offset(
+                    start_index,
+                    total_villagers,
+                    1,
+                    true,
+                )))),
+            )
+        } else if amount == 0 {
+            Expression::And(
+                Box::new(Expression::Unary(Testimony::Good(index_offset(
+                    start_index,
+                    total_villagers,
+                    1,
+                    true,
+                )))),
+                Box::new(Expression::Unary(Testimony::Good(index_offset(
+                    start_index,
+                    total_villagers,
+                    1,
+                    true,
+                )))),
+            )
+        } else {
+            Expression::Or(
+                Box::new(Expression::And(
+                    Box::new(Expression::Unary(Testimony::Good(index_offset(
+                        start_index,
+                        total_villagers,
+                        1,
+                        true,
+                    )))),
+                    Box::new(Expression::Unary(Testimony::Evil(index_offset(
+                        start_index,
+                        total_villagers,
+                        1,
+                        true,
+                    )))),
+                )),
+                Box::new(Expression::And(
+                    Box::new(Expression::Unary(Testimony::Evil(index_offset(
+                        start_index,
+                        total_villagers,
+                        1,
+                        true,
+                    )))),
+                    Box::new(Expression::Unary(Testimony::Good(index_offset(
+                        start_index,
+                        total_villagers,
+                        1,
+                        true,
+                    )))),
+                )),
+            )
+        }
+    }
 }
 
 fn index_offset(
