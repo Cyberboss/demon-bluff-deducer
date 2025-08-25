@@ -2,11 +2,11 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    hypotheses::{HypothesisBuilderType, HypothesisType},
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },
+    hypotheses::{HypothesisBuilderType, HypothesisType},
 };
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -62,13 +62,6 @@ impl Hypothesis for NegateHypothesis {
             .sub_evaluate(&self.target_hypothesis)
             .map(|fitness_and_action| fitness_and_action.invert());
 
-        evaluator.create_return(match result {
-            HypothesisResult::Pending(fitness_and_action) => {
-                HypothesisResult::Pending(fitness_and_action.invert())
-            }
-            HypothesisResult::Conclusive(fitness_and_action) => {
-                HypothesisResult::Conclusive(fitness_and_action.invert())
-            }
-        })
+        evaluator.create_return(result)
     }
 }
