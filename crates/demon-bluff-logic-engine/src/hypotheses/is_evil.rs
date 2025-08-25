@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use demon_bluff_gameplay_engine::{
-    game_state::GameState,
-    villager::{VillagerArchetype, VillagerIndex},
+    game_state::{self, GameState},
+    villager::{Villager, VillagerArchetype, VillagerIndex},
 };
 use log::Log;
 
@@ -10,7 +10,7 @@ use crate::{
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, and_result,
-        or_result,
+        fittest_result, or_result,
     },
     hypotheses::{
         HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
@@ -30,6 +30,8 @@ pub struct IsEvilHypothesisBuilder {
 pub struct IsEvilHypothesis {
     index: VillagerIndex,
     is_non_liar_hypotheses: Vec<HypothesisReference>,
+    testimonies_condemming: Vec<HypothesisReference>,
+    testimonies_exonerating: Vec<HypothesisReference>,
     is_lying_hypothesis: HypothesisReference,
     not_corrupt_hypothesis: HypothesisReference,
 }
@@ -41,7 +43,11 @@ impl IsEvilHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsEvilHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
+    fn build<TLog>(
+        self,
+        game_state: &GameState,
+        registrar: &mut HypothesisRegistrar<TLog>,
+    ) -> HypothesisType
     where
         TLog: ::log::Log,
     {
@@ -53,6 +59,33 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
                 ));
             }
         }
+
+        let testimonies_condemming = Vec::new();
+        game_state.iter_villagers(|index, villager| {
+            let potentially_condemning_testimony = match villager {
+                Villager::Active(active_villager) => active_villager.instance().testimony(),
+                Villager::Hidden(_) => &None,
+                Villager::Confirmed(confirmed_villager) => {
+                    if !confirmed_villager.lies() {
+                        confirmed_villager.instance().testimony()
+                    } else {
+                        &None
+                    }
+                }
+            };
+
+            if let Some(testimony) = potentially_condemning_testimony {
+                testimonies_condemming.push(registrar.register(
+                    TestimonyCondemnsHypothesisBuilder::new(
+                        index,
+                        testimony.clone(),
+                        self.index.clone(),
+                    ),
+                ));
+            }
+        });
+
+        let testimonies_exonerating = Vec::new(); // TODO
 
         let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
             IsTruthfulHypothesisBuilder::new(self.index.clone()),
@@ -66,6 +99,8 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
             is_non_liar_hypotheses,
             not_corrupt_hypothesis,
             is_lying_hypothesis,
+            testimonies_condemming,
+            testimonies_exonerating,
         }
         .into()
     }
@@ -106,11 +141,52 @@ impl Hypothesis for IsEvilHypothesis {
             })
         }
 
-        let result = match is_a_truthful_evil_result {
+        let evil_2_result = match is_a_truthful_evil_result {
             Some(is_a_truthful_evil_result) => {
                 or_result(regular_evil_result, is_a_truthful_evil_result)
             }
             None => regular_evil_result,
+        };
+
+        // balance the scales
+        let mut testimonies_condemning_result = None;
+        for sub_hypothesis in &self.testimonies_condemming {
+            let testimony_condemns = evaluator.sub_evaluate(sub_hypothesis);
+
+            testimonies_condemning_result = Some(match testimonies_condemning_result {
+                Some(other_result) => or_result(other_result, testimony_condemns),
+                None => testimony_condemns,
+            });
+        }
+
+        let mut testimonies_exonerating_result = None;
+        for sub_hypothesis in &self.testimonies_exonerating {
+            let testimony_exonerates = evaluator.sub_evaluate(sub_hypothesis);
+
+            testimonies_exonerating_result = Some(match testimonies_exonerating_result {
+                Some(other_result) => or_result(other_result, testimony_exonerates),
+                None => testimony_exonerates,
+            });
+        }
+
+        let result = match testimonies_condemning_result {
+            Some(condeming_result) => match testimonies_exonerating_result {
+                Some(exonerating_result) => or_result(
+                    evil_2_result,
+                    and_result(
+                        condeming_result,
+                        exonerating_result.map(|fitness| fitness.invert()),
+                    ),
+                ),
+                None => or_result(evil_2_result, condeming_result),
+            },
+            None => match testimonies_exonerating_result {
+                Some(exonerating_result) => and_result(
+                    evil_2_result,
+                    exonerating_result.map(|fitness| fitness.invert()),
+                ),
+                None => evil_2_result,
+            },
         };
 
         evaluator.create_return(result)

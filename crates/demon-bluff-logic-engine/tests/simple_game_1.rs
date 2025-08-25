@@ -27,7 +27,7 @@ pub fn simple_game_1() {
     );
 
     // reveal confessor
-    println!("Predition 1:");
+    println!("Prediction 1:");
     let mut prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
@@ -47,7 +47,7 @@ pub fn simple_game_1() {
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     // reveal hunter (fake)
-    println!("Predition 2:");
+    println!("Prediction 2:");
     prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
@@ -71,7 +71,7 @@ pub fn simple_game_1() {
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     // reveal gemcrafter
-    println!("Predition 3:");
+    println!("Prediction 3:");
     prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
@@ -91,7 +91,7 @@ pub fn simple_game_1() {
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     // reveal hunter2
-    println!("Predition 4:");
+    println!("Prediction 4:");
     prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
@@ -115,7 +115,7 @@ pub fn simple_game_1() {
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     // reveal enlightened
-    println!("Predition 5:");
+    println!("Prediction 5:");
     prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
@@ -137,7 +137,7 @@ pub fn simple_game_1() {
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
     // kill hunter1
-    println!("Predition 6:");
+    println!("Prediction 6:");
 
     colog::init();
     let log = log::logger();

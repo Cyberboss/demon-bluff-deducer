@@ -704,6 +704,10 @@ impl ConfirmedVillager {
         self.corrupted
     }
 
+    pub fn lies(&self) -> bool {
+        self.true_identity().lies() || self.corrupted
+    }
+
     pub fn instance(&self) -> &VillagerInstance {
         &self.instance
     }

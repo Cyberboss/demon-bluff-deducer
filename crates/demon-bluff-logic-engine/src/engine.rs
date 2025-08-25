@@ -1338,6 +1338,73 @@ pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResu
     }
 }
 
+pub fn average_result(results: impl Iterator<Item = HypothesisResult>) -> Option<HypothesisResult> {
+    let mut fitness_sum = 0.0;
+    let mut total_items: usize = 0;
+    let mut pending = false;
+
+    for result in results {
+        let fitness = match result {
+            HypothesisResult::Pending(fitness_and_action) => {
+                pending = true;
+                fitness_and_action
+            }
+            HypothesisResult::Conclusive(fitness_and_action) => fitness_and_action,
+        };
+
+        fitness_sum = fitness_sum + fitness.fitness;
+        total_items = total_items + 1;
+    }
+
+    if total_items == 0 {
+        None
+    } else {
+        let average_fitness = fitness_sum / (total_items as f64);
+        Some(if pending {
+            HypothesisResult::Pending(FitnessAndAction::new(average_fitness, None))
+        } else {
+            HypothesisResult::Conclusive(FitnessAndAction::new(average_fitness, None))
+        })
+    }
+}
+
+pub fn fittest_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
+    let new_fitness_and_action;
+    let must_be_pending;
+    match lhs {
+        HypothesisResult::Pending(fitness_and_action) => {
+            must_be_pending = true;
+            new_fitness_and_action = fitness_and_action
+        }
+        HypothesisResult::Conclusive(fitness_and_action) => {
+            must_be_pending = false;
+            new_fitness_and_action = fitness_and_action
+        }
+    }
+    match rhs {
+        HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
+            if current_fitness_and_action.fitness > new_fitness_and_action.fitness {
+                current_fitness_and_action
+            } else {
+                new_fitness_and_action
+            },
+        ),
+        HypothesisResult::Conclusive(current_fitness_and_action) => {
+            let fittest = if current_fitness_and_action.fitness > new_fitness_and_action.fitness {
+                current_fitness_and_action
+            } else {
+                new_fitness_and_action
+            };
+
+            if must_be_pending {
+                HypothesisResult::Pending(fittest)
+            } else {
+                HypothesisResult::Conclusive(fittest)
+            }
+        }
+    }
+}
+
 pub fn and_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
     for rh_action in rhs.action {
         lhs.action.insert(rh_action);

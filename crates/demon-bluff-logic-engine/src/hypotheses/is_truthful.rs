@@ -119,7 +119,7 @@ impl Hypothesis for IsTruthfulHypothesis {
                 // villager is confirmed
 
                 if let Villager::Confirmed(confirmed_villager) = game_state.villager(&self.index) {
-                    let truthful = !confirmed_villager.true_identity().lies();
+                    let truthful = !confirmed_villager.lies();
 
                     repository.create_return(HypothesisResult::Conclusive(if truthful {
                         FitnessAndAction::certainty(None)

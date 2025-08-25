@@ -4,7 +4,7 @@ use demon_bluff_gameplay_engine::{
         AbilityResult, Action, DrawStats, GameStateMutationError, GameStateMutationResult,
         KillAttempt, KillData, KillResult, RevealResult, SlayerKill, new_game,
     },
-    testimony::{ALCHEMIST_CURE_RANGE, ArchitectClaim, BakerClaim, RoleClaim, Testimony},
+    testimony::{ArchitectClaim, BakerClaim, RoleClaim, Testimony},
     villager::{
         Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
@@ -97,7 +97,6 @@ pub fn test_game_1() {
                     VillagerIndex(2),
                     2,
                     state.total_villagers(),
-                    ALCHEMIST_CURE_RANGE,
                 )),
             )),
         )))
