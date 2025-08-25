@@ -4,8 +4,8 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
-    desires::{DesireType, get_testimony::GetTestimonyDesire},
-    engine::{
+    desire::{DesireType, get_testimony::GetTestimonyDesire},
+    engine_old::{
         Depth, DesireConsumerReference, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
     },

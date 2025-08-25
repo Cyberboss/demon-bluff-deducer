@@ -6,7 +6,7 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    engine::{
+    engine_old::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
         HypothesisReturn, or_result,

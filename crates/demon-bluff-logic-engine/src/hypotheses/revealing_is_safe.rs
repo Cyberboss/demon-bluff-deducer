@@ -8,7 +8,7 @@ use demon_bluff_gameplay_engine::{
 use log::{Log, error};
 
 use crate::{
-    engine::{
+    engine_old::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
         HypothesisReturn, and_fitness, or_result,

@@ -1,12 +1,15 @@
 use std::fmt::Display;
 
-use ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder};
-use is_truly_archetype::{IsTrulyArchetypeHypothesis, IsTrulyArchetypeHypothesisBuilder};
-use testimony_condemns::{TestimonyCondemnsHypothesis, TestimonyCondemnsHypothesisBuilder};
-use true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder};
+pub use self::master::MasterHypothesisBuilder;
+use self::{
+    ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder},
+    is_truly_archetype::{IsTrulyArchetypeHypothesis, IsTrulyArchetypeHypothesisBuilder},
+    testimony_condemns::{TestimonyCondemnsHypothesis, TestimonyCondemnsHypothesisBuilder},
+    true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder},
+};
 
 use crate::{
-    engine::{Hypothesis, HypothesisBuilder},
+    engine::HypothesisBuilder,
     hypotheses::{
         ability::{AbilityHypothesis, AbilityHypothesisBuilder},
         archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
@@ -17,7 +20,7 @@ use crate::{
         is_corrupt::{IsCorruptHypothesis, IsCorruptHypothesisBuilder},
         is_evil::{IsEvilHypothesis, IsEvilHypothesisBuilder},
         is_truthful::{IsTruthfulHypothesis, IsTruthfulHypothesisBuilder},
-        master::{MasterHypothesis, MasterHypothesisBuilder},
+        master::MasterHypothesis,
         need_testimony::{NeedTestimonyHypothesis, NeedTestimonyHypothesisBuilder},
         negate::{NegateHypothesis, NegateHypothesisBuilder},
         reveal::{RevealHypothesis, RevealHypothesisBuilder},
@@ -34,6 +37,7 @@ mod ability;
 mod ability_index;
 mod archetype_in_play;
 mod corruption_in_play;
+pub(super) mod desires;
 mod execute;
 mod execute_index;
 mod gather_information;
@@ -41,7 +45,7 @@ mod is_corrupt;
 mod is_evil;
 mod is_truly_archetype;
 mod is_truthful;
-pub(crate) mod master;
+mod master;
 mod need_testimony;
 mod negate;
 mod reveal;

@@ -5,8 +5,8 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    desires::{DesireType, get_testimony::GetTestimonyDesire},
-    engine::{
+    desire::{DesireType, get_testimony::GetTestimonyDesire},
+    engine_old::{
         Depth, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis,
         HypothesisBuilder, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
         HypothesisResult, HypothesisReturn,
