@@ -88,7 +88,7 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
                     | Affect::Night(_)
                     | Affect::DupeVillager
                     | Affect::FakeOutcast
-                    | Affect::BlockLastNReveals(_) => todo!(),
+                    | Affect::BlockLastNReveals(_) => {}
                     Affect::Puppet(_) => can_be_converted = true,
                 }
             }

@@ -1,8 +1,11 @@
 use std::fmt::Display;
 
+use ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder};
+use is_truly_archetype::{IsTrulyArchetypeHypothesis, IsTrulyArchetypeHypothesisBuilder};
 use true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder};
 
 use crate::{
+    engine::{Hypothesis, HypothesisBuilder},
     hypotheses::{
         ability::{AbilityHypothesis, AbilityHypothesisBuilder},
         archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
@@ -24,10 +27,10 @@ use crate::{
             TestimonyExpressionHypothesis, TestimonyExpressionHypothesisBuilder,
         },
     },
-    engine::{Hypothesis, HypothesisBuilder},
 };
 
 mod ability;
+mod ability_index;
 mod archetype_in_play;
 mod corruption_in_play;
 mod execute;
@@ -35,6 +38,7 @@ mod execute_index;
 mod gather_information;
 mod is_corrupt;
 mod is_evil;
+mod is_truly_archetype;
 mod is_truthful;
 pub(crate) mod master;
 mod need_testimony;
@@ -67,6 +71,8 @@ pub enum HypothesisBuilderType {
     IsCorrupt(IsCorruptHypothesisBuilder),
     CorruptionInPlay(CorruptionInPlayHypothesisBuilder),
     TrueIdentity(TrueIdentityHypothesisBuilder),
+    AbilityIndex(AbilityIndexHypothesisBuilder),
+    IsTrulyArchetype(IsTrulyArchetypeHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]
@@ -90,6 +96,8 @@ pub enum HypothesisType {
     IsCorrupt(IsCorruptHypothesis),
     CorruptionInPlay(CorruptionInPlayHypothesis),
     TrueIdentity(TrueIdentityHypothesis),
+    AbilityIndex(AbilityIndexHypothesis),
+    IsTrulyArchetype(IsTrulyArchetypeHypothesis),
 }
 
 impl Display for HypothesisType {

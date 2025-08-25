@@ -1,7 +1,7 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
-use crate::hypothesis::{
+use crate::engine::{
     Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
     HypothesisRegistrar, HypothesisRepository, HypothesisReturn,
 };
