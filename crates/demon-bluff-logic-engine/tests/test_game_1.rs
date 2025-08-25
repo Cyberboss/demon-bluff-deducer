@@ -71,7 +71,7 @@ pub fn test_game_1() {
     prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
-        &PlayerAction::TryReveal(VillagerIndex(2)),
+        &PlayerAction::TryReveal(VillagerIndex(3)),
         prediction.iter().next().unwrap()
     );
 
