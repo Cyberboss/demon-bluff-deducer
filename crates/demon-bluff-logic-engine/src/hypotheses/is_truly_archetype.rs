@@ -5,11 +5,14 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::engine::{
-    Depth, Hypothesis, HypothesisBuilder, HypothesisRegistrar, HypothesisRepository,
-    HypothesisResult, HypothesisReturn,
+    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
+    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, and_result,
 };
 
-use super::HypothesisType;
+use super::{
+    HypothesisType,
+    archetype_in_play::{self, ArchetypeInPlayHypothesisBuilder},
+};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct IsTrulyArchetypeHypothesisBuilder {
@@ -27,6 +30,7 @@ impl IsTrulyArchetypeHypothesisBuilder {
 pub struct IsTrulyArchetypeHypothesis {
     archetype: VillagerArchetype,
     index: VillagerIndex,
+    archetype_in_play_hypothesis: HypothesisReference,
 }
 
 impl HypothesisBuilder for IsTrulyArchetypeHypothesisBuilder {
@@ -34,9 +38,14 @@ impl HypothesisBuilder for IsTrulyArchetypeHypothesisBuilder {
     where
         TLog: ::log::Log,
     {
+        let archetype_in_play_hypothesis = registrar.register(
+            ArchetypeInPlayHypothesisBuilder::new(self.archetype.clone()),
+        );
+
         IsTrulyArchetypeHypothesis {
             archetype: self.archetype,
             index: self.index,
+            archetype_in_play_hypothesis,
         }
         .into()
     }
@@ -61,6 +70,14 @@ impl Hypothesis for IsTrulyArchetypeHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::unimplemented())
+        let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
+
+        let archetype_in_play_result = evaluator.sub_evaluate(&self.archetype_in_play_hypothesis);
+
+        let is_truly_archetype_result = HypothesisResult::unimplemented();
+
+        let result = and_result(archetype_in_play_result, is_truly_archetype_result);
+
+        evaluator.create_return(result)
     }
 }

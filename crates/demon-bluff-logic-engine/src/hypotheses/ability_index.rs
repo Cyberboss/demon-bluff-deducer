@@ -6,7 +6,7 @@ use log::Log;
 
 use crate::engine::{
     Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, evaluate,
 };
 
 use super::HypothesisType;
@@ -61,14 +61,14 @@ impl Hypothesis for AbilityIndexHypothesis {
             Villager::Confirmed(confirmed_villager) => confirmed_villager.instance().archetype(),
         };
 
-        match archetype {
+        let result = match archetype {
             VillagerArchetype::GoodVillager(good_villager) => match good_villager {
-                GoodVillager::Dreamer => todo!(),
-                GoodVillager::Druid => todo!(),
-                GoodVillager::FortuneTeller => todo!(),
-                GoodVillager::Jester => todo!(),
-                GoodVillager::Judge => todo!(),
-                GoodVillager::Slayer => todo!(),
+                GoodVillager::Dreamer => HypothesisResult::unimplemented(),
+                GoodVillager::Druid => HypothesisResult::unimplemented(),
+                GoodVillager::FortuneTeller => HypothesisResult::unimplemented(),
+                GoodVillager::Jester => HypothesisResult::unimplemented(),
+                GoodVillager::Judge => HypothesisResult::unimplemented(),
+                GoodVillager::Slayer => HypothesisResult::unimplemented(),
                 GoodVillager::Scout
                 | GoodVillager::Bard
                 | GoodVillager::Alchemist
@@ -99,8 +99,8 @@ impl Hypothesis for AbilityIndexHypothesis {
             VillagerArchetype::Minion(_) | VillagerArchetype::Demon(_) => {
                 panic!("There shouldn't be an active minion or demon??")
             }
-        }
+        };
 
-        repository.create_return(HypothesisResult::unimplemented())
+        repository.create_return(result)
     }
 }
