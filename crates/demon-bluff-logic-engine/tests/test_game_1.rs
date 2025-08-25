@@ -1,5 +1,7 @@
 use demon_bluff_gameplay_engine::{
+    Expression,
     game_state::{Action, DrawStats, GameStateMutationResult, RevealResult, new_game},
+    testimony::{ALCHEMIST_CURE_RANGE, RoleClaim, Testimony},
     villager::{
         Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
@@ -27,11 +29,11 @@ pub fn test_game_1() {
         false,
     );
 
-    let prediction_1 = predict(&log, &state).expect("prediction failed??");
+    let mut prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
         &PlayerAction::TryReveal(VillagerIndex(0)),
-        prediction_1.iter().next().unwrap()
+        prediction.iter().next().unwrap()
     );
 
     let mut mutation_result = state
@@ -45,13 +47,59 @@ pub fn test_game_1() {
         .expect("malformed game step??");
     assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
-    colog::init();
-    let log = log::logger();
-    let prediction_2 = predict(&log, &state).expect("prediction failed??");
+    prediction = predict(&log, &state).expect("prediction failed??");
 
     assert_eq!(
         &PlayerAction::TryReveal(VillagerIndex(1)),
-        prediction_2.iter().next().unwrap()
+        prediction.iter().next().unwrap()
+    );
+
+    mutation_result = state
+        .mutate(Action::TryReveal(RevealResult::new(
+            VillagerIndex(1),
+            Some(VillagerInstance::new(
+                VillagerArchetype::GoodVillager(GoodVillager::Medium),
+                Some(Expression::Unary(Testimony::Role(RoleClaim::new(
+                    VillagerIndex(3),
+                    VillagerArchetype::GoodVillager(GoodVillager::Architect),
+                )))),
+            )),
+        )))
+        .expect("malformed game step??");
+    assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    colog::init();
+    let log = log::logger();
+    prediction = predict(&log, &state).expect("prediction failed??");
+
+    assert_eq!(
+        &PlayerAction::TryReveal(VillagerIndex(2)),
+        prediction.iter().next().unwrap()
+    );
+
+    mutation_result = state
+        .mutate(Action::TryReveal(RevealResult::new(
+            VillagerIndex(2),
+            Some(VillagerInstance::new(
+                VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
+                Some(Testimony::cure(
+                    VillagerIndex(2),
+                    2,
+                    state.total_villagers(),
+                    ALCHEMIST_CURE_RANGE,
+                )),
+            )),
+        )))
+        .expect("malformed game step??");
+    assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+    colog::init();
+    let log = log::logger();
+    prediction = predict(&log, &state).expect("prediction failed??");
+
+    assert_eq!(
+        &PlayerAction::TryReveal(VillagerIndex(2)),
+        prediction.iter().next().unwrap()
     );
 
     todo!("rest of the fucking owl")

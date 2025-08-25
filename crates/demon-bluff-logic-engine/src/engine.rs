@@ -521,21 +521,21 @@ impl Display for FitnessAndAction {
             return write!(f, "UNIMPLEMENTED");
         }
 
-        write!(f, "{:.2}% - ", self.fitness * 100.0)?;
+        write!(f, "{:.2}%", self.fitness * 100.0)?;
 
         let length = self.action.len();
-        if length == 0 {
-            return write!(f, "(NO ACTION)");
-        }
+        if length > 0 {
+            write!(f, " - ")?;
 
-        for (index, action) in self.action.iter().enumerate() {
-            if index != 0 {
-                write!(f, ", ")?
-            } else if index == length {
-                write!(f, "or ")?
+            for (index, action) in self.action.iter().enumerate() {
+                if index != 0 {
+                    write!(f, ", ")?
+                } else if index == length {
+                    write!(f, "or ")?
+                }
+
+                write!(f, "[{}]", action)?
             }
-
-            write!(f, "[{}]", action)?
         }
 
         Ok(())
