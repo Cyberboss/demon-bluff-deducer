@@ -111,6 +111,10 @@ impl Hypothesis for IsEvilHypothesis {
         write!(f, "{} is evil", self.index)
     }
 
+    fn wip(&self) -> bool {
+        true
+    }
+
     fn evaluate<TLog>(
         &mut self,
         _: &TLog,
