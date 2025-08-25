@@ -77,8 +77,6 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::certainty(
-            None,
-        )))
+        repository.create_return(HypothesisResult::unimplemented())
     }
 }

@@ -694,12 +694,7 @@ where
 
             force_conclusive = true;
         } else {
-            if current_data.results[hypothesis_reference.0]
-                .as_ref()
-                .is_some()
-            {
-                info!(logger: self.inner.log, "{} Skipping re-evaluation of hypothesis: {}", self.inner.depth(), hypothesis_reference);
-            } else if let Some(previous_data) = self.inner.previous_data
+            if let Some(previous_data) = self.inner.previous_data
                 && let Some(HypothesisResult::Conclusive(previously_conclusive_result)) =
                     &previous_data.results[hypothesis_reference.0]
             {
