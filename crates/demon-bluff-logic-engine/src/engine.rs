@@ -1,4 +1,6 @@
+use std::cell::Ref;
 use std::io::Write;
+use std::usize;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet, hash_map::Entry},
@@ -25,7 +27,7 @@ const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 100;
 const FITNESS_UNIMPLEMENTED: f64 = 0.000123456789;
 
 /// A reference to a `Hypothesis` in the graph.
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Serialize)]
 pub struct HypothesisReference(usize);
 
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
@@ -33,7 +35,6 @@ pub struct HypothesisRepository<'a, TLog>
 where
     TLog: Log,
 {
-    set_desires: HashMap<DesireProducerReference, bool>,
     inner: StackData<'a, TLog>,
 }
 
@@ -52,12 +53,12 @@ where
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
     break_at: &'a Option<HypothesisReference>,
     desire_definitions: &'a Vec<DesireDefinition>,
+    desire_data: &'a RefCell<Vec<DesireData>>,
     dependencies: &'a DependencyData,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize)]
 struct IterationData {
-    desires: Vec<DesireData>,
     results: Vec<Option<HypothesisResult>>,
 }
 
@@ -79,14 +80,14 @@ struct HypothesisGraph {
 pub struct DesireConsumerReference(usize);
 
 /// A reference to a [`DesireType`] that a [`Hypothesis`] declares a desire for or not
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DesireProducerReference(usize);
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 struct DesireData {
-    pending: usize,
-    desired: usize,
-    undesired: usize,
+    pending: HashSet<HypothesisReference>,
+    desired: HashSet<HypothesisReference>,
+    undesired: HashSet<HypothesisReference>,
 }
 
 #[derive(Debug)]
@@ -109,7 +110,6 @@ pub struct HypothesisEvaluator<'a, TLog>
 where
     TLog: Log,
 {
-    set_desires: HashMap<DesireProducerReference, bool>,
     inner: StackData<'a, TLog>,
 }
 
@@ -121,7 +121,6 @@ struct GraphBuilder {
 /// The return value of evaluating a single `Hypothesis`.
 #[derive(Debug)]
 pub struct HypothesisReturn {
-    set_desires: HashMap<DesireProducerReference, bool>,
     result: HypothesisResult,
 }
 
@@ -199,16 +198,16 @@ pub struct Depth {
 
 impl DesireData {
     fn total(&self) -> usize {
-        self.undesired + self.pending + self.desired
+        self.undesired.len() + self.pending.len() + self.desired.len()
     }
 }
 
 impl Display for DesireData {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{}", self.desired, self.total())?;
+        write!(f, "{}/{}", self.desired.len(), self.total())?;
 
-        if self.pending > 0 {
-            write!(f, " ({} Pending)", self.pending)
+        if self.pending.len() > 0 {
+            write!(f, " ({} Pending)", self.pending.len())
         } else {
             Ok(())
         }
@@ -354,6 +353,7 @@ where
         root_reference: &HypothesisReference,
         graph_builder: Option<&'a RefCell<GraphBuilder>>,
         desire_definitions: &'a Vec<DesireDefinition>,
+        desire_data: &'a RefCell<Vec<DesireData>>,
         dependencies: &'a DependencyData,
     ) -> Self {
         Self {
@@ -367,6 +367,7 @@ where
             cycles,
             graph_builder,
             desire_definitions,
+            desire_data,
             dependencies,
         }
     }
@@ -407,6 +408,7 @@ where
             cycles: &self.cycles,
             desire_definitions: self.desire_definitions,
             dependencies: self.dependencies,
+            desire_data: self.desire_data,
         }
     }
 
@@ -434,6 +436,7 @@ where
             cycles: &self.cycles,
             desire_definitions: self.desire_definitions,
             dependencies: self.dependencies,
+            desire_data: self.desire_data,
         }
     }
 
@@ -551,17 +554,12 @@ where
     }
 
     fn enter(self) -> HypothesisResult {
-        let reference = self
-            .inner
-            .reference_stack
-            .last()
-            .expect("There should be at least one reference in the stack!");
+        let reference = self.inner.current_reference();
 
         let mut hypothesis = self.inner.hypotheses[reference.0].borrow_mut();
 
         info!(logger: self.inner.log, "{} Entering: {}", self.inner.depth(), hypothesis);
         let repository = HypothesisRepository {
-            set_desires: HashMap::new(),
             inner: self.inner.share(),
         };
 
@@ -576,7 +574,12 @@ where
 
         if let HypothesisResult::Conclusive(_) = &hypo_return.result {
             for producer_reference in &self.inner.dependencies.desire_producers[reference.0] {
-                if !hypo_return.set_desires.contains_key(producer_reference) {
+                let desire_data = self.inner.desire_data.borrow();
+                if desire_data[producer_reference.0]
+                    .pending
+                    .iter()
+                    .any(|pending_reference| pending_reference == reference)
+                {
                     panic!(
                         "{}: {} was supposed to produce a result for {} before concluding but didn't!",
                         reference, hypothesis, producer_reference
@@ -616,87 +619,53 @@ where
             }
         }
 
-        HypothesisEvaluator {
-            inner: self.inner,
-            set_desires: self.set_desires,
-        }
+        HypothesisEvaluator { inner: self.inner }
     }
 
     pub fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
-        let mut borrow = self.inner.current_data.borrow_mut();
-        let data = &mut borrow.desires[desire_reference.0];
+        let mut borrow = self.inner.desire_data.borrow_mut();
+        let data = &mut borrow[desire_reference.0];
 
-        let changed;
-        match self.set_desires.entry(desire_reference.clone()) {
-            Entry::Occupied(mut occupied_entry) => {
-                if occupied_entry.insert(desired) == desired {
-                    return;
-                }
-
-                changed = true;
-            }
-            Entry::Vacant(vacant_entry) => {
-                vacant_entry.insert(desired);
-                changed = false;
-            }
-        }
-
-        if changed {
-            if desired {
-                data.undesired = data.undesired - 1;
-            } else {
-                data.desired = data.desired - 1;
-            }
-        } else {
-            data.pending = data.pending - 1;
-        }
+        let current_reference = self.inner.current_reference();
+        data.pending.remove(current_reference);
 
         if desired {
-            data.desired = data.desired + 1;
+            data.desired.insert(current_reference.clone());
+            data.undesired.remove(current_reference);
         } else {
-            data.undesired = data.undesired + 1;
+            data.undesired.insert(current_reference.clone());
+            data.desired.remove(current_reference);
         }
 
-        info!(logger: self.inner.log, "{} Set {}: {}. Now {}",self.inner.depth(), desire_reference, desired, data);
+        info!(logger: self.inner.log, "{} Set {}: {}. Now {}", self.inner.depth(), desire_reference, desired, data);
     }
 
     pub fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
         let definition = &self.inner.desire_definitions[desire_reference.0];
-        let data = self
-            .inner
-            .previous_data
-            .map(|previous_data| &previous_data.desires[desire_reference.0]);
+        let borrow = self.inner.desire_data.borrow();
 
-        match data {
-            Some(data) => {
-                info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, definition.desire, data);
-                let total = data.total();
-                let fitness = FitnessAndAction::new(
-                    if data.desired == 0 {
-                        0.0 // stop divide by 0
-                    } else {
-                        (data.desired as f64) / (total as f64)
-                    },
-                    None,
-                );
-                if data.pending == 0 {
-                    HypothesisResult::Conclusive(fitness)
-                } else {
-                    HypothesisResult::Pending(fitness)
-                }
-            }
-            None => {
-                info!(logger: self.inner.log, "{} Established desire dependency {}: {}", self.inner.depth(), desire_reference, definition);
-                HypothesisResult::Pending(FitnessAndAction::new(FITNESS_UNKNOWN, None))
-            }
+        let data = &borrow[desire_reference.0];
+
+        info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, definition.desire, data);
+        let total = data.total();
+        let fitness = FitnessAndAction::new(
+            if data.desired.len() == 0 {
+                0.0 // stop divide by 0
+            } else {
+                (data.desired.len() as f64) / (total as f64)
+            },
+            None,
+        );
+        if data.pending.len() == 0 {
+            HypothesisResult::Conclusive(fitness)
+        } else {
+            info!(logger: self.inner.log, "{} Remaining Pending: {}", self.inner.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
+            HypothesisResult::Pending(fitness)
         }
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
-        HypothesisReturn {
-            result,
-            set_desires: self.set_desires,
-        }
+        HypothesisReturn { result }
     }
 }
 
@@ -800,71 +769,49 @@ where
     }
 
     pub fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
-        let mut borrow = self.inner.current_data.borrow_mut();
-        let data = &mut borrow.desires[desire_reference.0];
+        let mut borrow = self.inner.desire_data.borrow_mut();
+        let data = &mut borrow[desire_reference.0];
 
-        let changed;
-        match self.set_desires.entry(desire_reference.clone()) {
-            Entry::Occupied(mut occupied_entry) => {
-                if occupied_entry.insert(desired) == desired {
-                    return;
-                }
-
-                changed = true;
-            }
-            Entry::Vacant(vacant_entry) => {
-                vacant_entry.insert(desired);
-                changed = false;
-            }
-        }
-
-        if changed {
-            if desired {
-                data.undesired = data.undesired - 1;
-            } else {
-                data.desired = data.desired - 1;
-            }
-        } else {
-            data.pending = data.pending - 1;
-        }
+        let current_reference = self.inner.current_reference();
+        data.pending.remove(current_reference);
 
         if desired {
-            data.desired = data.desired + 1;
+            data.desired.insert(current_reference.clone());
+            data.undesired.remove(current_reference);
         } else {
-            data.undesired = data.undesired + 1;
+            data.undesired.insert(current_reference.clone());
+            data.desired.remove(current_reference);
         }
+
+        info!(logger: self.inner.log, "{} Set {}: {}. Now {}", self.inner.depth(), desire_reference, desired, data);
     }
 
-    pub fn desire_result(&self, desire_reference: &DesireProducerReference) -> HypothesisResult {
-        let defintion = &self.inner.desire_definitions[desire_reference.0];
-        let data = self
-            .inner
-            .previous_data
-            .map(|previous_data| &previous_data.desires[desire_reference.0]);
+    pub fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
+        let definition = &self.inner.desire_definitions[desire_reference.0];
+        let borrow = self.inner.desire_data.borrow();
 
-        match data {
-            Some(data) => {
-                info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, defintion.desire, data);
-                let total = data.total();
-                let fitness = FitnessAndAction::new((data.desired as f64) / (total as f64), None);
-                if data.pending == 0 || data.pending == total {
-                    HypothesisResult::Conclusive(fitness)
-                } else {
-                    HypothesisResult::Pending(fitness)
-                }
-            }
-            None => {
-                info!(logger: self.inner.log, "{} Established desire {}: {}", self.inner.depth(), desire_reference, defintion);
-                HypothesisResult::Pending(FitnessAndAction::new(FITNESS_UNKNOWN, None))
-            }
+        let data = &borrow[desire_reference.0];
+
+        info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, definition.desire, data);
+        let total = data.total();
+        let fitness = FitnessAndAction::new(
+            if data.desired.len() == 0 {
+                0.0 // stop divide by 0
+            } else {
+                (data.desired.len() as f64) / (total as f64)
+            },
+            None,
+        );
+        if data.pending.len() == 0 {
+            HypothesisResult::Conclusive(fitness)
+        } else {
+            info!(logger: self.inner.log, "{} Remaining Pending: {}", self.inner.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
+            HypothesisResult::Pending(fitness)
         }
     }
 
     pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
-        HypothesisReturn {
-            result,
-            set_desires: self.set_desires,
-        }
+        HypothesisReturn { result }
     }
 }
 
@@ -1100,6 +1047,29 @@ where
 
     let mut iteration = 0;
     let mut stability_iteration = 0;
+    let mut desire_data_vec = graph
+        .desires
+        .iter()
+        .map(|desire_definition| DesireData {
+            pending: HashSet::with_capacity(desire_definition.count),
+            desired: HashSet::with_capacity(desire_definition.count),
+            undesired: HashSet::with_capacity(desire_definition.count),
+        })
+        .collect::<Vec<DesireData>>();
+    {
+        for (index, producer_dependencies) in graph.dependencies.desire_producers.iter().enumerate()
+        {
+            for desire_reference in producer_dependencies {
+                let reference = HypothesisReference(index);
+                desire_data_vec[desire_reference.0]
+                    .pending
+                    .insert(reference);
+            }
+        }
+    }
+
+    let desire_data = RefCell::new(desire_data_vec);
+
     loop {
         log.flush();
         iteration = iteration + 1;
@@ -1110,19 +1080,7 @@ where
             data.push(None);
         }
 
-        let mut desires = Vec::with_capacity(graph.desires.len());
-        for definition in &graph.desires {
-            desires.push(DesireData {
-                pending: definition.count,
-                desired: 0,
-                undesired: 0,
-            });
-        }
-
-        let data = RefCell::new(IterationData {
-            results: data,
-            desires,
-        });
+        let data = RefCell::new(IterationData { results: data });
         let cycles = RefCell::new(HashSet::new());
         let invocation = HypothesisInvocation::new(StackData::new(
             game_state,
@@ -1135,6 +1093,7 @@ where
             &graph.root,
             None,
             &graph.desires,
+            &desire_data,
             &graph.dependencies,
         ));
 
@@ -1186,67 +1145,103 @@ where
 
                         let cycles = cycles.borrow();
                         if cycles.len() == 0 {
-                            panic!(
-                                "We have a stagnate graph due to one of the following desires not concluding: {}",
-                                data.desires
+                            let mut borrow = desire_data.borrow_mut();
+                            warn!(
+                                "We have a stagnate graph due to one of the following desires not concluding. We will forcefully set the hypotheses that are not evaluating it to false {}",
+                                borrow
                                     .iter()
-                                    .filter(|desire| desire.pending > 0)
+                                    .filter(|desire| desire.pending.len() > 0)
                                     .enumerate()
                                     .map(|(index, data)| {
                                         format!("{}: {}", DesireProducerReference(index), data)
                                     })
                                     .collect::<Vec<String>>()
                                     .join(", ")
-                            )
-                        }
+                            );
 
-                        warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
-
-                        let mut best_break_candidate = None::<(&Cycle, &HypothesisReference, f64)>;
-
-                        for cycle in cycles.iter() {
-                            for reference in &cycle.order_from_root {
-                                let fitness = data.results[reference.0]
-                                    .as_ref()
-                                    .expect("A hypothesis in a cycle should have SOME result")
-                                    .fitness_and_action()
-                                    .fitness;
-
-                                best_break_candidate = Some(match best_break_candidate {
-                                    Some((
-                                        previous_cycle,
-                                        previous_reference,
-                                        previous_fitness,
-                                    )) => {
-                                        if previous_fitness > fitness {
-                                            (previous_cycle, previous_reference, previous_fitness)
-                                        } else if fitness > previous_fitness {
-                                            (cycle, reference, fitness)
+                            let mut least_pending_option = None;
+                            for (index, desire_data) in borrow
+                                .iter_mut()
+                                .filter(|desire| desire.pending.len() > 0)
+                                .enumerate()
+                            {
+                                least_pending_option = Some(match least_pending_option {
+                                    Some((previous_index, previous_pending)) => {
+                                        if previous_pending > desire_data.pending.len() {
+                                            (index, desire_data.pending.len())
                                         } else {
-                                            // break shortest fittest candidate cycle first for simplicity
-                                            if cycle.order_from_root.len()
-                                                < previous_cycle.order_from_root.len()
-                                            {
-                                                (cycle, reference, fitness)
-                                            } else {
+                                            (previous_index, previous_pending)
+                                        }
+                                    }
+                                    None => (index, desire_data.pending.len()),
+                                })
+                            }
+
+                            let (least_pending_index, _) = least_pending_option
+                                .expect("At least one stagnate desire should have been found!");
+                            info!(logger: log, "Selected {} for unblocking", DesireProducerReference(least_pending_index));
+                            let unblocking_data = &mut borrow[least_pending_index];
+                            for pending_hypothesis in
+                                std::mem::replace(&mut unblocking_data.pending, HashSet::new())
+                            {
+                                info!(logger: log, "Force setting {}'s desire to false", pending_hypothesis);
+                                unblocking_data.undesired.insert(pending_hypothesis);
+                            }
+                        } else {
+                            warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
+
+                            let mut best_break_candidate =
+                                None::<(&Cycle, &HypothesisReference, f64)>;
+
+                            for cycle in cycles.iter() {
+                                for reference in &cycle.order_from_root {
+                                    let fitness = data.results[reference.0]
+                                        .as_ref()
+                                        .expect("A hypothesis in a cycle should have SOME result")
+                                        .fitness_and_action()
+                                        .fitness;
+
+                                    best_break_candidate = Some(match best_break_candidate {
+                                        Some((
+                                            previous_cycle,
+                                            previous_reference,
+                                            previous_fitness,
+                                        )) => {
+                                            if previous_fitness > fitness {
                                                 (
                                                     previous_cycle,
                                                     previous_reference,
                                                     previous_fitness,
                                                 )
+                                            } else if fitness > previous_fitness {
+                                                (cycle, reference, fitness)
+                                            } else {
+                                                // break shortest fittest candidate cycle first for simplicity
+                                                if cycle.order_from_root.len()
+                                                    < previous_cycle.order_from_root.len()
+                                                {
+                                                    (cycle, reference, fitness)
+                                                } else {
+                                                    (
+                                                        previous_cycle,
+                                                        previous_reference,
+                                                        previous_fitness,
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
-                                    None => (cycle, reference, fitness),
-                                });
+                                        None => (cycle, reference, fitness),
+                                    });
+                                }
                             }
+
+                            let (break_cycle, break_reference, break_fitness) =
+                                best_break_candidate
+                                    .expect("At least one break candidate should exist");
+                            info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
+
+                            break_at = Some(break_reference.clone());
                         }
-
-                        let (break_cycle, break_reference, break_fitness) = best_break_candidate
-                            .expect("At least one break candidate should exist");
-                        info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
-
-                        break_at = Some(break_reference.clone());
                     }
                 }
 

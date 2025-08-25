@@ -7,7 +7,7 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::engine::{
-    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
+    Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
     HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
 };
 
@@ -34,6 +34,7 @@ impl TestimonyCondemnsHypothesisBuilder {
     }
 }
 
+/// If a testimony is true and condemns a given defendent
 #[derive(Debug)]
 pub struct TestimonyCondemnsHypothesis {
     testifier: VillagerIndex,
@@ -76,6 +77,8 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
     where
         TLog: Log,
     {
-        repository.create_return(HypothesisResult::unimplemented())
+        repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::certainty(
+            None,
+        )))
     }
 }
