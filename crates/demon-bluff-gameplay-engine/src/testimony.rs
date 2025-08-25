@@ -5,8 +5,7 @@ use crate::{
     Expression, testimony,
     villager::{self, VillagerArchetype, VillagerIndex},
 };
-
-pub const ALCHEMIST_CURE_RANGE: usize = 2;
+const ALCHEMIST_CURE_RANGE: usize = 2;
 
 #[derive(Clone, Debug, PartialEq, Eq, Display)]
 pub enum ConfessorClaim {
@@ -99,13 +98,13 @@ impl RoleClaim {
 }
 
 impl Testimony {
-    pub fn cure(
+    pub fn alchemist(
         start_index: VillagerIndex,
         villagers_cured: usize,
         total_villagers: usize,
-        cure_range: usize,
     ) -> Expression<Testimony> {
         let start_index = start_index.0;
+        let cure_range = ALCHEMIST_CURE_RANGE;
         let candidate_count = cure_range * 2;
         let mut potential_indicies = Vec::with_capacity(candidate_count);
         let mut current_index = if start_index >= cure_range {
@@ -165,4 +164,84 @@ impl Testimony {
 
         expr.expect("logic error in cure expression builder")
     }
+
+    pub fn hunter(
+        start_index: &VillagerIndex,
+        distance: usize,
+        total_villagers: usize,
+    ) -> Expression<Testimony> {
+        // hunter = (+N is evil || -N is evil) && (+(<N) good && -(<N) good)
+
+        let clockwise_evil_unary = Expression::Unary(Testimony::Evil(index_offset(
+            start_index,
+            total_villagers,
+            distance,
+            true,
+        )));
+        let counter_clockwise_evil_unary = Expression::Unary(Testimony::Evil(index_offset(
+            start_index,
+            total_villagers,
+            distance,
+            false,
+        )));
+
+        let evil_or = Expression::Or(
+            Box::new(clockwise_evil_unary),
+            Box::new(counter_clockwise_evil_unary),
+        );
+
+        let mut good_expression = None;
+        for i in 1..distance {
+            let clockwise_good_unary = Expression::Unary(Testimony::Evil(index_offset(
+                start_index,
+                total_villagers,
+                i,
+                true,
+            )));
+            let counter_clockwise_good_unary = Expression::Unary(Testimony::Evil(index_offset(
+                start_index,
+                total_villagers,
+                i,
+                true,
+            )));
+
+            let good_and = Expression::And(
+                Box::new(clockwise_good_unary),
+                Box::new(counter_clockwise_good_unary),
+            );
+
+            good_expression = Some(match good_expression {
+                Some(other_goods) => Expression::And(Box::new(other_goods), Box::new(good_and)),
+                None => good_and,
+            });
+        }
+
+        match good_expression {
+            Some(good_expression) => Expression::And(Box::new(good_expression), Box::new(evil_or)),
+            None => evil_or,
+        }
+    }
+}
+
+fn index_offset(
+    start_index: &VillagerIndex,
+    total_villagers: usize,
+    offset: usize,
+    clockwise: bool,
+) -> VillagerIndex {
+    let mut current_index = start_index.0;
+    for _ in 0..offset {
+        if clockwise {
+            current_index = current_index + 1;
+            if current_index == total_villagers {
+                current_index = 0;
+            }
+        } else if current_index == 0 {
+            current_index = total_villagers - 1;
+        } else {
+            current_index = current_index - 1;
+        }
+    }
+
+    VillagerIndex(current_index)
 }

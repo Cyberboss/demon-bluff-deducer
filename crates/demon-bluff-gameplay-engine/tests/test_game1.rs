@@ -93,7 +93,7 @@ pub fn test_game_1() {
             VillagerIndex(2),
             Some(VillagerInstance::new(
                 VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
-                Some(Testimony::cure(
+                Some(Testimony::alchemist(
                     VillagerIndex(2),
                     2,
                     state.total_villagers(),

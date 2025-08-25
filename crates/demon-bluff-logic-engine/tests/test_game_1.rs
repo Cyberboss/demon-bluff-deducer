@@ -1,7 +1,7 @@
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::{Action, DrawStats, GameStateMutationResult, RevealResult, new_game},
-    testimony::{ALCHEMIST_CURE_RANGE, ArchitectClaim, RoleClaim, Testimony},
+    testimony::{ArchitectClaim, RoleClaim, Testimony},
     villager::{
         Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
