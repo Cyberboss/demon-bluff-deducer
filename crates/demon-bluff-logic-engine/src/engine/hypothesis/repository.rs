@@ -1,28 +1,43 @@
+use std::collections::HashSet;
+
+use log::{Log, info};
+
+use crate::engine::{
+    DesireProducerReference, desire::Desire, index_reference::IndexReference, stack_data::StackData,
+};
+
+use super::{HypothesisEvaluator, HypothesisResult};
+
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
-pub struct HypothesisRepository<'a, TLog>
+pub struct HypothesisRepository<'a, TLog, TDesire>
 where
     TLog: Log,
+    TDesire: Desire,
 {
-    inner: StackData<'a, TLog>,
+    inner: StackData<'a, TLog, TDesire>,
 }
 
-impl<'a, TLog> HypothesisRepository<'a, TLog>
+impl<'a, TLog, TDesire> HypothesisRepository<'a, TLog, TDesire>
 where
     TLog: Log,
+    TDesire: Desire,
 {
     /// If a hypothesis has dependencies
-    pub fn require_sub_evaluation(self, initial_fitness: f64) -> HypothesisEvaluator<'a, TLog> {
+    pub fn require_sub_evaluation(
+        self,
+        initial_fitness: f64,
+    ) -> HypothesisEvaluator<'a, TLog, TDesire> {
         let mut data = self.inner.current_data.borrow_mut();
-        match &data.results[self.inner.current_reference().0] {
+        match &data.results[self.inner.current_reference().index()] {
             Some(_) => {}
             None => {
                 if let Some(previous) = self.inner.previous_data
-                    && let Some(_) = &previous.results[self.inner.current_reference().0]
+                    && let Some(_) = &previous.results[self.inner.current_reference().index()]
                 {
                 } else {
                     info!(logger: self.inner.log, "{} Set initial fitness: {}",self.inner.depth(), initial_fitness);
                 }
-                data.results[self.inner.current_reference().0] =
+                data.results[self.inner.current_reference().index()] =
                     Some(HypothesisResult::Pending(FitnessAndAction {
                         action: HashSet::new(),
                         fitness: initial_fitness,
@@ -30,7 +45,7 @@ where
             }
         }
 
-        HypothesisEvaluator { inner: self.inner }
+        HypothesisEvaluator::new(self.inner)
     }
 
     pub fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {

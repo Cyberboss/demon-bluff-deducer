@@ -5,29 +5,43 @@ use log::Log;
 
 use crate::hypotheses::HypothesisType;
 
-use super::{HypothesisReference, desire::DesireDefinition, misc::GraphBuilder};
+use super::{
+    HypothesisReference,
+    cycle::Cycle,
+    dependencies::DependencyData,
+    depth::Depth,
+    desire::{Desire, DesireData, DesireDefinition},
+    hypothesis::Hypothesis,
+    iteration_data::IterationData,
+    misc::GraphBuilder,
+};
 
 #[derive(Debug)]
-pub(super) struct StackData<'a, TLog>
+pub(super) struct StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
+    THypothesis: Hypothesis,
+    TDesire: Desire,
 {
     reference_stack: Vec<HypothesisReference>,
-    log: &'a TLog,
-    game_state: &'a GameState,
-    cycles: &'a RefCell<HashSet<Cycle>>,
-    hypotheses: &'a Vec<RefCell<HypothesisType>>,
-    previous_data: Option<&'a IterationData>,
+    pub log: &'a TLog,
+    pub game_state: &'a GameState,
+    pub cycles: &'a RefCell<HashSet<Cycle>>,
+    hypotheses: &'a Vec<RefCell<THypothesis>>,
+    pub previous_data: Option<&'a IterationData>,
     current_data: &'a RefCell<IterationData>,
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
     break_at: &'a Option<HypothesisReference>,
-    desire_definitions: &'a Vec<DesireDefinition>,
+    desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
     desire_data: &'a RefCell<Vec<DesireData>>,
     dependencies: &'a DependencyData,
 }
-impl<'a, TLog> StackData<'a, TLog>
+
+impl<'a, TLog, THypothesis, TDesire> StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
+    THypothesis: Hypothesis,
+    TDesire: Desire,
 {
     pub fn new(
         game_state: &'a GameState,
@@ -39,7 +53,7 @@ where
         break_at: &'a Option<HypothesisReference>,
         root_reference: &HypothesisReference,
         graph_builder: Option<&'a RefCell<GraphBuilder>>,
-        desire_definitions: &'a Vec<DesireDefinition>,
+        desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
         desire_data: &'a RefCell<Vec<DesireData>>,
         dependencies: &'a DependencyData,
     ) -> Self {
@@ -59,7 +73,7 @@ where
         }
     }
 
-    pub fn into_cycle(&self, locked_reference: &HypothesisReference) -> Cycle {
+    pub fn create_cycle(&self, locked_reference: &HypothesisReference) -> Cycle {
         let mut order_from_root = Vec::new();
         order_from_root.push(locked_reference.clone());
         let mut adding = false;
@@ -71,7 +85,7 @@ where
             }
         }
 
-        Cycle { order_from_root }
+        Cycle::new(order_from_root)
     }
 
     pub fn share(&self) -> Self {
@@ -135,14 +149,6 @@ where
 
     pub fn depth(&self) -> Depth {
         let reference = self.current_reference().clone();
-        Depth {
-            depth: self.reference_stack.len() - 1,
-            reference,
-        }
+        Depth::new(self.reference_stack.len() - 1, reference);
     }
-}
-
-#[derive(Debug, PartialEq, Clone, Serialize)]
-pub(super) struct IterationData {
-    results: Vec<Option<HypothesisResult>>,
 }

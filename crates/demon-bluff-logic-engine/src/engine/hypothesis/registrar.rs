@@ -3,10 +3,11 @@ use log::{Log, info};
 
 use crate::{
     engine::{
-        DesireConsumerReference, DesireProducerReference, dependencies::DependencyData,
-        desire::DesireDefinition,
+        DesireConsumerReference, DesireProducerReference,
+        dependencies::DependencyData,
+        desire::{Desire, DesireDefinition},
     },
-    hypotheses::{HypothesisBuilderType, desires::DesireType},
+    hypotheses::{HypothesisBuilderType, HypothesisType, desires::DesireType},
 };
 
 use super::{HypothesisBuilder, HypothesisReference, graph::HypothesisGraph};
@@ -126,14 +127,15 @@ where
         reference
     }
 
-    fn run<HypothesisBuilderImpl>(
+    fn run<HypothesisBuilderImpl, TDesire>(
         mut self,
         game_state: &GameState,
         mut builder: HypothesisBuilderImpl,
-    ) -> HypothesisGraph
+    ) -> HypothesisGraph<HypothesisType, TDesire>
     where
         HypothesisBuilderImpl: HypothesisBuilder,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
+        TDesire: Desire,
     {
         let mut current_reference = self.builders.len();
         let root_reference = HypothesisReference::new(current_reference);
@@ -209,11 +211,6 @@ where
             desire_definitions.push(definition);
         }
 
-        HypothesisGraph {
-            root: root_reference,
-            hypotheses,
-            dependencies,
-            desires: desire_definitions,
-        }
+        HypothesisGraph::new(root_reference, hypotheses, dependencies, desire_definitions);
     }
 }

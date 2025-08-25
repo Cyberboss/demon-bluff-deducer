@@ -1,15 +1,21 @@
 use std::fmt::{Display, Formatter};
 
-use crate::hypotheses::desires::DesireType;
+use super::r#trait::Desire;
 
 #[derive(Debug)]
-pub struct DesireDefinition<TDesire> {
+pub struct DesireDefinition<TDesire>
+where
+    TDesire: Desire,
+{
     desire: TDesire,
     count: usize,
     used: bool,
 }
 
-impl<TDesire> DesireDefinition<TDesire> {
+impl<TDesire> DesireDefinition<TDesire>
+where
+    TDesire: Desire,
+{
     pub fn new(desire: TDesire, count: usize, used: bool) -> Self {
         Self {
             desire,
@@ -19,7 +25,10 @@ impl<TDesire> DesireDefinition<TDesire> {
     }
 }
 
-impl<TDesire> Display for DesireDefinition<TDesire> {
+impl<TDesire> Display for DesireDefinition<TDesire>
+where
+    TDesire: Desire,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

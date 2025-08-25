@@ -1,23 +1,29 @@
 use log::{Log, info};
 
-use crate::engine::stack_data::StackData;
+use crate::engine::{
+    DesireConsumerReference, DesireProducerReference, desire::Desire, stack_data::StackData,
+};
 
-use super::{reference::HypothesisReference, result::HypothesisResult};
+use super::{
+    Hypothesis, HypothesisEvaluation, HypothesisFinalizer, reference::HypothesisReference,
+    result::HypothesisResult,
+};
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
-#[derive(Debug)]
-pub struct HypothesisEvaluator<'a, TLog>
-where
-    TLog: Log,
-{
-    inner: StackData<'a, TLog>,
+pub trait HypothesisEvaluator: HypothesisFinalizer {
+    fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult;
+    fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool);
+    fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
 }
 
-impl<'a, TLog> HypothesisEvaluator<'a, TLog>
+impl<'a, TLog, THypothesis, TDesire> HypothesisEvaluator
+    for StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
+    THypothesis: Hypothesis,
+    TDesire: Desire,
 {
-    pub fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
+    fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
         let current_reference = self
             .inner
             .current_reference()
@@ -52,9 +58,9 @@ where
                         drop(current_data);
                         drop(next_reference);
 
-                        let invocation = HypothesisInvocation {
-                            inner: self.inner.push(hypothesis_reference.clone()),
-                        };
+                        let invocation = HypothesisInvocation::new(
+                            self.inner.push(hypothesis_reference.clone()),
+                        );
 
                         return invocation.enter();
                     }
@@ -106,7 +112,7 @@ where
         last_evaluate
     }
 
-    pub fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
+    fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
         let mut borrow = self.inner.desire_data.borrow_mut();
         let data = &mut borrow[desire_reference.0];
 
@@ -124,7 +130,7 @@ where
         info!(logger: self.inner.log, "{} Set {}: {}. Now {}", self.inner.depth(), desire_reference, desired, data);
     }
 
-    pub fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
+    fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
         let definition = &self.inner.desire_definitions[desire_reference.0];
         let borrow = self.inner.desire_data.borrow();
 
@@ -146,9 +152,5 @@ where
             info!(logger: self.inner.log, "{} Remaining Pending: {}", self.inner.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
             HypothesisResult::Pending(fitness)
         }
-    }
-
-    pub fn create_return(self, result: HypothesisResult) -> HypothesisReturn {
-        HypothesisReturn { result }
     }
 }

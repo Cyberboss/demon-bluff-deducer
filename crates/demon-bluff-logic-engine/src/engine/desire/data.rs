@@ -8,10 +8,10 @@ use serde::Serialize;
 use crate::engine::HypothesisReference;
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
-struct DesireData {
-    pending: HashSet<HypothesisReference>,
-    desired: HashSet<HypothesisReference>,
-    undesired: HashSet<HypothesisReference>,
+pub struct DesireData {
+    pub pending: HashSet<HypothesisReference>,
+    pub desired: HashSet<HypothesisReference>,
+    pub undesired: HashSet<HypothesisReference>,
 }
 
 impl DesireData {

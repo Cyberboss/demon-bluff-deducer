@@ -1,21 +1,23 @@
 use log::{Log, info};
 
-use crate::engine::{hypothesis::HypothesisRepository, stack_data::StackData};
+use crate::engine::{desire::Desire, hypothesis::HypothesisRepository, stack_data::StackData};
 
 use super::HypothesisResult;
 
-struct HypothesisInvocation<'a, TLog>
+pub struct HypothesisInvocation<'a, TLog, TDesire>
 where
     TLog: Log,
+    TDesire: Desire,
 {
-    inner: StackData<'a, TLog>,
+    inner: StackData<'a, TLog, TDesire>,
 }
 
-impl<'a, TLog> HypothesisInvocation<'a, TLog>
+impl<'a, TLog, TDesire> HypothesisInvocation<'a, TLog, TDesire>
 where
     TLog: Log,
+    TDesire: Desire,
 {
-    fn new(stack_data: StackData<'a, TLog>) -> Self {
+    fn new(stack_data: StackData<'a, TLog, TDesire>) -> Self {
         Self { inner: stack_data }
     }
 
