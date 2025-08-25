@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder};
 use is_truly_archetype::{IsTrulyArchetypeHypothesis, IsTrulyArchetypeHypothesisBuilder};
+use testimony_condemns::{TestimonyCondemnsHypothesis, TestimonyCondemnsHypothesisBuilder};
 use true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder};
 
 use crate::{
@@ -47,6 +48,7 @@ mod reveal;
 mod reveal_index;
 mod revealing_is_safe;
 mod testimony;
+mod testimony_condemns;
 mod testimony_expression;
 mod true_identity;
 
@@ -73,6 +75,7 @@ pub enum HypothesisBuilderType {
     TrueIdentity(TrueIdentityHypothesisBuilder),
     AbilityIndex(AbilityIndexHypothesisBuilder),
     IsTrulyArchetype(IsTrulyArchetypeHypothesisBuilder),
+    TestimonyCondemns(TestimonyCondemnsHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]
@@ -98,6 +101,7 @@ pub enum HypothesisType {
     TrueIdentity(TrueIdentityHypothesis),
     AbilityIndex(AbilityIndexHypothesis),
     IsTrulyArchetype(IsTrulyArchetypeHypothesis),
+    TestimonyCondemns(TestimonyCondemnsHypothesis),
 }
 
 impl Display for HypothesisType {

@@ -10,7 +10,7 @@ use demon_bluff_gameplay_engine::{
 use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
 
 #[test]
-pub fn simple_game_2() {
+pub fn simple_game_3() {
     let log = log::logger();
 
     let mut state = new_game(
@@ -40,7 +40,7 @@ pub fn simple_game_2() {
             VillagerIndex(0),
             Some(VillagerInstance::new(
                 VillagerArchetype::GoodVillager(GoodVillager::Confessor),
-                Some(Testimony::Confess(ConfessorClaim::Dizzy)),
+                Some(Expression::Unary(Testimony::Confess(ConfessorClaim::Dizzy))),
             )),
         )))
         .expect("malformed game step??");

@@ -19,7 +19,10 @@ use crate::{
     },
 };
 
-use super::is_truly_archetype::IsTrulyArchetypeHypothesisBuilder;
+use super::{
+    is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
+    testimony_condemns::TestimonyCondemnsHypothesisBuilder,
+};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct IsEvilHypothesisBuilder {
@@ -60,7 +63,7 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
             }
         }
 
-        let testimonies_condemming = Vec::new();
+        let mut testimonies_condemming = Vec::new();
         game_state.iter_villagers(|index, villager| {
             let potentially_condemning_testimony = match villager {
                 Villager::Active(active_villager) => active_villager.instance().testimony(),
@@ -85,7 +88,7 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
             }
         });
 
-        let testimonies_exonerating = Vec::new(); // TODO
+        let mut testimonies_exonerating = Vec::new(); // TODO
 
         let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
             IsTruthfulHypothesisBuilder::new(self.index.clone()),
