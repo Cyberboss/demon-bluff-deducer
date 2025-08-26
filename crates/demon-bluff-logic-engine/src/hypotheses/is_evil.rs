@@ -112,13 +112,16 @@ impl Hypothesis for IsEvilHypothesis {
         true
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &impl Log,
+        _: &TLog,
         _: Depth,
         game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let initial_evils = game_state.draw_stats().demons() + game_state.draw_stats().minions();
         let mut evaluator = repository.require_sub_evaluation(
             (initial_evils as f64) / (game_state.draw_stats().total_villagers() as f64),

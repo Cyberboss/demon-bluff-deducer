@@ -1,30 +1,27 @@
-use std::fmt::Display;
-
 use log::{Log, info};
 
-use crate::engine::{
-    DesireConsumerReference, DesireProducerReference, desire::Desire,
-    fitness_and_action::FitnessAndAction, hypothesis::invocation::HypothesisInvocation,
-    index_reference::IndexReference, stack_data::StackData,
+use crate::{
+    engine::{
+        DesireConsumerReference, DesireProducerReference, fitness_and_action::FitnessAndAction,
+        hypothesis::invocation::HypothesisInvocation, index_reference::IndexReference,
+        stack_data::StackData,
+    },
+    hypotheses::{DesireType, HypothesisType},
 };
 
-use super::{
-    Hypothesis, HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult,
-};
+use super::{HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult};
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
-pub trait HypothesisEvaluator: HypothesisFunctions {
+pub trait HypothesisEvaluator<'a, TLog, THypothesis, TDesire>: HypothesisFunctions {
     fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult;
     fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool);
     fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
 }
 
-impl<'a, TLog, THypothesis, TDesire> HypothesisEvaluator
-    for StackData<'a, TLog, THypothesis, TDesire>
+impl<'a, TLog> HypothesisEvaluator<'a, TLog, HypothesisType, DesireType>
+    for StackData<'a, TLog, HypothesisType, DesireType>
 where
     TLog: Log,
-    THypothesis: Hypothesis + Display,
-    TDesire: Desire + Display,
 {
     fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
         let current_reference = self.current_reference();

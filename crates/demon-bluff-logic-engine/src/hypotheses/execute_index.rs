@@ -51,13 +51,16 @@ impl Hypothesis for ExecuteIndexHypothesis {
         write!(f, "Execute Villager {}", self.index)
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
+        _: &TLog,
+        _: Depth,
         game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let estimated_evils =
             (game_state.draw_stats().demons() + game_state.draw_stats().minions()) as f64;
         let total_villagers = game_state.draw_stats().total_villagers() as f64;

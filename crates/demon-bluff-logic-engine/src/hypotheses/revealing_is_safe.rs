@@ -63,13 +63,16 @@ impl Hypothesis for RevealingIsSafeHypothesis {
         true // I want better probabilities, see below TODO comment
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
+        log: &TLog,
         depth: Depth,
         game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let mut all_hidden = true;
         for villager in game_state.villagers() {
             match villager {

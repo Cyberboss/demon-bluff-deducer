@@ -6,7 +6,7 @@ use log::Log;
 use crate::{
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisFunctions, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::HypothesisType,
 };
@@ -55,13 +55,16 @@ impl Hypothesis for TestimonyHypothesis {
         true
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &impl Log,
+        _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         match &self.testimony {
             Testimony::Confess(_) => repository.finalize(HypothesisResult::Conclusive(
                 FitnessAndAction::certainty(None),

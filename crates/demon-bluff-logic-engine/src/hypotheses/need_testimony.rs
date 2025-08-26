@@ -9,7 +9,7 @@ use super::{
 use crate::{
     engine::{
         Depth, DesireConsumerReference, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisRegistrar, HypothesisRepository,
+        HypothesisFunctions, HypothesisRegistrar, HypothesisRepository,
     },
     hypotheses::HypothesisType,
 };
@@ -53,13 +53,16 @@ impl Hypothesis for NeedTestimonyHypothesis {
         write!(f, "Need testimony of {}", self.index)
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let result = repository.desire_result(&self.get_testimony_desire);
         repository.finalize(result)
     }

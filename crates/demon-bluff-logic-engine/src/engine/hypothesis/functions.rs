@@ -7,7 +7,7 @@ use crate::engine::{
     fitness_and_action::FitnessAndAction, index_reference::IndexReference, stack_data::StackData,
 };
 
-use super::{Hypothesis, HypothesisEvaluation, HypothesisResult};
+use super::{Hypothesis, HypothesisEvaluation, HypothesisRepository, HypothesisResult};
 
 pub trait HypothesisFunctions {
     fn finalize(self, result: HypothesisResult) -> HypothesisEvaluation;
@@ -66,5 +66,22 @@ where
             info!(logger: self.log, "{} Remaining Pending: {}", self.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
             HypothesisResult::Pending(fitness)
         }
+    }
+}
+
+impl<'a, TLog> HypothesisFunctions for HypothesisRepository<'a, TLog>
+where
+    TLog: Log,
+{
+    fn finalize(self, result: HypothesisResult) -> HypothesisEvaluation {
+        self.stack_data.finalize(result)
+    }
+
+    fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
+        self.stack_data.set_desire(desire_reference, desired)
+    }
+
+    fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
+        self.stack_data.desire_result(desire_reference)
     }
 }

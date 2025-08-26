@@ -98,13 +98,16 @@ impl Hypothesis for TestimonyExpressionHypothesis {
         )
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
         let result = match &self.hypothesis_expression {
             HypothesisExpression::Unary(hypothesis_reference) => {

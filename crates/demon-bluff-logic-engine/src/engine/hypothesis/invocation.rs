@@ -1,8 +1,9 @@
-use std::fmt::Display;
-
 use log::{Log, info};
 
-use crate::engine::{desire::Desire, index_reference::IndexReference, stack_data::StackData};
+use crate::{
+    engine::{HypothesisRepository, index_reference::IndexReference, stack_data::StackData},
+    hypotheses::{DesireType, HypothesisType},
+};
 
 use super::{Hypothesis, HypothesisResult};
 
@@ -10,12 +11,9 @@ pub trait HypothesisInvocation {
     fn invoke(&mut self) -> HypothesisResult;
 }
 
-impl<'a, TLog, THypothesis, TDesire> HypothesisInvocation
-    for StackData<'a, TLog, THypothesis, TDesire>
+impl<'a, TLog> HypothesisInvocation for StackData<'a, TLog, HypothesisType, DesireType>
 where
     TLog: Log,
-    THypothesis: Hypothesis + Display,
-    TDesire: Desire + Display,
 {
     fn invoke(&mut self) -> HypothesisResult {
         let reference = self.current_reference();
@@ -24,8 +22,12 @@ where
 
         info!(logger: self.log, "{} Entering: {}", self.depth(), hypothesis);
 
-        let hypo_return =
-            hypothesis.evaluate(self.log, self.depth(), self.game_state, self.share());
+        let hypo_return = hypothesis.evaluate(
+            self.log,
+            self.depth(),
+            self.game_state,
+            HypothesisRepository::new(self.share()),
+        );
 
         let result = hypo_return.unpack();
         info!(logger: self.log, "{} Result: {}", self.depth(), result);

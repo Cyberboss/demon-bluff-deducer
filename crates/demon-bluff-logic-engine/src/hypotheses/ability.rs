@@ -51,13 +51,16 @@ impl Hypothesis for AbilityHypothesis {
         write!(f, "Ability Decision")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &impl Log,
+        _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         if self.index_hypotheses.is_empty() {
             return repository.finalize(HypothesisResult::impossible());
         }

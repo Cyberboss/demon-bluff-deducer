@@ -7,8 +7,8 @@ use log::Log;
 
 use crate::{
     engine::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::HypothesisType,
 };
@@ -64,13 +64,16 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
         true
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
+        log: &TLog,
         depth: Depth,
         game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         // step one, eliminate the possibility if it's not in the deck
         // currently the only case where an archetype not in the deck can appear is the puppeteer
         let mut can_be_converted = false;

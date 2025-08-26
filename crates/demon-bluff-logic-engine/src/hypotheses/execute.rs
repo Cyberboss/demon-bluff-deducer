@@ -57,13 +57,16 @@ impl Hypothesis for ExecuteHypothesis {
         write!(f, "Execution Decision")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         if self.executable_hypotheses.is_empty() {
             return repository.finalize(HypothesisResult::impossible());
         }

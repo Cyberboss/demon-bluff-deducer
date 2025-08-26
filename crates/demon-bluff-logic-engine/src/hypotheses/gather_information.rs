@@ -44,13 +44,16 @@ impl Hypothesis for GatherInformationHypothesis {
         write!(f, "Gather Information")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &impl Log,
+        _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let mut evaluator = repository.require_sub_evaluation(0.0);
 
         let result = or_result(

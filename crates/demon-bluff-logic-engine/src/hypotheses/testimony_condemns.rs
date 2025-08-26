@@ -8,7 +8,8 @@ use log::Log;
 
 use crate::engine::{
     Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-    HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+    HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+    HypothesisResult,
 };
 
 use super::{DesireType, HypothesisBuilderType, HypothesisType};
@@ -68,13 +69,16 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
         true
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         repository.finalize(HypothesisResult::unimplemented())
     }
 }

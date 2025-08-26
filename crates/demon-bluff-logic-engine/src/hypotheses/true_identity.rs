@@ -5,8 +5,8 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::engine::{
-    Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisRegistrar,
-    HypothesisRepository, HypothesisResult,
+    Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
+    HypothesisRegistrar, HypothesisRepository, HypothesisResult,
 };
 
 use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
@@ -32,8 +32,8 @@ impl TrueIdentityHypothesisBuilder {
 impl HypothesisBuilder for TrueIdentityHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
-        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+        _: &GameState,
+        _: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         TrueIdentityHypothesis {
             index: self.index,
@@ -48,13 +48,16 @@ impl Hypothesis for TrueIdentityHypothesis {
         write!(f, "{} is a {}", self.index, self.archetype)
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         repository.finalize(HypothesisResult::unimplemented())
     }
 }

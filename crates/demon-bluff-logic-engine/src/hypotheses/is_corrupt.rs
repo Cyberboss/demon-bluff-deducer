@@ -66,13 +66,16 @@ impl Hypothesis for IsCorruptHypothesis {
         write!(f, "{} is corrupt", self.index)
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        _: &TLog,
+        _: Depth,
+        _: &GameState,
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
         let corruption_in_play_result = evaluator.sub_evaluate(&self.corruption_in_play_hypothesis);

@@ -88,13 +88,16 @@ impl Hypothesis for IsTruthfulHypothesis {
         write!(f, "{} is truthful", self.index)
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &impl Log,
+        _: &TLog,
         _: Depth,
         game_state: &GameState,
-        mut repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        mut repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         match &self.sub_reference {
             Some(sub_reference) => match sub_reference {
                 SubReferenceType::CheckTestimony(testimony_expression_hypothesis) => {

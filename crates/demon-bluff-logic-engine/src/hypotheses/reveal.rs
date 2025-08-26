@@ -50,13 +50,16 @@ impl Hypothesis for RevealHypothesis {
         write!(f, "Reveal Decision")
     }
 
-    fn evaluate(
+    fn evaluate<TLog>(
         &mut self,
-        _: &impl Log,
+        _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: impl HypothesisRepository,
-    ) -> HypothesisEvaluation {
+        repository: HypothesisRepository<TLog>,
+    ) -> HypothesisEvaluation
+    where
+        TLog: Log,
+    {
         if self.revealable_hypotheses.is_empty() {
             return repository
                 .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
