@@ -52,6 +52,10 @@ impl FitnessAndAction {
         }
     }
 
+    pub fn unknown(action: Option<PlayerAction>) -> Self {
+        Self::new(FITNESS_UNKNOWN, action)
+    }
+
     pub fn certainty(action: Option<PlayerAction>) -> Self {
         Self::new(1.0, action)
     }

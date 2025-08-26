@@ -1,11 +1,14 @@
-use demon_bluff_gameplay_engine::game_state::GameState;
+use std::collections::HashMap;
+
+use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
+use itertools::Itertools;
 use log::Log;
 
 use crate::{
     engine::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult,
+        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
+        HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_result, or_result,
     },
     hypotheses::HypothesisType,
 };
@@ -21,10 +24,13 @@ impl HypothesisBuilder for AllEvilsAccountedForHypothesisBuilder {
         game_state: &GameState,
         registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
-        let mut index_evil_hypotheses = Vec::new();
-        game_state.iter_villagers(|index, _| {
-            index_evil_hypotheses.push(registrar.register(IsEvilHypothesisBuilder::new(index)));
-        });
+        let mut index_evil_hypotheses = HashMap::with_capacity(game_state.total_villagers());
+        for index in game_state.villager_indicies() {
+            index_evil_hypotheses.insert(
+                index.clone(),
+                registrar.register(IsEvilHypothesisBuilder::new(index)),
+            );
+        }
 
         AllEvilsAccountedForHypothesis {
             index_evil_hypotheses,
@@ -36,7 +42,7 @@ impl HypothesisBuilder for AllEvilsAccountedForHypothesisBuilder {
 /// Returns either 1 conclusive if certain where all evils are 0 pending otherwise
 #[derive(Debug)]
 pub struct AllEvilsAccountedForHypothesis {
-    index_evil_hypotheses: Vec<HypothesisReference>,
+    index_evil_hypotheses: HashMap<VillagerIndex, HypothesisReference>,
 }
 
 impl Hypothesis for AllEvilsAccountedForHypothesis {
@@ -60,27 +66,48 @@ impl Hypothesis for AllEvilsAccountedForHypothesis {
             )));
         }
 
-        let mut evaluator = repository.require_sub_evaluation(0.0);
-        let mut evils_found = 0;
-        for reference in &self.index_evil_hypotheses {
-            let sub_evaluation = evaluator.sub_evaluate(reference);
-            match sub_evaluation {
-                HypothesisResult::Pending(_) => {
-                    return evaluator
-                        .finalize(HypothesisResult::Pending(FitnessAndAction::impossible()));
-                }
-                HypothesisResult::Conclusive(fitness_and_action) => {
-                    if fitness_and_action.is_certain() {
-                        evils_found = evils_found + 1;
-                    }
-                }
-            }
+        let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
+
+        let mut villager_evil_probabilities = HashMap::with_capacity(game_state.total_villagers());
+        for index in game_state.villager_indicies() {
+            let sub_hypothesis = evaluator
+                .sub_evaluate(self.index_evil_hypotheses.get(&index).expect(
+                "You're telling me the villager indicies changed since building this hypothesis?",
+            ));
+            villager_evil_probabilities.insert(index, sub_hypothesis);
         }
 
-        evaluator.finalize(if evils_found >= game_state.total_evils() {
-            HypothesisResult::Conclusive(FitnessAndAction::certainty(None))
-        } else {
-            HypothesisResult::Pending(FitnessAndAction::impossible())
-        })
+        // for each combination of possible evils get the probability that they are the full set of evils
+        // then or the results
+        let mut individual_case_probabilities = Vec::new();
+        for combo in game_state
+            .villager_indicies()
+            .combinations(game_state.total_evils() as usize)
+        {
+            let mut combo_probability = None;
+            for index in combo.into_iter() {
+                let index_evil_probability = villager_evil_probabilities.get(&index).expect("Bro, we literally calculated this two lines ago, is villager_indicies impure??");
+                combo_probability = Some(match combo_probability {
+                    Some(running_combo) => {
+                        and_result(running_combo, index_evil_probability.clone())
+                    }
+                    None => index_evil_probability.clone(),
+                })
+            }
+
+            individual_case_probabilities.push(
+                combo_probability.expect("Getting tired of writing unreachable expect messages"),
+            );
+        }
+
+        let mut final_probability = None;
+        for case_probability in individual_case_probabilities.into_iter() {
+            final_probability = Some(match final_probability {
+                Some(running_combo) => or_result(running_combo, case_probability),
+                None => case_probability,
+            })
+        }
+
+        evaluator.finalize(final_probability.expect("One more for the road"))
     }
 }

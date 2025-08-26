@@ -1,8 +1,8 @@
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::GameState,
-    testimony::{self, Testimony},
-    villager::VillagerIndex,
+    testimony::{self, ConfessorClaim, Testimony},
+    villager::{Villager, VillagerIndex},
 };
 use log::Log;
 
@@ -73,12 +73,46 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
         &mut self,
         _: &TLog,
         _: Depth,
-        _: &GameState,
+        game_state: &GameState,
         repository: HypothesisRepository<TLog>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
     {
-        repository.finalize(HypothesisResult::unimplemented())
+        let testimony = match game_state.villager(&self.testifier) {
+            Villager::Active(active_villager) => active_villager.instance().testimony(),
+            Villager::Hidden(_) => {
+                return repository
+                    .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
+            }
+            Villager::Confirmed(confirmed_villager) => confirmed_villager.instance().testimony(),
+        };
+
+        let expression = match testimony {
+            Some(testimony) => testimony,
+            None => {
+                return repository
+                    .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
+            }
+        };
+
+        match expression {
+            Expression::Unary(Testimony::Confess(confession)) => {
+                if self.defendant == self.testifier {
+                    return repository.finalize(HypothesisResult::Conclusive(match confession {
+                        ConfessorClaim::Good => FitnessAndAction::impossible(),
+                        ConfessorClaim::Dizzy => FitnessAndAction::certainty(None),
+                    }));
+                } else {
+                    return repository
+                        .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
+                }
+            }
+            _ => {
+                return repository.finalize(HypothesisResult::Conclusive(
+                    FitnessAndAction::unimplemented(),
+                ));
+            }
+        }
     }
 }

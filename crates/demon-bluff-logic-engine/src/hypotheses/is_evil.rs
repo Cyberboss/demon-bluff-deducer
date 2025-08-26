@@ -198,6 +198,11 @@ impl Hypothesis for IsEvilHypothesis {
             },
         };
 
+        // need this check because any_evil_slots_left_hypothesis is actually dependent on our results which can screw up perfect probabilities
+        if penultimate_result.fitness_and_action().is_certain() {
+            return evaluator.finalize(penultimate_result);
+        }
+
         let any_evil_slots_left_result =
             evaluator.sub_evaluate(&self.any_evil_slots_left_hypothesis);
 
