@@ -1,3 +1,7 @@
 [workspace]
 resolver = "3"
-members = [ "crates/demon-bluff-bot","crates/demon-bluff-gameplay-engine", "crates/demon-bluff-logic-engine"]
+members = [
+    "crates/demon-bluff-deducer",
+    "crates/demon-bluff-gameplay-engine",
+    "crates/demon-bluff-logic-engine",
+]

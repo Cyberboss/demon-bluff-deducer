@@ -1,5 +1,5 @@
 [package]
-name = "demon-bluff-bot"
+name = "demon-bluff-deducer"
 version = "0.1.0"
 edition = "2024"
 
