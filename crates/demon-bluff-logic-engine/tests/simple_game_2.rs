@@ -7,7 +7,7 @@ use demon_bluff_gameplay_engine::{
     testimony::{ConfessorClaim, Testimony},
     villager::{GoodVillager, Minion, VillagerArchetype, VillagerIndex, VillagerInstance},
 };
-use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
+use demon_bluff_logic_engine::{PlayerAction, predict};
 
 #[test]
 pub fn simple_game_2() {

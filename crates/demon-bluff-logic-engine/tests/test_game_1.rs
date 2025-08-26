@@ -6,7 +6,7 @@ use demon_bluff_gameplay_engine::{
         Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
 };
-use demon_bluff_logic_engine::{player_action::PlayerAction, predict};
+use demon_bluff_logic_engine::{PlayerAction, predict};
 
 #[test]
 pub fn test_game_1() {

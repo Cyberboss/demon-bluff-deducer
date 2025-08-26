@@ -21,6 +21,7 @@ where
     THypothesis: Hypothesis,
     TDesire: Desire + Display,
 {
+    iteration: u32,
     reference_stack: Vec<HypothesisReference>,
     pub log: &'a TLog,
     pub game_state: &'a GameState,
@@ -42,6 +43,7 @@ where
     TDesire: Desire + Display,
 {
     pub fn new(
+        iteration: u32,
         game_state: &'a GameState,
         log: &'a TLog,
         hypotheses: &'a Vec<RefCell<THypothesis>>,
@@ -56,6 +58,7 @@ where
         dependencies: &'a DependencyData,
     ) -> Self {
         Self {
+            iteration,
             reference_stack: vec![root_reference.clone()],
             log,
             game_state,
@@ -96,6 +99,7 @@ where
             reference_stack.push(mapped_reference);
         }
         Self {
+            iteration: self.iteration,
             reference_stack,
             log: &self.log,
             game_state: &self.game_state,
@@ -124,6 +128,7 @@ where
         reference_stack.push(new_reference);
 
         Self {
+            iteration: self.iteration,
             reference_stack,
             log: &self.log,
             game_state: &self.game_state,

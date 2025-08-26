@@ -1,6 +1,5 @@
 #![feature(breakpoint)]
 
-mod debugger;
 mod engine;
 mod hypotheses;
 mod player_action;
@@ -11,9 +10,7 @@ use std::collections::HashSet;
 use engine::evaluate;
 use log::Log;
 
-pub use self::{
-    debugger::Debugger, player_action::PlayerAction, prediction_error::PredictionError,
-};
+pub use self::{engine::Debugger, player_action::PlayerAction, prediction_error::PredictionError};
 use demon_bluff_gameplay_engine::game_state::GameState;
 
 use crate::hypotheses::MasterHypothesisBuilder;

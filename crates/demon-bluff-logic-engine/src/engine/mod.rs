@@ -1,5 +1,4 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
-use force_graph::ForceGraph;
 use log::{Log, error, info};
 use std::{cell::RefCell, collections::HashSet};
 
@@ -12,6 +11,7 @@ use self::{
     stack_data::StackData,
 };
 pub use self::{
+    debugger::Debugger,
     depth::Depth,
     desire::{Desire, DesireConsumerReference, DesireProducerReference},
     fitness_and_action::{
@@ -22,15 +22,15 @@ pub use self::{
         HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
         HypothesisResult,
     },
-    misc::GraphNodeData,
 };
 use crate::{
-    Debugger, PredictionError,
+    PredictionError,
     hypotheses::{DesireType, HypothesisBuilderType, HypothesisType},
     player_action::PlayerAction,
 };
 
 mod cycle;
+mod debugger;
 mod dependencies;
 mod depth;
 mod desire;
@@ -110,6 +110,7 @@ where
         let data = RefCell::new(IterationData { results: data });
         let cycles = RefCell::new(HashSet::new());
         let mut stack_data = StackData::new(
+            iteration,
             game_state,
             log,
             &hypotheses,
