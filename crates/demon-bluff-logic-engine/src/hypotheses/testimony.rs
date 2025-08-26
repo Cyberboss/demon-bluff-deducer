@@ -1,17 +1,17 @@
 use demon_bluff_gameplay_engine::{
-    game_state::GameState,
-    testimony::{self, Testimony},
-    villager::VillagerIndex,
+    game_state::GameState, testimony::Testimony, villager::VillagerIndex,
 };
 use log::Log;
 
 use crate::{
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
-    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesis},
+    hypotheses::HypothesisType,
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TestimonyHypothesisBuilder {
@@ -35,8 +35,8 @@ impl TestimonyHypothesisBuilder {
 impl HypothesisBuilder for TestimonyHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
-        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+        _: &GameState,
+        _: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         TestimonyHypothesis {
             index: self.index,
@@ -57,15 +57,15 @@ impl Hypothesis for TestimonyHypothesis {
 
     fn evaluate(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
+        _: &impl Log,
+        _: Depth,
+        _: &GameState,
         repository: impl HypothesisRepository,
     ) -> HypothesisEvaluation {
         match &self.testimony {
-            Testimony::Confess(confessor_claim) => repository.finalize(
-                HypothesisResult::Conclusive(FitnessAndAction::certainty(None)),
-            ),
+            Testimony::Confess(_) => repository.finalize(HypothesisResult::Conclusive(
+                FitnessAndAction::certainty(None),
+            )),
             _ => repository.finalize(HypothesisResult::unimplemented()),
         }
     }

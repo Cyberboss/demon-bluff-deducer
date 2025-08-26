@@ -2,7 +2,7 @@
 pub trait Hypothesis {
     fn describe(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error>;
 
-    fn evaluate(
+    fn evaluate<TRepository>(
         &mut self,
         log: &impl ::log::Log,
         depth: crate::engine::Depth,

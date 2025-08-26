@@ -1,23 +1,18 @@
 use demon_bluff_gameplay_engine::{
-    Expression,
-    game_state::GameState,
-    testimony::{self, Testimony},
-    villager::{Villager, VillagerIndex},
+    Expression, game_state::GameState, testimony::Testimony, villager::VillagerIndex,
 };
 use log::Log;
 
 use crate::{
     engine::{
-        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisEvaluation, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-        HypothesisResult, and_result, or_result,
+        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, and_result, or_result,
     },
-    hypotheses::{
-        HypothesisType,
-        testimony::{TestimonyHypothesis, TestimonyHypothesisBuilder},
-        testimony_expression,
-    },
+    hypotheses::{HypothesisType, testimony::TestimonyHypothesisBuilder},
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Debug)]
 enum HypothesisExpression {
@@ -52,7 +47,7 @@ impl TestimonyExpressionHypothesisBuilder {
 impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
+        _: &GameState,
         registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         let expression_friendly = format!("{}", self.testimony_expression);

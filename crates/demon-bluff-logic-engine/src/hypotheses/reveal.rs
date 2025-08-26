@@ -4,11 +4,13 @@ use log::Log;
 use crate::{
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        decide_result,
+        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, decide_result,
     },
     hypotheses::{HypothesisType, reveal_index::RevealIndexHypothesisBuilder},
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct RevealHypothesisBuilder {}
@@ -50,9 +52,9 @@ impl Hypothesis for RevealHypothesis {
 
     fn evaluate(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
+        _: &impl Log,
+        _: Depth,
+        _: &GameState,
         repository: impl HypothesisRepository,
     ) -> HypothesisEvaluation {
         if self.revealable_hypotheses.is_empty() {

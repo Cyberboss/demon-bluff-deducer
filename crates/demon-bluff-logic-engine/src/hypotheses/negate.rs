@@ -4,10 +4,13 @@ use log::Log;
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult,
     },
     hypotheses::{HypothesisBuilderType, HypothesisType},
 };
+
+use super::DesireType;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct NegateHypothesisBuilder {

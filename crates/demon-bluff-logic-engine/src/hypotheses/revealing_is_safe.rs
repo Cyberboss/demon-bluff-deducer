@@ -3,20 +3,22 @@ use std::collections::HashMap;
 use demon_bluff_gameplay_engine::{
     affect::{Affect, NightEffect},
     game_state::{DAYS_BEFORE_NIGHT, GameState},
-    villager::{Villager, VillagerArchetype, VillagerIndex},
+    villager::{Villager, VillagerArchetype},
 };
 use log::{Log, error};
 
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisEvaluation, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-        HypothesisResult, and_fitness, or_result,
+        HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_fitness, or_result,
     },
     hypotheses::HypothesisType,
 };
 
-use super::archetype_in_play::ArchetypeInPlayHypothesisBuilder;
+use super::{
+    DesireType, HypothesisBuilderType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
+};
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct RevealingIsSafeHypothesisBuilder {}

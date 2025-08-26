@@ -4,8 +4,8 @@ use log::Log;
 use crate::{
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        or_result,
+        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, or_result,
     },
     hypotheses::{
         HypothesisType, need_testimony::NeedTestimonyHypothesisBuilder,
@@ -13,6 +13,8 @@ use crate::{
     },
     player_action::PlayerAction,
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct RevealIndexHypothesisBuilder {
@@ -35,7 +37,7 @@ impl RevealIndexHypothesisBuilder {
 impl HypothesisBuilder for RevealIndexHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
+        _: &GameState,
         registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         let revealing_is_safe_hypothesis =
@@ -58,9 +60,9 @@ impl Hypothesis for RevealIndexHypothesis {
 
     fn evaluate(
         &mut self,
-        log: &impl Log,
-        depth: Depth,
-        game_state: &GameState,
+        _: &impl Log,
+        _: Depth,
+        _: &GameState,
         repository: impl HypothesisRepository,
     ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(0.0);

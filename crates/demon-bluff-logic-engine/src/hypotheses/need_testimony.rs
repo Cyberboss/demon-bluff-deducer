@@ -1,5 +1,3 @@
-use std::arch::breakpoint;
-
 use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
@@ -10,8 +8,8 @@ use super::{
 
 use crate::{
     engine::{
-        Depth, DesireConsumerReference, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisEvaluation, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        Depth, DesireConsumerReference, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisRegistrar, HypothesisRepository,
     },
     hypotheses::HypothesisType,
 };
@@ -36,7 +34,7 @@ impl NeedTestimonyHypothesisBuilder {
 impl HypothesisBuilder for NeedTestimonyHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
+        _: &GameState,
         registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         let get_testimony_desire = registrar.register_desire_consumer(DesireType::GetTestimony(

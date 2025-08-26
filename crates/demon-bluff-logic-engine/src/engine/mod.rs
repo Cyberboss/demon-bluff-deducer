@@ -9,20 +9,20 @@ use self::{
     hypothesis::{HypothesisInvocation, HypothesisRegistrarImpl},
     index_reference::IndexReference,
     iteration_data::IterationData,
-    misc::GraphNodeData,
     stack_data::StackData,
 };
 pub use self::{
     depth::Depth,
     desire::{Desire, DesireConsumerReference, DesireProducerReference},
     fitness_and_action::{
-        FITNESS_UNKNOWN, FitnessAndAction, and_result, decide_result, fittest_result, or_result,
+        FITNESS_UNKNOWN, FitnessAndAction, and_fitness, and_result, decide_result, or_result,
     },
     hypothesis::{
         Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
         HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
         HypothesisResult,
     },
+    misc::GraphNodeData,
 };
 use crate::{
     PredictionError,

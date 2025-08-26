@@ -11,7 +11,7 @@ use crate::engine::{
     HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
 };
 
-use super::HypothesisType;
+use super::{DesireType, HypothesisBuilderType, HypothesisType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TestimonyCondemnsHypothesisBuilder {
@@ -44,8 +44,8 @@ pub struct TestimonyCondemnsHypothesis {
 impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
-        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+        _: &GameState,
+        _: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         TestimonyCondemnsHypothesis {
             testifier: self.testifier,
