@@ -100,6 +100,14 @@ impl RoleClaim {
             archetype,
         }
     }
+
+    pub fn index(&self) -> &VillagerIndex {
+        &self.villager
+    }
+
+    pub fn role(&self) -> &VillagerArchetype {
+        &self.archetype
+    }
 }
 
 impl SlayResult {
