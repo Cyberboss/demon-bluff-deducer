@@ -96,6 +96,8 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
             }
         };
 
+        // TODO: Make this use a testimony_condemns_expression and then just match on the testimony
+
         match expression {
             Expression::Unary(Testimony::Confess(confession)) => {
                 if self.defendant == self.testifier {
