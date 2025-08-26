@@ -25,7 +25,7 @@ pub use self::{
     misc::GraphNodeData,
 };
 use crate::{
-    PredictionError,
+    Debugger, PredictionError,
     hypotheses::{DesireType, HypothesisBuilderType, HypothesisType},
     player_action::PlayerAction,
 };
@@ -43,17 +43,17 @@ mod stack_data;
 
 const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 100;
 
-pub fn evaluate<TBuilder, TLog, FGraph>(
+pub fn evaluate<TBuilder, TLog, F>(
     game_state: &GameState,
     initial_hypothesis_builder: TBuilder,
     log: &TLog,
-    _: Option<FGraph>,
+    _: Option<F>,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
     TBuilder: HypothesisBuilder,
     HypothesisBuilderType: From<TBuilder>,
     TLog: Log,
-    FGraph: FnMut(&mut ForceGraph<GraphNodeData>),
+    F: FnMut(&mut Debugger),
 {
     let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 

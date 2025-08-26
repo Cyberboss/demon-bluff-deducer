@@ -1,35 +1,36 @@
 #![feature(breakpoint)]
 
+mod debugger;
 mod engine;
 mod hypotheses;
-pub mod player_action;
+mod player_action;
 mod prediction_error;
 
 use std::collections::HashSet;
 
-use engine::{GraphNodeData, evaluate};
-use force_graph::ForceGraph;
+use engine::evaluate;
 use log::Log;
 
+pub use self::{
+    debugger::Debugger, player_action::PlayerAction, prediction_error::PredictionError,
+};
 use demon_bluff_gameplay_engine::game_state::GameState;
-use player_action::PlayerAction;
-use prediction_error::PredictionError;
 
 use crate::hypotheses::MasterHypothesisBuilder;
 
-pub fn predict_with_graph<F>(
+pub fn predict_with_debugger<F>(
     log: &impl Log,
     state: &GameState,
-    graph_stepper: F,
+    debugger: F,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
-    F: FnMut(&mut ForceGraph<GraphNodeData>),
+    F: FnMut(&mut Debugger),
 {
     evaluate(
         state,
         MasterHypothesisBuilder::default(),
         log,
-        Some(graph_stepper),
+        Some(debugger),
     )
 }
 
@@ -41,6 +42,6 @@ pub fn predict(
         state,
         MasterHypothesisBuilder::default(),
         log,
-        None::<fn(&mut ForceGraph<GraphNodeData>)>,
+        None::<fn(&mut Debugger)>,
     )
 }
