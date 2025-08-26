@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use serde::Serialize;
 use std::fmt::Display;
 
 use crate::{
@@ -7,39 +8,39 @@ use crate::{
 };
 const ALCHEMIST_CURE_RANGE: usize = 2;
 
-#[derive(Clone, Debug, PartialEq, Eq, Display)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize)]
 pub enum ConfessorClaim {
     Good,
     Dizzy,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Hash, Serialize)]
 pub enum Direction {
     Clockwise,
     CounterClockwise,
     Equidistant,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize)]
 pub enum ArchitectClaim {
     Left,
     Right,
     Equal,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize)]
 pub enum BakerClaim {
     Original,
     Was(VillagerArchetype),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct SlayResult {
     index: VillagerIndex,
     slayed: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RoleClaim {
     villager: VillagerIndex,
     archetype: VillagerArchetype,
@@ -57,7 +58,7 @@ pub struct ScoutClaim {
     distance: u8,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct EvilPairsClaim(u8);
 
 impl Display for EvilPairsClaim {
@@ -66,7 +67,7 @@ impl Display for EvilPairsClaim {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum Testimony {
     Good(VillagerIndex),
     Evil(VillagerIndex),

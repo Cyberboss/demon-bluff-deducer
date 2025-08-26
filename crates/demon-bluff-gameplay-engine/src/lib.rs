@@ -1,6 +1,8 @@
 #![feature(gen_blocks)]
 
-use std::fmt::{Display, write};
+use std::fmt::Display;
+
+use serde::Serialize;
 
 #[macro_use]
 extern crate enum_display_derive;
@@ -13,7 +15,7 @@ pub mod villager;
 pub const VILLAGERS_MIN: usize = 7;
 pub const VILLAGERS_MAX: usize = 9;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum Expression<Type>
 where
     Type: Display,

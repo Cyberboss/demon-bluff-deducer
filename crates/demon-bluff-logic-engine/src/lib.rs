@@ -1,8 +1,5 @@
 #![feature(breakpoint)]
 
-#[macro_use]
-extern crate enum_display_derive;
-
 mod engine;
 mod hypotheses;
 pub mod player_action;

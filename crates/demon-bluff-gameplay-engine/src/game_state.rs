@@ -1,19 +1,14 @@
-use std::{
-    collections::HashSet,
-    hash::Hash,
-    iter::{Skip, repeat},
-    mem::replace,
-};
+use std::{iter::repeat, mem::replace};
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
     Expression,
-    testimony::{self, Testimony},
+    testimony::Testimony,
     villager::{
-        self, ActiveVillager, ConfirmedVillager, Demon, ExecutionResult, GoodVillager,
-        HiddenVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex,
-        VillagerInstance,
+        ActiveVillager, ConfirmedVillager, Demon, ExecutionResult, GoodVillager, HiddenVillager,
+        Minion, Outcast, Villager, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
 };
 
@@ -27,7 +22,7 @@ pub enum DayCycle {
     Night,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DrawStats {
     villagers: u8,
     outcasts: u8,
@@ -35,7 +30,7 @@ pub struct DrawStats {
     demons: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GameState {
     // TODO: Alignment of cards may affect Architect claim, double check
     next_day: Option<u8>,

@@ -11,7 +11,7 @@ use std::fmt::Display;
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, Serialize)]
 pub struct VillagerIndex(pub usize);
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
 pub enum GoodVillager {
     Alchemist,
     Architect,
@@ -39,7 +39,7 @@ pub enum GoodVillager {
     Witness,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
 pub enum Outcast {
     Drunk,
     Wretch,
@@ -48,7 +48,7 @@ pub enum Outcast {
     PlagueDoctor,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
 pub enum Minion {
     Counsellor,
     Witch,
@@ -60,14 +60,14 @@ pub enum Minion {
     Puppet,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
 pub enum Demon {
     Baa,
     Pooka,
     Lilis,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, Serialize)]
 pub enum VillagerArchetype {
     GoodVillager(GoodVillager),
     Outcast(Outcast),
@@ -75,34 +75,34 @@ pub enum VillagerArchetype {
     Demon(Demon),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ActiveVillager {
     instance: VillagerInstance,
     cant_kill: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct HiddenVillager {
     dead: bool,
     cant_reveal: bool,
     cant_kill: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct VillagerInstance {
     archetype: VillagerArchetype,
     testimony: Option<Expression<Testimony>>,
     action_available: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ConfirmedVillager {
     instance: VillagerInstance,
     true_identity: Option<VillagerArchetype>,
     corrupted: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Villager {
     Active(ActiveVillager),
     Hidden(HiddenVillager),
