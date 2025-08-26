@@ -6,18 +6,18 @@ use crate::engine::{
 use super::{Hypothesis, reference::HypothesisReference};
 
 #[derive(Debug)]
-pub struct HypothesisGraph<THypotheses, TDesire>
+pub struct HypothesisGraphData<THypotheses, TDesire>
 where
     THypotheses: Hypothesis,
     TDesire: Desire,
 {
-    root: HypothesisReference,
-    hypotheses: Vec<THypotheses>,
-    dependencies: DependencyData,
-    desires: Vec<DesireDefinition<TDesire>>,
+    pub root: HypothesisReference,
+    pub hypotheses: Vec<THypotheses>,
+    pub dependencies: DependencyData,
+    pub desires: Vec<DesireDefinition<TDesire>>,
 }
 
-impl<THypothesis, TDesire> HypothesisGraph<THypothesis, TDesire>
+impl<THypothesis, TDesire> HypothesisGraphData<THypothesis, TDesire>
 where
     THypothesis: Hypothesis,
     TDesire: Desire,

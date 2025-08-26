@@ -5,14 +5,15 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    desire::{DesireType, get_testimony::GetTestimonyDesire},
-    engine_old::{
+    engine::{
         Depth, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis,
-        HypothesisBuilder, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-        HypothesisResult, HypothesisReturn,
+        HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
 };
+
+use super::{DesireType, HypothesisBuilderType, desires::GetTestimonyDesire};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct IsTruthfulHypothesisBuilder {
@@ -38,14 +39,11 @@ impl IsTruthfulHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsTruthfulHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let sub_reference = match game_state.villager(&self.index) {
             Villager::Active(active_villager) => {
                 Some(match active_villager.instance().testimony() {
@@ -90,26 +88,23 @@ impl Hypothesis for IsTruthfulHypothesis {
         write!(f, "{} is truthful", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
+        _: &impl Log,
         _: Depth,
         game_state: &GameState,
-        mut repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        mut repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         match &self.sub_reference {
             Some(sub_reference) => match sub_reference {
                 SubReferenceType::CheckTestimony(testimony_expression_hypothesis) => {
                     let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
                     let result = evaluator.sub_evaluate(testimony_expression_hypothesis);
-                    evaluator.create_return(result)
+                    evaluator.finalize(result)
                 }
                 SubReferenceType::GetTestimony(desire_producer_reference) => {
                     repository.set_desire(desire_producer_reference, true);
-                    repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::new(
+                    repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::new(
                         FITNESS_UNKNOWN,
                         None,
                     )))
@@ -121,7 +116,7 @@ impl Hypothesis for IsTruthfulHypothesis {
                 if let Villager::Confirmed(confirmed_villager) = game_state.villager(&self.index) {
                     let truthful = !confirmed_villager.lies();
 
-                    repository.create_return(HypothesisResult::Conclusive(if truthful {
+                    repository.finalize(HypothesisResult::Conclusive(if truthful {
                         FitnessAndAction::certainty(None)
                     } else {
                         FitnessAndAction::impossible()

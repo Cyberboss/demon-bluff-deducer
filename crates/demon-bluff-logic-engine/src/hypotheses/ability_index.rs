@@ -1,15 +1,15 @@
 use demon_bluff_gameplay_engine::{
-    game_state::{self, GameState},
-    villager::{GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
+    game_state::GameState,
+    villager::{GoodVillager, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use log::Log;
 
-use crate::engine_old::{
-    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, evaluate,
+use crate::engine::{
+    Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisRegistrar,
+    HypothesisRepository, HypothesisResult,
 };
 
-use super::HypothesisType;
+use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct AbilityIndexHypothesisBuilder {
@@ -28,10 +28,11 @@ impl AbilityIndexHypothesisBuilder {
 }
 
 impl HypothesisBuilder for AbilityIndexHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         AbilityIndexHypothesis { index: self.index }.into()
     }
 }
@@ -45,16 +46,13 @@ impl Hypothesis for AbilityIndexHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
+        log: &impl Log,
+        depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let archetype = match game_state.villager(&self.index) {
             Villager::Hidden(_) => panic!("We shouldn't be evaluating a hidden villager!"),
             Villager::Active(active_villager) => active_villager.instance().archetype(),
@@ -101,6 +99,6 @@ impl Hypothesis for AbilityIndexHypothesis {
             }
         };
 
-        repository.create_return(result)
+        repository.finalize(result)
     }
 }

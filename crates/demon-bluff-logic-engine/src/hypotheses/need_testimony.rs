@@ -3,11 +3,15 @@ use std::arch::breakpoint;
 use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
+use super::{
+    HypothesisBuilderType,
+    desires::{DesireType, GetTestimonyDesire},
+};
+
 use crate::{
-    desire::{DesireType, get_testimony::GetTestimonyDesire},
-    engine_old::{
+    engine::{
         Depth, DesireConsumerReference, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+        HypothesisEvaluation, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::HypothesisType,
 };
@@ -30,10 +34,11 @@ impl NeedTestimonyHypothesisBuilder {
 }
 
 impl HypothesisBuilder for NeedTestimonyHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let get_testimony_desire = registrar.register_desire_consumer(DesireType::GetTestimony(
             GetTestimonyDesire::new(self.index.clone()),
         ));
@@ -50,17 +55,14 @@ impl Hypothesis for NeedTestimonyHypothesis {
         write!(f, "Need testimony of {}", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let result = repository.desire_result(&self.get_testimony_desire);
-        repository.create_return(result)
+        repository.finalize(result)
     }
 }

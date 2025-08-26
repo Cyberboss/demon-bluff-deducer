@@ -7,10 +7,10 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    engine_old::{
+    engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        HypothesisReturn, and_result, or_result,
+        HypothesisEvaluation, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult, and_result, or_result,
     },
     hypotheses::{
         HypothesisType,
@@ -50,10 +50,11 @@ impl TestimonyExpressionHypothesisBuilder {
 }
 
 impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let expression_friendly = format!("{}", self.testimony_expression);
         let hypothesis_expression = match self.testimony_expression {
             Expression::Unary(testimony) => HypothesisExpression::Unary(registrar.register(
@@ -102,16 +103,13 @@ impl Hypothesis for TestimonyExpressionHypothesis {
         )
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
         let result = match &self.hypothesis_expression {
             HypothesisExpression::Unary(hypothesis_reference) => {
@@ -128,6 +126,6 @@ impl Hypothesis for TestimonyExpressionHypothesis {
             }
         };
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

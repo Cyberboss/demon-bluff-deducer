@@ -2,13 +2,14 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
+    engine::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+        or_result,
+    },
     hypotheses::{
         HypothesisType, need_testimony::NeedTestimonyHypothesisBuilder,
         revealing_is_safe::RevealingIsSafeHypothesisBuilder,
-    },
-    engine_old::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, or_result,
     },
     player_action::PlayerAction,
 };
@@ -32,10 +33,11 @@ impl RevealIndexHypothesisBuilder {
 }
 
 impl HypothesisBuilder for RevealIndexHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let revealing_is_safe_hypothesis =
             registrar.register(RevealingIsSafeHypothesisBuilder::default());
         let need_testimony_hypothesis =
@@ -54,16 +56,13 @@ impl Hypothesis for RevealIndexHypothesis {
         write!(f, "Reveal {}", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(0.0);
 
         let reveal_result = evaluator.sub_evaluate(&self.revealing_is_safe_hypothesis);
@@ -71,7 +70,7 @@ impl Hypothesis for RevealIndexHypothesis {
             HypothesisResult::Pending(_) => {}
             HypothesisResult::Conclusive(fitness_and_action) => {
                 if fitness_and_action.is_certain() {
-                    return evaluator.create_return(HypothesisResult::Conclusive(
+                    return evaluator.finalize(HypothesisResult::Conclusive(
                         FitnessAndAction::certainty(Some(PlayerAction::TryReveal(
                             self.index.clone(),
                         ))),
@@ -91,6 +90,6 @@ impl Hypothesis for RevealIndexHypothesis {
             )
         });
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

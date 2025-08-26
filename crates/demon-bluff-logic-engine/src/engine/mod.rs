@@ -1,18 +1,34 @@
-use std::collections::HashSet;
-
 use demon_bluff_gameplay_engine::game_state::GameState;
 use force_graph::ForceGraph;
-use log::{Log, info};
-use misc::GraphNodeData;
+use log::{Log, error, info};
+use std::{cell::RefCell, collections::HashSet};
 
+use self::{
+    cycle::Cycle,
+    desire::DesireData,
+    hypothesis::{HypothesisInvocation, HypothesisRegistrarImpl},
+    index_reference::IndexReference,
+    iteration_data::IterationData,
+    misc::GraphNodeData,
+    stack_data::StackData,
+};
 pub use self::{
-    desire::{DesireConsumerReference, DesireProducerReference},
+    depth::Depth,
+    desire::{Desire, DesireConsumerReference, DesireProducerReference},
+    fitness_and_action::{
+        FITNESS_UNKNOWN, FitnessAndAction, and_result, decide_result, fittest_result, or_result,
+    },
     hypothesis::{
-        HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator, HypothesisReference,
-        HypothesisRegistrar, HypothesisResult,
+        Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
+        HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult,
     },
 };
-use crate::{PredictionError, hypotheses::HypothesisBuilderType, player_action::PlayerAction};
+use crate::{
+    PredictionError,
+    hypotheses::{DesireType, HypothesisBuilderType, HypothesisType},
+    player_action::PlayerAction,
+};
 
 mod cycle;
 mod dependencies;
@@ -31,7 +47,7 @@ pub fn evaluate<TBuilder, TLog, FGraph>(
     game_state: &GameState,
     initial_hypothesis_builder: TBuilder,
     log: &TLog,
-    mut stepper: Option<FGraph>,
+    _: Option<FGraph>,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
     TBuilder: HypothesisBuilder,
@@ -39,12 +55,12 @@ where
     TLog: Log,
     FGraph: FnMut(&mut ForceGraph<GraphNodeData>),
 {
-    let registrar = HypothesisRegistrar::new(log);
+    let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 
     info!(logger: log, target: "evaluate", "Evaluate dependencies");
     let graph = registrar.run(game_state, initial_hypothesis_builder.into());
 
-    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", graph.hypotheses.len(), graph.hypotheses[graph.root.0]);
+    info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", graph.hypotheses.len(), graph.hypotheses[graph.root.index()]);
 
     let hypotheses: Vec<RefCell<HypothesisType>> = graph
         .hypotheses
@@ -62,17 +78,17 @@ where
         .desires
         .iter()
         .map(|desire_definition| DesireData {
-            pending: HashSet::with_capacity(desire_definition.count),
-            desired: HashSet::with_capacity(desire_definition.count),
-            undesired: HashSet::with_capacity(desire_definition.count),
+            pending: HashSet::with_capacity(desire_definition.count()),
+            desired: HashSet::with_capacity(desire_definition.count()),
+            undesired: HashSet::with_capacity(desire_definition.count()),
         })
         .collect::<Vec<DesireData>>();
     {
         for (index, producer_dependencies) in graph.dependencies.desire_producers.iter().enumerate()
         {
             for desire_reference in producer_dependencies {
-                let reference = HypothesisReference(index);
-                desire_data_vec[desire_reference.0]
+                let reference = HypothesisReference::new(index);
+                desire_data_vec[desire_reference.index()]
                     .pending
                     .insert(reference);
             }
@@ -93,7 +109,7 @@ where
 
         let data = RefCell::new(IterationData { results: data });
         let cycles = RefCell::new(HashSet::new());
-        let invocation = HypothesisInvocation::new(StackData::new(
+        let mut stack_data = StackData::new(
             game_state,
             log,
             &hypotheses,
@@ -106,9 +122,9 @@ where
             &graph.desires,
             &desire_data,
             &graph.dependencies,
-        ));
+        );
 
-        let result = invocation.enter();
+        let result = stack_data.invoke();
 
         break_at = None;
 
@@ -144,7 +160,7 @@ where
                         log.flush();
                         */
                         if stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE {
-                            warn!(logger: log, "Graph not stable after {} iterations, assuming stable enough for progression", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
+                            info!(logger: log, "Graph not stable after {} iterations, assuming stable enough for progression", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
                             graph_stable = true;
                         }
                     } else {
@@ -157,14 +173,15 @@ where
                         let cycles = cycles.borrow();
                         if cycles.len() == 0 {
                             let mut borrow = desire_data.borrow_mut();
-                            warn!(
-                                "We have a stagnate graph due to one of the following desires not concluding. We will forcefully set the hypotheses that are not evaluating it to false {}",
+                            info!(
+                                "I-{}: We have a stagnate graph due to one of the following desires not concluding. We will forcefully set the hypotheses that are not evaluating it to false {}",
+                                iteration,
                                 borrow
                                     .iter()
                                     .filter(|desire| desire.pending.len() > 0)
                                     .enumerate()
                                     .map(|(index, data)| {
-                                        format!("{}: {}", DesireProducerReference(index), data)
+                                        format!("{}: {}", DesireProducerReference::new(index), data)
                                     })
                                     .collect::<Vec<String>>()
                                     .join(", ")
@@ -190,7 +207,7 @@ where
 
                             let (least_pending_index, _) = least_pending_option
                                 .expect("At least one stagnate desire should have been found!");
-                            info!(logger: log, "Selected {} for unblocking", DesireProducerReference(least_pending_index));
+                            info!(logger: log, "Selected {} for unblocking", DesireProducerReference::new(least_pending_index));
                             let unblocking_data = &mut borrow[least_pending_index];
                             for pending_hypothesis in
                                 std::mem::replace(&mut unblocking_data.pending, HashSet::new())
@@ -199,18 +216,19 @@ where
                                 unblocking_data.undesired.insert(pending_hypothesis);
                             }
                         } else {
-                            warn!(logger: log, "We must break a cycle, of which there are {}", cycles.len());
+                            info!(logger: log, "I-{}: We must break a cycle, of which there are {}",
+                                iteration,cycles.len());
 
                             let mut best_break_candidate =
                                 None::<(&Cycle, &HypothesisReference, f64)>;
 
                             for cycle in cycles.iter() {
-                                for reference in &cycle.order_from_root {
-                                    let fitness = data.results[reference.0]
+                                for reference in cycle.references() {
+                                    let fitness = data.results[reference.index()]
                                         .as_ref()
                                         .expect("A hypothesis in a cycle should have SOME result")
                                         .fitness_and_action()
-                                        .fitness;
+                                        .fitness();
 
                                     best_break_candidate = Some(match best_break_candidate {
                                         Some((
@@ -228,8 +246,8 @@ where
                                                 (cycle, reference, fitness)
                                             } else {
                                                 // break shortest fittest candidate cycle first for simplicity
-                                                if cycle.order_from_root.len()
-                                                    < previous_cycle.order_from_root.len()
+                                                if cycle.references().len()
+                                                    < previous_cycle.references().len()
                                                 {
                                                     (cycle, reference, fitness)
                                                 } else {
@@ -259,20 +277,20 @@ where
                 previous_results = Some(data.clone());
             }
             HypothesisResult::Conclusive(fitness_and_action) => {
-                if fitness_and_action.action.len() == 0 {
+                if fitness_and_action.action().len() == 0 {
                     error!(logger: log, "Obtained conclusive result with no actions!");
                     return Err(PredictionError::ConclusiveNoAction);
                 }
 
                 info!(logger: log, "Conclusive result obtained. Fitness: {}", fitness_and_action);
 
-                if fitness_and_action.action.len() == 1 {
-                    for action in &fitness_and_action.action {
+                if fitness_and_action.action().len() == 1 {
+                    for action in fitness_and_action.action() {
                         info!(logger: log, "Conclusive action: {}", action);
                     }
                 }
 
-                return Ok(fitness_and_action.action);
+                return Ok(fitness_and_action.action().clone());
             }
         }
     }

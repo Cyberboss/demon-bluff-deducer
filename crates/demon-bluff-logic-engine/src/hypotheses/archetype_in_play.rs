@@ -1,17 +1,19 @@
 use demon_bluff_gameplay_engine::{
     affect::Affect,
     game_state::GameState,
-    villager::{Minion, VillagerArchetype, VillagerIndex},
+    villager::{Minion, VillagerArchetype},
 };
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisReference,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::HypothesisType,
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct ArchetypeInPlayHypothesisBuilder {
@@ -31,10 +33,11 @@ impl ArchetypeInPlayHypothesisBuilder {
 }
 
 impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let counsellor_in_play_hypothesis = match self.archetype {
             VillagerArchetype::GoodVillager(_) => {
                 Some(registrar.register(ArchetypeInPlayHypothesisBuilder::new(
@@ -61,16 +64,13 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        log: &TLog,
+        log: &impl Log,
         depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         // step one, eliminate the possibility if it's not in the deck
         // currently the only case where an archetype not in the deck can appear is the puppeteer
         let mut can_be_converted = false;
@@ -95,9 +95,9 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
         }
 
         if !in_deck && !can_be_converted {
-            return repository.create_return(HypothesisResult::impossible());
+            return repository.finalize(HypothesisResult::impossible());
         }
 
-        repository.create_return(HypothesisResult::unimplemented())
+        repository.finalize(HypothesisResult::unimplemented())
     }
 }

@@ -6,11 +6,11 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use crate::{
-    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesis},
-    engine_old::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    engine::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
+    hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesis},
 };
 
 #[derive(PartialEq, Eq, Clone, Debug)]
@@ -33,14 +33,11 @@ impl TestimonyHypothesisBuilder {
 }
 
 impl HypothesisBuilder for TestimonyHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         TestimonyHypothesis {
             index: self.index,
             testimony: self.testimony,
@@ -58,21 +55,18 @@ impl Hypothesis for TestimonyHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        log: &TLog,
+        log: &impl Log,
         depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         match &self.testimony {
-            Testimony::Confess(confessor_claim) => repository.create_return(
+            Testimony::Confess(confessor_claim) => repository.finalize(
                 HypothesisResult::Conclusive(FitnessAndAction::certainty(None)),
             ),
-            _ => repository.create_return(HypothesisResult::unimplemented()),
+            _ => repository.finalize(HypothesisResult::unimplemented()),
         }
     }
 }

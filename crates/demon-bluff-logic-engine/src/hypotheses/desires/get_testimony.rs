@@ -1,6 +1,8 @@
-use std::fmt::Display;
+use std::fmt::{Formatter, Result};
 
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
+
+use crate::engine::Desire;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GetTestimonyDesire {
@@ -13,8 +15,8 @@ impl GetTestimonyDesire {
     }
 }
 
-impl Display for GetTestimonyDesire {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Desire for GetTestimonyDesire {
+    fn describe(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "Get {}'s Testimony", self.index)
     }
 }

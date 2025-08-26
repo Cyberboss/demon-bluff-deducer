@@ -2,12 +2,15 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, decide_result,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
+        HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult, decide_result,
     },
     hypotheses::{HypothesisType, execute_index::ExecuteIndexHypothesisBuilder},
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct ExecuteHypothesisBuilder {}
@@ -18,14 +21,11 @@ pub struct ExecuteHypothesis {
 }
 
 impl HypothesisBuilder for ExecuteHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let mut executable_hypotheses = Vec::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(active_villager) => {
@@ -57,18 +57,15 @@ impl Hypothesis for ExecuteHypothesis {
         write!(f, "Execution Decision")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         if self.executable_hypotheses.is_empty() {
-            return repository.create_return(HypothesisResult::impossible());
+            return repository.finalize(HypothesisResult::impossible());
         }
 
         let mut evaluator = repository.require_sub_evaluation(0.0);
@@ -82,6 +79,6 @@ impl Hypothesis for ExecuteHypothesis {
         }
 
         let result = result.expect("There should be a result after iterating");
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

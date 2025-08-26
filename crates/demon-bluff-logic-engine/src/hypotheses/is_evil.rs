@@ -1,26 +1,23 @@
-use std::collections::HashMap;
-
 use demon_bluff_gameplay_engine::{
-    game_state::{self, GameState},
+    game_state::GameState,
     villager::{Villager, VillagerArchetype, VillagerIndex},
 };
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, and_result,
-        fittest_result, or_result,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
+        HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        and_result, or_result,
     },
     hypotheses::{
-        HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
-        is_corrupt::IsCorruptHypothesisBuilder, is_truthful::IsTruthfulHypothesisBuilder,
-        negate::NegateHypothesisBuilder,
+        HypothesisType, is_corrupt::IsCorruptHypothesisBuilder,
+        is_truthful::IsTruthfulHypothesisBuilder, negate::NegateHypothesisBuilder,
     },
 };
 
 use super::{
-    is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
+    DesireType, HypothesisBuilderType, is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
     testimony_condemns::TestimonyCondemnsHypothesisBuilder,
 };
 
@@ -46,14 +43,11 @@ impl IsEvilHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsEvilHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let mut is_non_liar_hypotheses = Vec::new();
         for archetype in VillagerArchetype::iter() {
             if archetype.is_evil() && !archetype.lies() {
@@ -118,16 +112,13 @@ impl Hypothesis for IsEvilHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
+        _: &impl Log,
         _: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let initial_evils = game_state.draw_stats().demons() + game_state.draw_stats().minions();
         let mut evaluator = repository.require_sub_evaluation(
             (initial_evils as f64) / (game_state.draw_stats().total_villagers() as f64),
@@ -196,6 +187,6 @@ impl Hypothesis for IsEvilHypothesis {
             },
         };
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

@@ -6,9 +6,9 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use crate::engine_old::{
-    Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+use crate::engine::{
+    Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+    HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
 };
 
 use super::HypothesisType;
@@ -42,10 +42,11 @@ pub struct TestimonyCondemnsHypothesis {
 }
 
 impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         TestimonyCondemnsHypothesis {
             testifier: self.testifier,
             defendant: self.defendant,
@@ -67,16 +68,13 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
-        repository.create_return(HypothesisResult::unimplemented())
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
+        repository.finalize(HypothesisResult::unimplemented())
     }
 }

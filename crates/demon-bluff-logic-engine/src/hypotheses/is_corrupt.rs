@@ -2,16 +2,19 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use log::Log;
 
 use crate::{
+    engine::{
+        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, and_result,
+    },
     hypotheses::{
         HypothesisType, corruption_in_play::CorruptionInPlayHypothesisBuilder,
         is_evil::IsEvilHypothesisBuilder, is_truthful::IsTruthfulHypothesisBuilder,
         negate::NegateHypothesisBuilder,
     },
-    engine_old::{
-        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisReturn, and_result,
-    },
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IsCorruptHypothesisBuilder {
@@ -34,10 +37,11 @@ impl IsCorruptHypothesisBuilder {
 }
 
 impl HypothesisBuilder for IsCorruptHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let is_good_hypothesis = registrar.register(NegateHypothesisBuilder::new(
             IsEvilHypothesisBuilder::new(self.index.clone()),
         ));
@@ -62,16 +66,13 @@ impl Hypothesis for IsCorruptHypothesis {
         write!(f, "{} is corrupt", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
         let corruption_in_play_result = evaluator.sub_evaluate(&self.corruption_in_play_hypothesis);
@@ -83,6 +84,6 @@ impl Hypothesis for IsCorruptHypothesis {
             and_result(is_good_result, is_lying_result),
         );
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

@@ -8,10 +8,10 @@ use demon_bluff_gameplay_engine::{
 use log::{Log, error};
 
 use crate::{
-    engine_old::{
+    engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        HypothesisReturn, and_fitness, or_result,
+        HypothesisEvaluation, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult, and_fitness, or_result,
     },
     hypotheses::HypothesisType,
 };
@@ -27,14 +27,11 @@ pub struct RevealingIsSafeHypothesis {
 }
 
 impl HypothesisBuilder for RevealingIsSafeHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let mut unsafe_reveal_archetype_presence_hypotheses = HashMap::new();
         for archetype in VillagerArchetype::iter() {
             // index doesn't matter for this question
@@ -64,16 +61,13 @@ impl Hypothesis for RevealingIsSafeHypothesis {
         true // I want better probabilities, see below TODO comment
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        log: &TLog,
+        log: &impl Log,
         depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut all_hidden = true;
         for villager in game_state.villagers() {
             match villager {
@@ -87,14 +81,14 @@ impl Hypothesis for RevealingIsSafeHypothesis {
 
         // first reveal is always required, so call it safe even if it isn't
         if all_hidden {
-            return repository.create_return(HypothesisResult::Conclusive(
-                FitnessAndAction::certainty(None),
-            ));
+            return repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::certainty(
+                None,
+            )));
         }
 
         if self.unsafe_reveal_archetype_presence_hypotheses.is_empty() {
             error!(logger: log, "{} Found no archetypes that could make revealing unsafe? Bug?", depth);
-            return repository.create_return(HypothesisResult::Conclusive(FitnessAndAction::new(
+            return repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::new(
                 FITNESS_UNKNOWN,
                 None,
             )));
@@ -123,7 +117,7 @@ impl Hypothesis for RevealingIsSafeHypothesis {
             })
         }
 
-        evaluator.create_return(result.expect("Dumb logic error in RevealingIsSafeHypothesis"))
+        evaluator.finalize(result.expect("Dumb logic error in RevealingIsSafeHypothesis"))
     }
 }
 

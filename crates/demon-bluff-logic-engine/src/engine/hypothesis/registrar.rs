@@ -6,71 +6,52 @@ use crate::{
         DesireConsumerReference, DesireProducerReference,
         dependencies::DependencyData,
         desire::{Desire, DesireDefinition},
+        index_reference::IndexReference,
     },
-    hypotheses::{HypothesisBuilderType, HypothesisType, desires::DesireType},
+    hypotheses::{DesireType, HypothesisBuilderType, HypothesisType},
 };
 
-use super::{HypothesisBuilder, HypothesisReference, graph::HypothesisGraph};
+use super::{HypothesisReference, graph_data::HypothesisGraphData};
+use crate::engine::HypothesisBuilder;
 
-pub struct HypothesisRegistrar<'a, TLog>
+pub trait HypothesisRegistrar<THypothesisBuilder, TDesire>
+where
+    THypothesisBuilder: HypothesisBuilder,
+{
+    fn register<THypothesisBuilderImpl>(
+        &mut self,
+        builder: THypothesisBuilderImpl,
+    ) -> HypothesisReference
+    where
+        THypothesisBuilder: From<THypothesisBuilderImpl>;
+    fn register_builder_type(&mut self, builder: THypothesisBuilder) -> HypothesisReference;
+    fn register_desire_consumer(&mut self, desire: TDesire) -> DesireConsumerReference;
+    fn register_desire_producer(&mut self, desire: TDesire) -> DesireProducerReference;
+}
+
+pub struct HypothesisRegistrarImpl<'a, TLog, THypothesisBuilder, TDesire>
 where
     TLog: Log,
+    THypothesisBuilder: HypothesisBuilder + Clone,
+    TDesire: Desire,
 {
     log: &'a TLog,
-    builders: Vec<HypothesisBuilderType>,
-    desires: Vec<DesireType>,
+    builders: Vec<THypothesisBuilder>,
+    desires: Vec<TDesire>,
     dependencies: Option<DependencyData>,
 }
 
-impl<'a, TLog> HypothesisRegistrar<'a, TLog>
+impl<'a, TLog> HypothesisRegistrarImpl<'a, TLog, HypothesisBuilderType, DesireType>
 where
     TLog: Log,
 {
-    pub(in crate::engine) fn new(log: &'a TLog) -> Self {
+    pub fn new(log: &'a TLog) -> Self {
         Self {
             log,
             builders: Vec::new(),
             dependencies: Some(DependencyData::default()),
             desires: Vec::new(),
         }
-    }
-
-    /// Register a dependency of the currently building [`Hypothesis`]' [`HypothesisBuilder`] and get its [`HypothesisReference`].
-    pub fn register<HypothesisBuilderImpl>(
-        &mut self,
-        builder: HypothesisBuilderImpl,
-    ) -> HypothesisReference
-    where
-        HypothesisBuilderImpl: HypothesisBuilder,
-        HypothesisBuilderType: From<HypothesisBuilderImpl>,
-    {
-        self.register_builder_type(builder.into())
-    }
-
-    pub fn register_builder_type(&mut self, builder: HypothesisBuilderType) -> HypothesisReference {
-        let mut reference_option = None;
-        for (index, existing_builder) in self.builders.iter().enumerate() {
-            if builder == *existing_builder {
-                reference_option = Some(HypothesisReference::new(index));
-                break;
-            }
-        }
-
-        let reference = match reference_option {
-            Some(reference) => reference,
-            None => {
-                let reference = HypothesisReference::new(self.builders.len());
-                self.builders.push(builder);
-                reference
-            }
-        };
-
-        if let Some(dependencies) = &mut self.dependencies {
-            let dependencies_index = dependencies.hypotheses.len() - 1;
-            dependencies.hypotheses[dependencies_index].push(reference.clone());
-        }
-
-        reference
     }
 
     fn register_desire_core(&mut self, desire: DesireType) -> usize {
@@ -85,57 +66,13 @@ where
         reference
     }
 
-    pub fn register_desire_consumer(&mut self, desire: DesireType) -> DesireConsumerReference {
-        let index = self.register_desire_core(desire.clone());
-        let reference = DesireConsumerReference::new(index);
-
-        if let Some(dependencies) = self.dependencies.as_mut() {
-            let consumers = dependencies
-                .desire_consumers
-                .last_mut()
-                .expect("Consumer entry should exist!");
-            for existing_reference in consumers.iter() {
-                if reference == *existing_reference {
-                    return reference;
-                }
-            }
-
-            consumers.push(reference.clone());
-        }
-
-        reference
-    }
-
-    pub fn register_desire_producer(&mut self, desire: DesireType) -> DesireProducerReference {
-        let index = self.register_desire_core(desire.clone());
-        let reference = DesireProducerReference::new(index);
-
-        if let Some(dependencies) = self.dependencies.as_mut() {
-            let producers = dependencies
-                .desire_producers
-                .last_mut()
-                .expect("Producer entry should exist!");
-            for existing_reference in producers.iter() {
-                if reference == *existing_reference {
-                    return reference;
-                }
-            }
-
-            producers.push(reference.clone());
-        }
-
-        reference
-    }
-
-    fn run<HypothesisBuilderImpl, TDesire>(
+    pub(in crate::engine) fn run<HypothesisBuilderImpl>(
         mut self,
         game_state: &GameState,
-        mut builder: HypothesisBuilderImpl,
-    ) -> HypothesisGraph<HypothesisType, TDesire>
+        builder: HypothesisBuilderImpl,
+    ) -> HypothesisGraphData<HypothesisType, DesireType>
     where
-        HypothesisBuilderImpl: HypothesisBuilder,
         HypothesisBuilderType: From<HypothesisBuilderImpl>,
-        TDesire: Desire,
     {
         let mut current_reference = self.builders.len();
         let root_reference = HypothesisReference::new(current_reference);
@@ -194,7 +131,7 @@ where
                     .filter(|producer_references| {
                         producer_references
                             .iter()
-                            .any(|reference| reference.0 == index)
+                            .any(|reference| reference.index() == index)
                     })
                     .count(),
                 dependencies
@@ -203,7 +140,7 @@ where
                     .any(|consumer_references| {
                         consumer_references
                             .iter()
-                            .any(|reference| reference.0 == index)
+                            .any(|reference| reference.index() == index)
                     }),
             );
 
@@ -211,6 +148,91 @@ where
             desire_definitions.push(definition);
         }
 
-        HypothesisGraph::new(root_reference, hypotheses, dependencies, desire_definitions);
+        HypothesisGraphData::new(root_reference, hypotheses, dependencies, desire_definitions)
+    }
+}
+
+impl<'a, TLog> HypothesisRegistrar<HypothesisBuilderType, DesireType>
+    for HypothesisRegistrarImpl<'a, TLog, HypothesisBuilderType, DesireType>
+where
+    TLog: Log,
+{
+    /// Register a dependency of the currently building [`Hypothesis`]' [`HypothesisBuilder`] and get its [`HypothesisReference`].
+    fn register<THypothesisBuilderImpl>(
+        &mut self,
+        builder: THypothesisBuilderImpl,
+    ) -> HypothesisReference
+    where
+        HypothesisBuilderType: From<THypothesisBuilderImpl>,
+    {
+        self.register_builder_type(builder.into())
+    }
+
+    fn register_builder_type(&mut self, builder: HypothesisBuilderType) -> HypothesisReference {
+        let mut reference_option = None;
+        for (index, existing_builder) in self.builders.iter().enumerate() {
+            if builder == *existing_builder {
+                reference_option = Some(HypothesisReference::new(index));
+                break;
+            }
+        }
+
+        let reference = match reference_option {
+            Some(reference) => reference,
+            None => {
+                let reference = HypothesisReference::new(self.builders.len());
+                self.builders.push(builder);
+                reference
+            }
+        };
+
+        if let Some(dependencies) = &mut self.dependencies {
+            let dependencies_index = dependencies.hypotheses.len() - 1;
+            dependencies.hypotheses[dependencies_index].push(reference.clone());
+        }
+
+        reference
+    }
+
+    fn register_desire_consumer(&mut self, desire: DesireType) -> DesireConsumerReference {
+        let index = self.register_desire_core(desire.clone());
+        let reference = DesireConsumerReference::new(index);
+
+        if let Some(dependencies) = self.dependencies.as_mut() {
+            let consumers = dependencies
+                .desire_consumers
+                .last_mut()
+                .expect("Consumer entry should exist!");
+            for existing_reference in consumers.iter() {
+                if reference == *existing_reference {
+                    return reference;
+                }
+            }
+
+            consumers.push(reference.clone());
+        }
+
+        reference
+    }
+
+    fn register_desire_producer(&mut self, desire: DesireType) -> DesireProducerReference {
+        let index = self.register_desire_core(desire.clone());
+        let reference = DesireProducerReference::new(index);
+
+        if let Some(dependencies) = self.dependencies.as_mut() {
+            let producers = dependencies
+                .desire_producers
+                .last_mut()
+                .expect("Producer entry should exist!");
+            for existing_reference in producers.iter() {
+                if reference == *existing_reference {
+                    return reference;
+                }
+            }
+
+            producers.push(reference.clone());
+        }
+
+        reference
     }
 }

@@ -1,49 +1,39 @@
+use std::fmt::Display;
+
 use log::{Log, info};
 
-use crate::engine::{desire::Desire, hypothesis::HypothesisRepository, stack_data::StackData};
+use crate::engine::{desire::Desire, index_reference::IndexReference, stack_data::StackData};
 
-use super::HypothesisResult;
+use super::{Hypothesis, HypothesisResult};
 
-pub struct HypothesisInvocation<'a, TLog, TDesire>
-where
-    TLog: Log,
-    TDesire: Desire,
-{
-    inner: StackData<'a, TLog, TDesire>,
+pub trait HypothesisInvocation {
+    fn invoke(&mut self) -> HypothesisResult;
 }
 
-impl<'a, TLog, TDesire> HypothesisInvocation<'a, TLog, TDesire>
+impl<'a, TLog, THypothesis, TDesire> HypothesisInvocation
+    for StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
-    TDesire: Desire,
+    THypothesis: Hypothesis + Display,
+    TDesire: Desire + Display,
 {
-    fn new(stack_data: StackData<'a, TLog, TDesire>) -> Self {
-        Self { inner: stack_data }
-    }
+    fn invoke(&mut self) -> HypothesisResult {
+        let reference = self.current_reference();
 
-    fn enter(self) -> HypothesisResult {
-        let reference = self.inner.current_reference();
+        let mut hypothesis = self.hypotheses[reference.index()].borrow_mut();
 
-        let mut hypothesis = self.inner.hypotheses[reference.0].borrow_mut();
+        info!(logger: self.log, "{} Entering: {}", self.depth(), hypothesis);
 
-        info!(logger: self.inner.log, "{} Entering: {}", self.inner.depth(), hypothesis);
-        let repository = HypothesisRepository {
-            inner: self.inner.share(),
-        };
+        let hypo_return =
+            hypothesis.evaluate(self.log, self.depth(), self.game_state, self.share());
 
-        let hypo_return = hypothesis.evaluate(
-            self.inner.log,
-            self.inner.depth(),
-            self.inner.game_state,
-            repository,
-        );
+        let result = hypo_return.unpack();
+        info!(logger: self.log, "{} Result: {}", self.depth(), result);
 
-        info!(logger: self.inner.log, "{} Result: {}", self.inner.depth(), hypo_return.result);
-
-        if let HypothesisResult::Conclusive(_) = &hypo_return.result {
-            for producer_reference in &self.inner.dependencies.desire_producers[reference.0] {
-                let desire_data = self.inner.desire_data.borrow();
-                if desire_data[producer_reference.0]
+        if let HypothesisResult::Conclusive(_) = &result {
+            for producer_reference in &self.dependencies.desire_producers[reference.index()] {
+                let desire_data = self.desire_data.borrow();
+                if desire_data[producer_reference.index()]
                     .pending
                     .iter()
                     .any(|pending_reference| pending_reference == reference)
@@ -56,9 +46,9 @@ where
             }
         }
 
-        let mut current_data = self.inner.current_data.borrow_mut();
-        current_data.results[self.inner.current_reference().0] = Some(hypo_return.result.clone());
+        let mut current_data = self.current_data.borrow_mut();
+        current_data.results[self.current_reference().index()] = Some(result.clone());
 
-        hypo_return.result
+        result
     }
 }

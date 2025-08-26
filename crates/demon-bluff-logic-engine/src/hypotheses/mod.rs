@@ -1,15 +1,15 @@
 use std::fmt::Display;
 
-pub use self::master::MasterHypothesisBuilder;
 use self::{
     ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder},
     is_truly_archetype::{IsTrulyArchetypeHypothesis, IsTrulyArchetypeHypothesisBuilder},
     testimony_condemns::{TestimonyCondemnsHypothesis, TestimonyCondemnsHypothesisBuilder},
     true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder},
 };
+pub use self::{desires::DesireType, master::MasterHypothesisBuilder};
 
 use crate::{
-    engine::HypothesisBuilder,
+    engine::{Hypothesis, HypothesisBuilder},
     hypotheses::{
         ability::{AbilityHypothesis, AbilityHypothesisBuilder},
         archetype_in_play::{ArchetypeInPlayHypothesis, ArchetypeInPlayHypothesisBuilder},
@@ -37,7 +37,7 @@ mod ability;
 mod ability_index;
 mod archetype_in_play;
 mod corruption_in_play;
-pub(super) mod desires;
+mod desires;
 mod execute;
 mod execute_index;
 mod gather_information;

@@ -2,27 +2,25 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, decide_result,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
+        HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult, decide_result,
     },
     hypotheses::HypothesisType,
 };
 
-use super::ability_index::AbilityIndexHypothesisBuilder;
+use super::{DesireType, HypothesisBuilderType, ability_index::AbilityIndexHypothesisBuilder};
 
 #[derive(Eq, PartialEq, Debug, Default, Clone)]
 pub struct AbilityHypothesisBuilder {}
 
 impl HypothesisBuilder for AbilityHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let mut index_hypotheses = Vec::new();
         game_state.iter_villagers(|index, villager| {
             let has_ability = match villager {
@@ -53,18 +51,15 @@ impl Hypothesis for AbilityHypothesis {
         write!(f, "Ability Decision")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
+        _: &impl Log,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         if self.index_hypotheses.is_empty() {
-            return repository.create_return(HypothesisResult::impossible());
+            return repository.finalize(HypothesisResult::impossible());
         }
 
         let mut evaluator = repository.require_sub_evaluation(0.0);
@@ -78,6 +73,6 @@ impl Hypothesis for AbilityHypothesis {
         }
 
         let result = result.expect("There should be a result after iterating");
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

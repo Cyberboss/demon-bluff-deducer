@@ -2,9 +2,9 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    engine::{
+        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::{HypothesisBuilderType, HypothesisType},
 };
@@ -32,10 +32,11 @@ impl NegateHypothesisBuilder {
 }
 
 impl HypothesisBuilder for NegateHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let target_hypothesis = registrar.register_builder_type(*self.target_hypothesis_builder);
         NegateHypothesis { target_hypothesis }.into()
     }
@@ -46,22 +47,19 @@ impl Hypothesis for NegateHypothesis {
         write!(f, "Negate {}", self.target_hypothesis)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
         let result = evaluator
             .sub_evaluate(&self.target_hypothesis)
             .map(|fitness_and_action| fitness_and_action.invert());
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

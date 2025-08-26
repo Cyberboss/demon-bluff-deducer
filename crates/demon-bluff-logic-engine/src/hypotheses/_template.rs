@@ -2,8 +2,8 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::engine::{
-    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisReturn,
+    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+    HypothesisReference, HypothesisRegistrar, HypothesisRepository,
 };
 
 use super::HypothesisType;
@@ -43,7 +43,7 @@ impl Hypothesis for TemplateHypothesis {
         _: Depth,
         _: &GameState,
         repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
+    ) -> HypothesisEvaluation
     where
         TLog: Log,
     {
@@ -51,6 +51,6 @@ impl Hypothesis for TemplateHypothesis {
 
         let sub_result = evaluator.sub_evaluate(&self.sub_hypothesis);
 
-        evaluator.create_return(sub_result)
+        evaluator.finalize(sub_result)
     }
 }

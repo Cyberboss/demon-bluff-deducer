@@ -2,14 +2,17 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
+        HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        or_result,
+    },
     hypotheses::{
         HypothesisType, ability::AbilityHypothesisBuilder, reveal::RevealHypothesisBuilder,
     },
-    engine_old::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRepository,
-        HypothesisReturn, or_result,
-    },
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct GatherInformationHypothesisBuilder {}
@@ -21,14 +24,11 @@ pub struct GatherInformationHypothesis {
 }
 
 impl HypothesisBuilder for GatherInformationHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
-        _: &::demon_bluff_gameplay_engine::game_state::GameState,
-        registrar: &mut crate::engine_old::HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let reveal_hypothesis = registrar.register(RevealHypothesisBuilder::default());
         let ability_hypothesis = registrar.register(AbilityHypothesisBuilder::default());
         GatherInformationHypothesis {
@@ -44,16 +44,13 @@ impl Hypothesis for GatherInformationHypothesis {
         write!(f, "Gather Information")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
+        _: &impl Log,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(0.0);
 
         let result = or_result(
@@ -61,6 +58,6 @@ impl Hypothesis for GatherInformationHypothesis {
             evaluator.sub_evaluate(&self.reveal_hypothesis),
         );
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

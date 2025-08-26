@@ -4,12 +4,12 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use crate::engine_old::{
-    Depth, Hypothesis, HypothesisBuilder, HypothesisRegistrar, HypothesisRepository,
-    HypothesisResult, HypothesisReturn,
+use crate::engine::{
+    Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisRegistrar,
+    HypothesisRepository, HypothesisResult,
 };
 
-use super::HypothesisType;
+use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TrueIdentityHypothesisBuilder {
@@ -30,10 +30,11 @@ impl TrueIdentityHypothesisBuilder {
 }
 
 impl HypothesisBuilder for TrueIdentityHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, _: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         TrueIdentityHypothesis {
             index: self.index,
             archetype: self.archetype,
@@ -47,16 +48,13 @@ impl Hypothesis for TrueIdentityHypothesis {
         write!(f, "{} is a {}", self.index, self.archetype)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
-        repository.create_return(HypothesisResult::unimplemented())
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
+        repository.finalize(HypothesisResult::unimplemented())
     }
 }

@@ -23,11 +23,23 @@ where
             used,
         }
     }
+
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    pub fn used(&self) -> bool {
+        self.used
+    }
+
+    pub fn desire(&self) -> &TDesire {
+        &self.desire
+    }
 }
 
 impl<TDesire> Display for DesireDefinition<TDesire>
 where
-    TDesire: Desire,
+    TDesire: Desire + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(

@@ -1,18 +1,18 @@
 use demon_bluff_gameplay_engine::{
-    affect::Affect,
-    game_state::GameState,
-    villager::{VillagerArchetype, VillagerIndex},
+    affect::Affect, game_state::GameState, villager::VillagerArchetype,
 };
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
-        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
-        HypothesisReturn, or_result,
+    engine::{
+        Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+        HypothesisRepository, HypothesisResult, or_result,
     },
     hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
 };
+
+use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct CorruptionInPlayHypothesisBuilder {}
@@ -24,14 +24,11 @@ pub struct CorruptionInPlayHypothesis {
 }
 
 impl HypothesisBuilder for CorruptionInPlayHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let mut corrupting_archetype_hypotheses = Vec::new();
         for archetype in VillagerArchetype::iter() {
             if let Some(Affect::Corrupt(_)) = archetype.affect(game_state.total_villagers(), None) {
@@ -56,18 +53,15 @@ impl Hypothesis for CorruptionInPlayHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
-        _: Depth,
-        _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         if self.corrupting_archetype_hypotheses.is_empty() {
-            return repository.create_return(HypothesisResult::impossible());
+            return repository.finalize(HypothesisResult::impossible());
         }
 
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
@@ -81,6 +75,6 @@ impl Hypothesis for CorruptionInPlayHypothesis {
             })
         }
 
-        evaluator.create_return(sub_result.expect("Logic error in CorruptionInPlayHypothesis"))
+        evaluator.finalize(sub_result.expect("Logic error in CorruptionInPlayHypothesis"))
     }
 }

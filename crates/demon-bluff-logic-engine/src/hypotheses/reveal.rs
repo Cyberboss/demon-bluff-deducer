@@ -2,9 +2,9 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisReference,
-        HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn,
+    engine::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
         decide_result,
     },
     hypotheses::{HypothesisType, reveal_index::RevealIndexHypothesisBuilder},
@@ -19,14 +19,11 @@ pub struct RevealHypothesis {
 }
 
 impl HypothesisBuilder for RevealHypothesisBuilder {
-    fn build<TLog>(
+    fn build(
         self,
         game_state: &GameState,
-        registrar: &mut HypothesisRegistrar<TLog>,
-    ) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let mut revealable_hypotheses = Vec::new();
         game_state.iter_villagers(|villager_index, villager| match villager {
             Villager::Active(_) | Villager::Confirmed(_) => {}
@@ -51,19 +48,16 @@ impl Hypothesis for RevealHypothesis {
         write!(f, "Reveal Decision")
     }
 
-    fn evaluate<'a, 'b, TLog>(
-        &'a mut self,
-        _: &'a TLog,
-        _: Depth,
-        _: &'a GameState,
-        repository: HypothesisRepository<'b, TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+    fn evaluate(
+        &mut self,
+        log: &impl Log,
+        depth: Depth,
+        game_state: &GameState,
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         if self.revealable_hypotheses.is_empty() {
             return repository
-                .create_return(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
+                .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
         }
 
         let mut evaluator = repository.require_sub_evaluation(0.0);
@@ -77,6 +71,6 @@ impl Hypothesis for RevealHypothesis {
         }
 
         let result = result.expect("There should be a result after iterating");
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

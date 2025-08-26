@@ -1,16 +1,19 @@
+use std::fmt::Display;
+
 use log::{Log, info};
 
 use crate::engine::{
-    DesireConsumerReference, DesireProducerReference, desire::Desire, stack_data::StackData,
+    DesireConsumerReference, DesireProducerReference, desire::Desire,
+    fitness_and_action::FitnessAndAction, hypothesis::invocation::HypothesisInvocation,
+    index_reference::IndexReference, stack_data::StackData,
 };
 
 use super::{
-    Hypothesis, HypothesisEvaluation, HypothesisFinalizer, reference::HypothesisReference,
-    result::HypothesisResult,
+    Hypothesis, HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult,
 };
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
-pub trait HypothesisEvaluator: HypothesisFinalizer {
+pub trait HypothesisEvaluator: HypothesisFunctions {
     fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult;
     fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool);
     fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
@@ -20,76 +23,70 @@ impl<'a, TLog, THypothesis, TDesire> HypothesisEvaluator
     for StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
-    THypothesis: Hypothesis,
-    TDesire: Desire,
+    THypothesis: Hypothesis + Display,
+    TDesire: Desire + Display,
 {
     fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
-        let current_reference = self
-            .inner
-            .current_reference()
-            .expect("There should be at least one reference in the stack");
+        let current_reference = self.current_reference();
 
-        let mut current_data = self.inner.current_data.borrow_mut();
+        let mut current_data = self.current_data.borrow_mut();
         let mut force_conclusive = false;
-        if let Some(break_at) = self.inner.break_at
+        if let Some(break_at) = self.break_at
             && break_at == current_reference
         {
             info!(
-                logger: self.inner.log,
+                logger: self.log,
                 "{} Want to evaluate {} but we are breaking the cycle",
-                self.inner.depth(),
+                self.depth(),
                 hypothesis_reference
             );
 
             force_conclusive = true;
         } else {
-            if let Some(previous_data) = self.inner.previous_data
+            if let Some(previous_data) = self.previous_data
                 && let Some(HypothesisResult::Conclusive(previously_conclusive_result)) =
-                    &previous_data.results[hypothesis_reference.0]
+                    &previous_data.results[hypothesis_reference.index()]
             {
-                info!(logger: self.inner.log, "{} Skipping previously concluded hypothesis: {}", self.inner.depth(), hypothesis_reference);
-                current_data.results[hypothesis_reference.0] = Some(HypothesisResult::Conclusive(
-                    previously_conclusive_result.clone(),
-                ));
+                info!(logger: self.log, "{} Skipping previously concluded hypothesis: {}", self.depth(), hypothesis_reference);
+                current_data.results[hypothesis_reference.index()] = Some(
+                    HypothesisResult::Conclusive(previously_conclusive_result.clone()),
+                );
             } else {
-                match self.inner.hypotheses[hypothesis_reference.0].try_borrow_mut() {
+                match self.hypotheses[hypothesis_reference.index()].try_borrow_mut() {
                     Ok(next_reference) => {
                         // Important or entering the invocation will BorrowError
                         drop(current_data);
                         drop(next_reference);
 
-                        let invocation = HypothesisInvocation::new(
-                            self.inner.push(hypothesis_reference.clone()),
-                        );
+                        let mut invocation = self.push(hypothesis_reference.clone());
 
-                        return invocation.enter();
+                        return invocation.invoke();
                     }
                     Err(_) => {
                         info!(
-                            logger: self.inner.log,
+                            logger: self.log,
                             "{} Cycle detected when trying to evaluate reference {}",
-                            self.inner.depth(),
+                            self.depth(),
                             hypothesis_reference
                         );
 
-                        let cycle = self.inner.into_cycle(hypothesis_reference);
+                        let cycle = self.create_cycle(hypothesis_reference);
 
-                        let mut cycles = self.inner.cycles.borrow_mut();
+                        let mut cycles = self.cycles.borrow_mut();
                         cycles.insert(cycle);
                     }
                 }
             }
         }
 
-        let relevant_iteration_data = current_data.results[hypothesis_reference.0]
+        let relevant_iteration_data = current_data.results[hypothesis_reference.index()]
             .as_ref()
             .unwrap_or_else(|| {
-                self.inner
-                    .previous_data
+                self.previous_data
                     .expect("We shouldn't be using cached fitness data if none exists")
-                    .results[hypothesis_reference.0]
-                    .as_ref()
-                    .expect("Fitness for cycle break didn't previously exist")
+                    .results[hypothesis_reference.index()]
+                .as_ref()
+                .expect("Fitness for cycle break didn't previously exist")
             });
 
         let mut last_evaluate = relevant_iteration_data.clone();
@@ -102,9 +99,9 @@ where
         }
 
         info!(
-            logger: self.inner.log,
+            logger: self.log,
             "{} Using existing {} result: {}",
-            self.inner.depth(),
+            self.depth(),
             hypothesis_reference,
             last_evaluate
         );
@@ -113,10 +110,10 @@ where
     }
 
     fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool) {
-        let mut borrow = self.inner.desire_data.borrow_mut();
-        let data = &mut borrow[desire_reference.0];
+        let mut borrow = self.desire_data.borrow_mut();
+        let data = &mut borrow[desire_reference.index()];
 
-        let current_reference = self.inner.current_reference();
+        let current_reference = self.current_reference();
         data.pending.remove(current_reference);
 
         if desired {
@@ -127,16 +124,16 @@ where
             data.desired.remove(current_reference);
         }
 
-        info!(logger: self.inner.log, "{} Set {}: {}. Now {}", self.inner.depth(), desire_reference, desired, data);
+        info!(logger: self.log, "{} Set {}: {}. Now {}", self.depth(), desire_reference, desired, data);
     }
 
     fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
-        let definition = &self.inner.desire_definitions[desire_reference.0];
-        let borrow = self.inner.desire_data.borrow();
+        let definition = &self.desire_definitions[desire_reference.index()];
+        let borrow = self.desire_data.borrow();
 
-        let data = &borrow[desire_reference.0];
+        let data = &borrow[desire_reference.index()];
 
-        info!(logger: self.inner.log, "{} Read desire {} {} - {}", self.inner.depth(), desire_reference, definition.desire, data);
+        info!(logger: self.log, "{} Read desire {} {} - {}", self.depth(), desire_reference, definition.desire(), data);
         let total = data.total();
         let fitness = FitnessAndAction::new(
             if data.desired.len() == 0 {
@@ -149,7 +146,7 @@ where
         if data.pending.len() == 0 {
             HypothesisResult::Conclusive(fitness)
         } else {
-            info!(logger: self.inner.log, "{} Remaining Pending: {}", self.inner.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
+            info!(logger: self.log, "{} Remaining Pending: {}", self.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
             HypothesisResult::Pending(fitness)
         }
     }

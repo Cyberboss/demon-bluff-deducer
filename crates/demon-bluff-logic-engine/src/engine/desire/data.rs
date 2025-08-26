@@ -15,7 +15,7 @@ pub struct DesireData {
 }
 
 impl DesireData {
-    fn total(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.undesired.len() + self.pending.len() + self.desired.len()
     }
 }

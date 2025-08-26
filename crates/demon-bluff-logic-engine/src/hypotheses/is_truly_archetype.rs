@@ -4,14 +4,15 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use crate::engine_old::{
-    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisReference,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult, HypothesisReturn, and_result,
+use crate::engine::{
+    Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+    HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+    HypothesisRepository, HypothesisResult, and_result,
 };
 
 use super::{
-    HypothesisType,
-    archetype_in_play::{self, ArchetypeInPlayHypothesisBuilder},
+    DesireType, HypothesisBuilderType, HypothesisType,
+    archetype_in_play::ArchetypeInPlayHypothesisBuilder,
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -34,10 +35,11 @@ pub struct IsTrulyArchetypeHypothesis {
 }
 
 impl HypothesisBuilder for IsTrulyArchetypeHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        game_state: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let archetype_in_play_hypothesis = registrar.register(
             ArchetypeInPlayHypothesisBuilder::new(self.archetype.clone()),
         );
@@ -60,16 +62,13 @@ impl Hypothesis for IsTrulyArchetypeHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
+        _: &impl Log,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
         let archetype_in_play_result = evaluator.sub_evaluate(&self.archetype_in_play_hypothesis);
@@ -78,6 +77,6 @@ impl Hypothesis for IsTrulyArchetypeHypothesis {
 
         let result = and_result(archetype_in_play_result, is_truly_archetype_result);
 
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }

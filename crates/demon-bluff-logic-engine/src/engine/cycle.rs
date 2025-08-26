@@ -7,6 +7,16 @@ pub(super) struct Cycle {
     order_from_root: Vec<HypothesisReference>,
 }
 
+impl Cycle {
+    pub fn new(order_from_root: Vec<HypothesisReference>) -> Self {
+        Self { order_from_root }
+    }
+
+    pub fn references(&self) -> &Vec<HypothesisReference> {
+        &self.order_from_root
+    }
+}
+
 impl Display for Cycle {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut first = true;

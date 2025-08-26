@@ -1,12 +1,10 @@
-use std::{cell::RefCell, collections::HashSet};
+use std::{cell::RefCell, collections::HashSet, fmt::Display};
 
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
-use crate::hypotheses::HypothesisType;
-
 use super::{
-    HypothesisReference,
+    HypothesisReference, IndexReference,
     cycle::Cycle,
     dependencies::DependencyData,
     depth::Depth,
@@ -17,36 +15,36 @@ use super::{
 };
 
 #[derive(Debug)]
-pub(super) struct StackData<'a, TLog, THypothesis, TDesire>
+pub struct StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
     THypothesis: Hypothesis,
-    TDesire: Desire,
+    TDesire: Desire + Display,
 {
     reference_stack: Vec<HypothesisReference>,
     pub log: &'a TLog,
     pub game_state: &'a GameState,
     pub cycles: &'a RefCell<HashSet<Cycle>>,
-    hypotheses: &'a Vec<RefCell<THypothesis>>,
+    pub hypotheses: &'a Vec<RefCell<THypothesis>>,
     pub previous_data: Option<&'a IterationData>,
-    current_data: &'a RefCell<IterationData>,
+    pub current_data: &'a RefCell<IterationData>,
     graph_builder: Option<&'a RefCell<GraphBuilder>>,
-    break_at: &'a Option<HypothesisReference>,
-    desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
-    desire_data: &'a RefCell<Vec<DesireData>>,
-    dependencies: &'a DependencyData,
+    pub break_at: &'a Option<HypothesisReference>,
+    pub desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
+    pub desire_data: &'a RefCell<Vec<DesireData>>,
+    pub dependencies: &'a DependencyData,
 }
 
 impl<'a, TLog, THypothesis, TDesire> StackData<'a, TLog, THypothesis, TDesire>
 where
     TLog: Log,
     THypothesis: Hypothesis,
-    TDesire: Desire,
+    TDesire: Desire + Display,
 {
     pub fn new(
         game_state: &'a GameState,
         log: &'a TLog,
-        hypotheses: &'a Vec<RefCell<HypothesisType>>,
+        hypotheses: &'a Vec<RefCell<THypothesis>>,
         cycles: &'a RefCell<HashSet<Cycle>>,
         previous_data: Option<&'a IterationData>,
         current_data: &'a RefCell<IterationData>,
@@ -149,6 +147,6 @@ where
 
     pub fn depth(&self) -> Depth {
         let reference = self.current_reference().clone();
-        Depth::new(self.reference_stack.len() - 1, reference);
+        Depth::new(self.reference_stack.len() - 1, Some(reference))
     }
 }

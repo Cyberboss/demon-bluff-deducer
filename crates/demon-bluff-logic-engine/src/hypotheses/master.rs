@@ -2,9 +2,10 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use crate::{
-    engine_old::{
-        Depth, Hypothesis, HypothesisBuilder, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult, HypothesisReturn, decide_result,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
+        HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+        HypothesisResult, decide_result,
     },
     hypotheses::{
         HypothesisType, execute::ExecuteHypothesisBuilder,
@@ -12,14 +13,17 @@ use crate::{
     },
 };
 
+use super::{HypothesisBuilderType, desires::DesireType};
+
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct MasterHypothesisBuilder {}
 
 impl HypothesisBuilder for MasterHypothesisBuilder {
-    fn build<TLog>(self, _: &GameState, registrar: &mut HypothesisRegistrar<TLog>) -> HypothesisType
-    where
-        TLog: ::log::Log,
-    {
+    fn build(
+        self,
+        _: &GameState,
+        registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
+    ) -> HypothesisType {
         let execute_hypothesis = registrar.register(ExecuteHypothesisBuilder::default());
         let info_hypothesis = registrar.register(GatherInformationHypothesisBuilder::default());
         MasterHypothesis {
@@ -41,16 +45,13 @@ impl Hypothesis for MasterHypothesis {
         write!(f, "Master Hypothesis")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate(
         &mut self,
-        _: &TLog,
+        _: &impl Log,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
-    ) -> HypothesisReturn
-    where
-        TLog: Log,
-    {
+        repository: impl HypothesisRepository,
+    ) -> HypothesisEvaluation {
         let mut evaluator = repository.require_sub_evaluation(0.0);
         let mut result = evaluator.sub_evaluate(&self.execute_hypothesis);
         match &result {
@@ -58,11 +59,11 @@ impl Hypothesis for MasterHypothesis {
             HypothesisResult::Conclusive(fitness_and_action) => {
                 if fitness_and_action.is_certain() {
                     return evaluator
-                        .create_return(HypothesisResult::Conclusive(fitness_and_action.clone()));
+                        .finalize(HypothesisResult::Conclusive(fitness_and_action.clone()));
                 }
             }
         }
         result = decide_result(evaluator.sub_evaluate(&self.info_hypothesis), result);
-        evaluator.create_return(result)
+        evaluator.finalize(result)
     }
 }
