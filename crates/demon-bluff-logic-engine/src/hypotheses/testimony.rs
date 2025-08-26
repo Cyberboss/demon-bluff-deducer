@@ -112,7 +112,7 @@ impl HypothesisBuilder for TestimonyHypothesisBuilder {
 
 impl Hypothesis for TestimonyHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Testimony of {} is true: {}", self.index, self.testimony)
+        write!(f, "Testimony from {}: {}", self.index, self.testimony)
     }
 
     fn wip(&self) -> bool {

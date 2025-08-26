@@ -93,7 +93,7 @@ impl Hypothesis for TestimonyExpressionHypothesis {
     fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "Evaluate testimony expression from {}: {}",
+            "Testimony from {}: {}",
             self.index, self.expression_friendly
         )
     }
