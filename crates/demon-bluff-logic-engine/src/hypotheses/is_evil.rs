@@ -17,7 +17,9 @@ use crate::{
 };
 
 use super::{
-    DesireType, HypothesisBuilderType, is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
+    DesireType, HypothesisBuilderType,
+    all_evils_accounted_for::AllEvilsAccountedForHypothesisBuilder,
+    is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
     testimony_condemns::TestimonyCondemnsHypothesisBuilder,
 };
 
@@ -34,6 +36,7 @@ pub struct IsEvilHypothesis {
     testimonies_exonerating: Vec<HypothesisReference>,
     is_lying_hypothesis: HypothesisReference,
     not_corrupt_hypothesis: HypothesisReference,
+    any_evil_slots_left_hypothesis: HypothesisReference,
 }
 
 impl IsEvilHypothesisBuilder {
@@ -91,6 +94,10 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
             IsCorruptHypothesisBuilder::new(self.index.clone()),
         ));
 
+        let any_evil_slots_left_hypothesis = registrar.register(NegateHypothesisBuilder::new(
+            AllEvilsAccountedForHypothesisBuilder::default(),
+        ));
+
         IsEvilHypothesis {
             index: self.index,
             is_non_liar_hypotheses,
@@ -98,6 +105,7 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
             is_lying_hypothesis,
             testimonies_condemming,
             testimonies_exonerating,
+            any_evil_slots_left_hypothesis,
         }
         .into()
     }
@@ -170,7 +178,7 @@ impl Hypothesis for IsEvilHypothesis {
             });
         }
 
-        let result = match testimonies_condemning_result {
+        let penultimate_result = match testimonies_condemning_result {
             Some(condeming_result) => match testimonies_exonerating_result {
                 Some(exonerating_result) => or_result(
                     evil_2_result,
@@ -189,6 +197,11 @@ impl Hypothesis for IsEvilHypothesis {
                 None => evil_2_result,
             },
         };
+
+        let any_evil_slots_left_result =
+            evaluator.sub_evaluate(&self.any_evil_slots_left_hypothesis);
+
+        let result = and_result(any_evil_slots_left_result, penultimate_result);
 
         evaluator.finalize(result)
     }

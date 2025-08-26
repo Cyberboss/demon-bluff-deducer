@@ -1,5 +1,9 @@
 use std::fmt::Display;
 
+use all_evils_accounted_for::{
+    AllEvilsAccountedForHypothesis, AllEvilsAccountedForHypothesisBuilder,
+};
+
 use self::{
     ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder},
     is_truly_archetype::{IsTrulyArchetypeHypothesis, IsTrulyArchetypeHypothesisBuilder},
@@ -35,6 +39,7 @@ use crate::{
 
 mod ability;
 mod ability_index;
+mod all_evils_accounted_for;
 mod archetype_in_play;
 mod corruption_in_play;
 mod desires;
@@ -80,6 +85,7 @@ pub enum HypothesisBuilderType {
     AbilityIndex(AbilityIndexHypothesisBuilder),
     IsTrulyArchetype(IsTrulyArchetypeHypothesisBuilder),
     TestimonyCondemns(TestimonyCondemnsHypothesisBuilder),
+    AllEvilsAccountedFor(AllEvilsAccountedForHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]
@@ -106,6 +112,7 @@ pub enum HypothesisType {
     AbilityIndex(AbilityIndexHypothesis),
     IsTrulyArchetype(IsTrulyArchetypeHypothesis),
     TestimonyCondemns(TestimonyCondemnsHypothesis),
+    AllEvilsAccountedFor(AllEvilsAccountedForHypothesis),
 }
 
 impl Display for HypothesisType {
