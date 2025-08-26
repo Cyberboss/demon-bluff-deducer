@@ -262,7 +262,7 @@ impl Testimony {
                     start_index,
                     total_villagers,
                     1,
-                    true,
+                    false,
                 )))),
             )
         } else if amount == 0 {
@@ -277,7 +277,7 @@ impl Testimony {
                     start_index,
                     total_villagers,
                     1,
-                    true,
+                    false,
                 )))),
             )
         } else {
@@ -293,7 +293,7 @@ impl Testimony {
                         start_index,
                         total_villagers,
                         1,
-                        true,
+                        false,
                     )))),
                 )),
                 Box::new(Expression::And(
@@ -307,7 +307,7 @@ impl Testimony {
                         start_index,
                         total_villagers,
                         1,
-                        true,
+                        false,
                     )))),
                 )),
             )
