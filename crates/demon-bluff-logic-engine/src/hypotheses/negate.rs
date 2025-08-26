@@ -5,7 +5,7 @@ use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
         HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-        HypothesisRepository, HypothesisResult,
+        HypothesisRepository,
     },
     hypotheses::{HypothesisBuilderType, HypothesisType},
 };
@@ -37,7 +37,7 @@ impl NegateHypothesisBuilder {
 impl HypothesisBuilder for NegateHypothesisBuilder {
     fn build(
         self,
-        game_state: &GameState,
+        _: &GameState,
         registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
     ) -> HypothesisType {
         let target_hypothesis = registrar.register_builder_type(*self.target_hypothesis_builder);
