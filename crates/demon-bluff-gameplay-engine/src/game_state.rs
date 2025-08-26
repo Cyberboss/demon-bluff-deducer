@@ -605,7 +605,7 @@ impl GameState {
                         {
                             match result.slayer_kill {
                                 Some(local_slayer_kill) => {
-                                    if local_slayer_kill.target != *slay_testimony {
+                                    if local_slayer_kill.target != *slay_testimony.index() {
                                         return Err(GameStateMutationError::SlayerKillDataMismatch);
                                     }
 

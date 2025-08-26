@@ -34,6 +34,12 @@ pub enum BakerClaim {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SlayResult {
+    index: VillagerIndex,
+    slayed: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RoleClaim {
     villager: VillagerIndex,
     archetype: VillagerArchetype,
@@ -60,10 +66,9 @@ impl Display for EvilPairsClaim {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Testimony {
     Good(VillagerIndex),
-    Real(VillagerIndex),
     Evil(VillagerIndex),
     Corrupt(VillagerIndex),
     NotCorrupt(VillagerIndex),
@@ -78,7 +83,7 @@ pub enum Testimony {
     Affected(VillagerIndex),
     FakeEvil(VillagerIndex),
     SelfDestruct(VillagerIndex),
-    Slayed(VillagerIndex),
+    Slayed(SlayResult),
     Confess(ConfessorClaim),
 }
 
@@ -94,6 +99,20 @@ impl RoleClaim {
             villager,
             archetype,
         }
+    }
+}
+
+impl SlayResult {
+    pub fn new(index: VillagerIndex, slayed: bool) -> Self {
+        Self { index, slayed }
+    }
+
+    pub fn slayed(&self) -> bool {
+        self.slayed
+    }
+
+    pub fn index(&self) -> &VillagerIndex {
+        &self.index
     }
 }
 
@@ -292,6 +311,43 @@ impl Testimony {
                     )))),
                 )),
             )
+        }
+    }
+}
+
+impl Display for Testimony {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Good(villager_index) => write!(f, "{} is good", villager_index),
+            Self::Evil(villager_index) => write!(f, "{} is evil", villager_index),
+            Self::Corrupt(villager_index) => write!(f, "{} is corrupt", villager_index),
+            Self::NotCorrupt(villager_index) => write!(f, "{} is not corrupt", villager_index),
+            Self::Lying(villager_index) => write!(f, "{} is lying", villager_index),
+            Self::Cured(villager_index) => write!(f, "{} was cured of corruption", villager_index),
+            Self::Architect(architect_claim) => write!(f, "{} side(s) more evil", architect_claim),
+            Self::Baker(baker_claim) => match baker_claim {
+                BakerClaim::Original => write!(f, "I was the OG Baker"),
+                BakerClaim::Was(villager_archetype) => write!(f, "I was a {}", villager_archetype),
+            },
+            Self::Role(role_claim) => {
+                write!(f, "{} is a {}", role_claim.villager, role_claim.archetype)
+            }
+            Self::Enlightened(direction) => write!(f, "Closest evil is {}", direction),
+            Self::Invincible(villager_index) => write!(f, "{} is invincible", villager_index),
+            Self::Knitter(evil_pairs_claim) => write!(f, "{} evil pairs present", evil_pairs_claim),
+            Self::Affected(villager_index) => write!(f, "{} was affected", villager_index),
+            Self::FakeEvil(villager_index) => write!(f, "{} looks evil but isn't", villager_index),
+            Self::SelfDestruct(villager_index) => {
+                write!(f, "{} will self destruct", villager_index)
+            }
+            Self::Slayed(slay_result) => {
+                if slay_result.slayed {
+                    write!(f, "I killed {}", slay_result.index)
+                } else {
+                    write!(f, "I couldn't kill {}", slay_result.index)
+                }
+            }
+            Self::Confess(confessor_claim) => write!(f, "I confess to being {}", confessor_claim),
         }
     }
 }

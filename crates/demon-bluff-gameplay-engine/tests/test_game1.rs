@@ -4,7 +4,7 @@ use demon_bluff_gameplay_engine::{
         AbilityResult, Action, DrawStats, GameStateMutationError, GameStateMutationResult,
         KillAttempt, KillData, KillResult, RevealResult, SlayerKill, new_game,
     },
-    testimony::{ArchitectClaim, BakerClaim, RoleClaim, Testimony},
+    testimony::{ArchitectClaim, BakerClaim, RoleClaim, SlayResult, Testimony},
     villager::{
         Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
     },
@@ -188,7 +188,10 @@ pub fn test_game_1() {
     mutation_result = state
         .mutate(Action::Ability(AbilityResult::new(
             VillagerIndex(0),
-            Some(Expression::Unary(Testimony::Slayed(VillagerIndex(1)))),
+            Some(Expression::Unary(Testimony::Slayed(SlayResult::new(
+                VillagerIndex(1),
+                true,
+            )))),
             Some(SlayerKill::new(
                 VillagerIndex(1),
                 KillResult::Revealed(
