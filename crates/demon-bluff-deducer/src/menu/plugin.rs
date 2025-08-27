@@ -4,9 +4,11 @@ use crate::root_state::RootState;
 
 use super::{
     components::on_main_menu_screen::OnMainMenuScreen,
-    setup::{main_menu_setup, menu_setup},
     state::MenuState,
-    systems::{button::button, despawn_screen, menu_action::menu_action},
+    systems::{
+        button::button, despawn_screen, main_menu_setup::main_menu_setup, menu_action::menu_action,
+        menu_setup::menu_setup,
+    },
 };
 
 pub struct MenuPlugin;

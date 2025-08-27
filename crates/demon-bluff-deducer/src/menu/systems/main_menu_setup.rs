@@ -3,15 +3,10 @@ use bevy::{color::palettes::css::CRIMSON, prelude::*};
 use crate::menu::{
     colours::{NORMAL_BUTTON, TEXT_COLOR},
     components::{button_action::MenuButtonAction, on_main_menu_screen::OnMainMenuScreen},
+    state::MenuState,
 };
 
-use super::state::MenuState;
-
-pub fn menu_setup(mut menu_state: ResMut<NextState<MenuState>>) {
-    menu_state.set(MenuState::Main);
-}
-
-pub fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn main_menu_setup(mut commands: Commands) {
     // Common style for all buttons on the screen
     let button_node = Node {
         width: Val::Px(300.0),
@@ -19,14 +14,6 @@ pub fn main_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         margin: UiRect::all(Val::Px(20.0)),
         justify_content: JustifyContent::Center,
         align_items: AlignItems::Center,
-        ..default()
-    };
-    let button_icon_node = Node {
-        width: Val::Px(30.0),
-        // This takes the icons out of the flexbox flow, to be positioned exactly
-        position_type: PositionType::Absolute,
-        // The icon will be close to the left border of the button
-        left: Val::Px(10.0),
         ..default()
     };
     let button_text_font = TextFont {

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use menu::MenuPlugin;
 use root_state::RootState;
 
+mod evaluator;
 mod menu;
 mod root_state;
 
