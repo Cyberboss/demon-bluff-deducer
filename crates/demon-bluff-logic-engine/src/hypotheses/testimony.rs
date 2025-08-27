@@ -12,7 +12,8 @@ use crate::{
         HypothesisRegistrar, HypothesisRepository, HypothesisResult,
     },
     hypotheses::{
-        HypothesisType, is_corrupt::IsCorruptHypothesisBuilder, is_evil::IsEvilHypothesisBuilder,
+        HypothesisType, appears_evil::AppearsEvilHypothesisBuilder,
+        is_corrupt::IsCorruptHypothesisBuilder, is_evil::IsEvilHypothesisBuilder,
         is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
         is_truthful::IsTruthfulHypothesisBuilder, negate::NegateHypothesisBuilder,
     },
@@ -64,7 +65,7 @@ impl HypothesisBuilder for TestimonyHypothesisBuilder {
                 }
             }
             Testimony::Evil(villager_index) => {
-                Some(IsEvilHypothesisBuilder::new(villager_index.clone()).into())
+                Some(AppearsEvilHypothesisBuilder::new(villager_index.clone()).into())
             }
             Testimony::Corrupt(villager_index) => {
                 Some(IsCorruptHypothesisBuilder::new(villager_index.clone()).into())
