@@ -3,13 +3,11 @@ mod context;
 mod desire_node;
 mod hypothesis_node;
 mod node;
-mod node_type;
 
 pub use self::{
     breakpoint::Breakpoint,
-    context::{DebuggerContext, create_debugger_context},
+    context::{DebuggerContext, create_debugger_context, nodes_mut},
     desire_node::DesireNode,
-    hypothesis_node::HypothesisNode,
+    hypothesis_node::{HypothesisNode, create_hypothesis_node},
     node::Node,
-    node_type::NodeType,
 };

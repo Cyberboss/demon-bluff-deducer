@@ -1,5 +1,6 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, error, info};
+use serde::de;
 use std::{
     cell::RefCell,
     collections::HashSet,
@@ -16,7 +17,7 @@ use self::{
     stack_data::StackData,
 };
 pub use self::{
-    debugger::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node, NodeType},
+    debugger::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node},
     depth::Depth,
     desire::{Desire, DesireConsumerReference, DesireProducerReference},
     fitness_and_action::{
@@ -60,17 +61,20 @@ where
     TLog: Log,
     F: FnMut(Breakpoint),
 {
-    let debugger = breakpoint_handler.map(|breakpoint_handler| {
-        (
-            Arc::new(Mutex::new(create_debugger_context())),
-            breakpoint_handler,
-        )
+    let mut debugger = breakpoint_handler.map(|mut breaker| {
+        let debugger_arc = Arc::new(Mutex::new(create_debugger_context()));
+        breaker(Breakpoint::Initialize(debugger_arc.clone()));
+        (debugger_arc, breaker)
     });
 
     let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 
     info!(logger: log, target: "evaluate", "Evaluate dependencies");
-    let graph = registrar.run(game_state, initial_hypothesis_builder.into());
+    let graph = registrar.run(
+        game_state,
+        initial_hypothesis_builder.into(),
+        debugger.as_mut(),
+    );
 
     info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", graph.hypotheses.len(), graph.hypotheses[graph.root.index()]);
 

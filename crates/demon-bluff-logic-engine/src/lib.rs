@@ -11,7 +11,7 @@ use engine::evaluate;
 use log::Log;
 
 pub use self::{
-    engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node, NodeType},
+    engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node},
     player_action::PlayerAction,
     prediction_error::PredictionError,
 };

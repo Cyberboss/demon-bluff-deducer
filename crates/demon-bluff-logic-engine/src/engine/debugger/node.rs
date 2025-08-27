@@ -1,6 +1,6 @@
-use crate::engine::debugger::node_type::NodeType;
+use crate::engine::debugger::{desire_node::DesireNode, hypothesis_node::HypothesisNode};
 
-pub struct Node {
-    node_type: NodeType,
-    index: usize,
+pub enum Node {
+    Hypothesis(HypothesisNode),
+    Desire(DesireNode),
 }

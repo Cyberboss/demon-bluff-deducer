@@ -1,9 +1,13 @@
+use std::sync::{Arc, Mutex};
+
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, info};
 
 use crate::{
+    Breakpoint, DebuggerContext, Node,
     engine::{
         DesireConsumerReference, DesireProducerReference,
+        debugger::{create_hypothesis_node, nodes_mut},
         dependencies::DependencyData,
         desire::{Desire, DesireDefinition},
         index_reference::IndexReference,
@@ -66,13 +70,15 @@ where
         reference
     }
 
-    pub(in crate::engine) fn run<HypothesisBuilderImpl>(
+    pub(in crate::engine) fn run<THypothesisBuilderImpl, FDebugBreak>(
         mut self,
         game_state: &GameState,
-        builder: HypothesisBuilderImpl,
+        builder: THypothesisBuilderImpl,
+        debugger: Option<&mut (Arc<Mutex<DebuggerContext>>, FDebugBreak)>,
     ) -> HypothesisGraphData<HypothesisType, DesireType>
     where
-        HypothesisBuilderType: From<HypothesisBuilderImpl>,
+        HypothesisBuilderType: From<THypothesisBuilderImpl>,
+        FDebugBreak: FnMut(Breakpoint),
     {
         let mut current_reference = self.builders.len();
         let root_reference = HypothesisReference::new(current_reference);
@@ -110,7 +116,30 @@ where
 
         for (index, builder) in self.builders.clone().into_iter().enumerate() {
             let hypothesis = builder.build(game_state, &mut self).into();
+
             info!(logger: self.log, "{}: {}", HypothesisReference::new(index), hypothesis);
+            if let Some((debugger, breaker)) = debugger {
+                let mut debugger = debugger.lock().expect("Debugger lock was poisoned!");
+                let node = create_hypothesis_node(
+                    format!("{}", hypothesis),
+                    dependencies.hypotheses[index]
+                        .iter()
+                        .map(|reference| reference.index())
+                        .collect(),
+                    dependencies.desire_producers[index]
+                        .iter()
+                        .map(|reference| reference.index())
+                        .collect(),
+                    dependencies.desire_consumers[index]
+                        .iter()
+                        .map(|reference| reference.index())
+                        .collect(),
+                );
+
+                nodes_mut(&mut debugger).push(Node::Hypothesis(node));
+                breaker(Breakpoint::RegisterNode(index))
+            }
+
             for dependency in &dependencies.hypotheses[index] {
                 info!(logger: self.log, "- {}", dependency);
             }
