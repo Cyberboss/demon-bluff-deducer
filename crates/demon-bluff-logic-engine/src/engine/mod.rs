@@ -1,9 +1,14 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, error, info};
-use std::{cell::RefCell, collections::HashSet};
+use std::{
+    cell::RefCell,
+    collections::HashSet,
+    sync::{Arc, Mutex},
+};
 
 use self::{
     cycle::Cycle,
+    debugger::create_debugger_context,
     desire::DesireData,
     hypothesis::{HypothesisInvocation, HypothesisRegistrarImpl},
     index_reference::IndexReference,
@@ -11,7 +16,7 @@ use self::{
     stack_data::StackData,
 };
 pub use self::{
-    debugger::Debugger,
+    debugger::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node, NodeType},
     depth::Depth,
     desire::{Desire, DesireConsumerReference, DesireProducerReference},
     fitness_and_action::{
@@ -47,14 +52,21 @@ pub fn evaluate<TBuilder, TLog, F>(
     game_state: &GameState,
     initial_hypothesis_builder: TBuilder,
     log: &TLog,
-    _: Option<F>,
+    breakpoint_handler: Option<F>,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
     TBuilder: HypothesisBuilder,
     HypothesisBuilderType: From<TBuilder>,
     TLog: Log,
-    F: FnMut(&mut Debugger),
+    F: FnMut(Breakpoint),
 {
+    let debugger = breakpoint_handler.map(|breakpoint_handler| {
+        (
+            Arc::new(Mutex::new(create_debugger_context())),
+            breakpoint_handler,
+        )
+    });
+
     let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 
     info!(logger: log, target: "evaluate", "Evaluate dependencies");

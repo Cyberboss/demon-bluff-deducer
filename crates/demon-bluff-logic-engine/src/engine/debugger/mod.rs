@@ -1,26 +1,15 @@
 mod breakpoint;
-mod debug_break;
+mod context;
 mod desire_node;
 mod hypothesis_node;
 mod node;
 mod node_type;
 
-use debug_break::DebugBreak;
-use force_graph::ForceGraph;
-
-pub use self::node::Node;
-
-use super::FitnessAndAction;
-
-pub struct Debugger {
-    root_index: usize,
-    nodes: Vec<Node>,
-    graph: ForceGraph<usize, Option<FitnessAndAction>>,
-    last_debug_break: Option<usize>,
-}
-
-impl Debugger {
-    fn handle_break(debug_break: DebugBreak) {
-        todo!()
-    }
-}
+pub use self::{
+    breakpoint::Breakpoint,
+    context::{DebuggerContext, create_debugger_context},
+    desire_node::DesireNode,
+    hypothesis_node::HypothesisNode,
+    node::Node,
+    node_type::NodeType,
+};

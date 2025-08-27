@@ -10,7 +10,11 @@ use std::collections::HashSet;
 use engine::evaluate;
 use log::Log;
 
-pub use self::{engine::Debugger, player_action::PlayerAction, prediction_error::PredictionError};
+pub use self::{
+    engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node, NodeType},
+    player_action::PlayerAction,
+    prediction_error::PredictionError,
+};
 use demon_bluff_gameplay_engine::game_state::GameState;
 
 use crate::hypotheses::MasterHypothesisBuilder;
@@ -18,16 +22,16 @@ use crate::hypotheses::MasterHypothesisBuilder;
 pub fn predict_with_debugger<F>(
     log: &impl Log,
     state: &GameState,
-    debugger: F,
+    breakpoint_handler: F,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
-    F: FnMut(&mut Debugger),
+    F: FnMut(Breakpoint),
 {
     evaluate(
         state,
         MasterHypothesisBuilder::default(),
         log,
-        Some(debugger),
+        Some(breakpoint_handler),
     )
 }
 
@@ -39,6 +43,6 @@ pub fn predict(
         state,
         MasterHypothesisBuilder::default(),
         log,
-        None::<fn(&mut Debugger)>,
+        None::<fn(Breakpoint)>,
     )
 }

@@ -1,11 +1,17 @@
-use crate::engine::{Cycle, debugger::node::Node};
+use std::sync::{Arc, Mutex};
 
-pub enum Breakpoint<'a> {
+use crate::engine::{Cycle, FitnessAndAction};
+
+use super::context::DebuggerContext;
+
+pub enum Breakpoint {
+    Initialize(Arc<Mutex<DebuggerContext>>),
     RegisterNode(usize),
     IterationStart(usize),
     EnterNode(usize),
+    ExitNode(usize),
     DesireUpdate(usize),
-    DetectCycle(&'a Cycle),
-    BreakCycle(&'a Cycle),
+    DetectCycle(Cycle),
+    BreakCycle(Cycle),
     IterationEnd(usize),
 }
