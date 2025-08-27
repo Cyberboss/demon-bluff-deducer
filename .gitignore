@@ -4,6 +4,7 @@
 !.gitignore
 !Cargo.lock
 !Cargo.toml
+!rustfmt.toml
 !rust-toolchain.toml
 !/.github/**
 !/crates/**
