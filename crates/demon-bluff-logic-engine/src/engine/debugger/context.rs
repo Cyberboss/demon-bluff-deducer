@@ -5,7 +5,7 @@ pub struct DebuggerContext {
 }
 
 impl DebuggerContext {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { nodes: Vec::new() }
     }
 
