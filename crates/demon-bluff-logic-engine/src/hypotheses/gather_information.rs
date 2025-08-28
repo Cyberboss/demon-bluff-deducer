@@ -1,6 +1,7 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType};
 use crate::{
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
@@ -11,8 +12,6 @@ use crate::{
         HypothesisType, ability::AbilityHypothesisBuilder, reveal::RevealHypothesisBuilder,
     },
 };
-
-use super::{DesireType, HypothesisBuilderType};
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub struct GatherInformationHypothesisBuilder {}

@@ -7,6 +7,7 @@ mod prediction_error;
 
 use std::collections::HashSet;
 
+use demon_bluff_gameplay_engine::game_state::GameState;
 use engine::evaluate;
 use log::Log;
 
@@ -15,8 +16,6 @@ pub use self::{
     player_action::PlayerAction,
     prediction_error::PredictionError,
 };
-use demon_bluff_gameplay_engine::game_state::GameState;
-
 use crate::hypotheses::MasterHypothesisBuilder;
 
 pub fn predict_with_debugger<F>(

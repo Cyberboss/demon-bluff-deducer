@@ -5,7 +5,6 @@ use super::{
     HypothesisBuilderType,
     desires::{DesireType, GetTestimonyDesire},
 };
-
 use crate::{
     engine::{
         Depth, DesireConsumerReference, Hypothesis, HypothesisBuilder, HypothesisEvaluation,

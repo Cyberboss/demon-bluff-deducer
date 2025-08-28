@@ -4,6 +4,12 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{
+    DesireType, HypothesisBuilderType,
+    all_evils_accounted_for::AllEvilsAccountedForHypothesisBuilder,
+    is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
+    testimony_condemns::TestimonyCondemnsHypothesisBuilder,
+};
 use crate::{
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
@@ -14,13 +20,6 @@ use crate::{
         HypothesisType, is_corrupt::IsCorruptHypothesisBuilder,
         is_truthful::IsTruthfulHypothesisBuilder, negate::NegateHypothesisBuilder,
     },
-};
-
-use super::{
-    DesireType, HypothesisBuilderType,
-    all_evils_accounted_for::AllEvilsAccountedForHypothesisBuilder,
-    is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
-    testimony_condemns::TestimonyCondemnsHypothesisBuilder,
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]

@@ -1,11 +1,12 @@
-use demon_bluff_gameplay_engine::game_state::GameState;
-use log::{Log, error, info};
-use serde::de;
 use std::{
     cell::RefCell,
     collections::HashSet,
     sync::{Arc, Mutex},
 };
+
+use demon_bluff_gameplay_engine::game_state::GameState;
+use log::{Log, error, info};
+use serde::de;
 
 use self::{
     cycle::Cycle,

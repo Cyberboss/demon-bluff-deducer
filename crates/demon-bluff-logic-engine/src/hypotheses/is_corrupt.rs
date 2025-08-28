@@ -1,6 +1,7 @@
 use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex};
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType};
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
@@ -13,8 +14,6 @@ use crate::{
         negate::NegateHypothesisBuilder,
     },
 };
-
-use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IsCorruptHypothesisBuilder {

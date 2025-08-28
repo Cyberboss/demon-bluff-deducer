@@ -3,6 +3,7 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType};
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
@@ -11,8 +12,6 @@ use crate::{
     },
     hypotheses::{HypothesisType, archetype_in_play::ArchetypeInPlayHypothesisBuilder},
 };
-
-use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct CorruptionInPlayHypothesisBuilder {}

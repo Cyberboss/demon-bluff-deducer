@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::root_state::RootState;
-
 use super::{
     components::on_main_menu_screen::OnMainMenuScreen,
     state::MenuState,
@@ -10,6 +8,7 @@ use super::{
         menu_setup::menu_setup,
     },
 };
+use crate::root_state::RootState;
 
 pub struct MenuPlugin;
 

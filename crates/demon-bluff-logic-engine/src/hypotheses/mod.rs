@@ -12,7 +12,6 @@ use self::{
     true_identity::{TrueIdentityHypothesis, TrueIdentityHypothesisBuilder},
 };
 pub use self::{desires::DesireType, master::MasterHypothesisBuilder};
-
 use crate::{
     engine::{Hypothesis, HypothesisBuilder},
     hypotheses::{

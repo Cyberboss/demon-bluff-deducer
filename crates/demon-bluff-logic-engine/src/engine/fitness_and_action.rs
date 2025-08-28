@@ -5,9 +5,8 @@ use std::{
 
 use serde::Serialize;
 
-use crate::player_action::PlayerAction;
-
 use super::HypothesisResult;
+use crate::player_action::PlayerAction;
 
 pub const FITNESS_UNKNOWN: f64 = 0.5;
 const FITNESS_UNIMPLEMENTED: f64 = 0.000123456789;

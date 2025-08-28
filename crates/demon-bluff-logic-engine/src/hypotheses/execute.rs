@@ -1,6 +1,7 @@
 use demon_bluff_gameplay_engine::{game_state::GameState, villager::Villager};
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType};
 use crate::{
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
@@ -9,8 +10,6 @@ use crate::{
     },
     hypotheses::{HypothesisType, execute_index::ExecuteIndexHypothesisBuilder},
 };
-
-use super::{DesireType, HypothesisBuilderType};
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct ExecuteHypothesisBuilder {}

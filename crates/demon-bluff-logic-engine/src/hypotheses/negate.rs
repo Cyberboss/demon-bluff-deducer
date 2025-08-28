@@ -1,6 +1,7 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
+use super::DesireType;
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
@@ -9,8 +10,6 @@ use crate::{
     },
     hypotheses::{HypothesisBuilderType, HypothesisType},
 };
-
-use super::DesireType;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct NegateHypothesisBuilder {

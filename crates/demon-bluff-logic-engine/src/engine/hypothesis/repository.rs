@@ -1,5 +1,6 @@
 use log::{Log, info};
 
+use super::{HypothesisEvaluator, HypothesisResult};
 use crate::{
     engine::{
         fitness_and_action::FitnessAndAction, index_reference::IndexReference,
@@ -7,8 +8,6 @@ use crate::{
     },
     hypotheses::{DesireType, HypothesisType},
 };
-
-use super::{HypothesisEvaluator, HypothesisResult};
 
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
 pub struct HypothesisRepository<'a, TLog>

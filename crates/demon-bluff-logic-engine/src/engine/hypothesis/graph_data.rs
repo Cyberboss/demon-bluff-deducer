@@ -1,9 +1,8 @@
+use super::{Hypothesis, reference::HypothesisReference};
 use crate::engine::{
     dependencies::DependencyData,
     desire::{Desire, DesireDefinition},
 };
-
-use super::{Hypothesis, reference::HypothesisReference};
 
 #[derive(Debug)]
 pub struct HypothesisGraphData<THypothesis, TDesire>

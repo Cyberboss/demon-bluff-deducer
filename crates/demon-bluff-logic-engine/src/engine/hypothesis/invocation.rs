@@ -1,11 +1,10 @@
 use log::{Log, info};
 
+use super::{Hypothesis, HypothesisResult};
 use crate::{
     engine::{HypothesisRepository, index_reference::IndexReference, stack_data::StackData},
     hypotheses::{DesireType, HypothesisType},
 };
-
-use super::{Hypothesis, HypothesisResult};
 
 pub trait HypothesisInvocation {
     fn invoke(&mut self) -> HypothesisResult;

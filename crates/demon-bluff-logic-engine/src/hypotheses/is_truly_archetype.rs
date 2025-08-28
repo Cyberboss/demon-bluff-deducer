@@ -4,15 +4,14 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{
+    DesireType, HypothesisBuilderType, HypothesisType,
+    archetype_in_play::ArchetypeInPlayHypothesisBuilder,
+};
 use crate::engine::{
     Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
     HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
     HypothesisRepository, HypothesisResult, and_result,
-};
-
-use super::{
-    DesireType, HypothesisBuilderType, HypothesisType,
-    archetype_in_play::ArchetypeInPlayHypothesisBuilder,
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]

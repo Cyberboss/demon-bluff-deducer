@@ -2,12 +2,11 @@ use std::fmt::Display;
 
 use log::{Log, info};
 
+use super::{Hypothesis, HypothesisEvaluation, HypothesisRepository, HypothesisResult};
 use crate::engine::{
     DesireConsumerReference, DesireProducerReference, desire::Desire,
     fitness_and_action::FitnessAndAction, index_reference::IndexReference, stack_data::StackData,
 };
-
-use super::{Hypothesis, HypothesisEvaluation, HypothesisRepository, HypothesisResult};
 
 pub trait HypothesisFunctions {
     fn finalize(self, result: HypothesisResult) -> HypothesisEvaluation;

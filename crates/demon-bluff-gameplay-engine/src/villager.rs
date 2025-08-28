@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::Serialize;
 use strum::{EnumIter, IntoEnumIterator};
 
@@ -6,7 +8,6 @@ use crate::{
     affect::{Affect, NightEffect, VillagerAffect},
     testimony::{Direction, Testimony},
 };
-use std::fmt::Display;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, Serialize)]
 pub struct VillagerIndex(pub usize);

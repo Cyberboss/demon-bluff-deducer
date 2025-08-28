@@ -1,5 +1,6 @@
 use log::{Log, info};
 
+use super::{HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult};
 use crate::{
     engine::{
         DesireConsumerReference, DesireProducerReference, fitness_and_action::FitnessAndAction,
@@ -8,8 +9,6 @@ use crate::{
     },
     hypotheses::{DesireType, HypothesisType},
 };
-
-use super::{HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult};
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
 pub trait HypothesisEvaluator<'a, TLog, THypothesis, TDesire>: HypothesisFunctions {

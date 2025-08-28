@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
-use crate::root_state::RootState;
-
 use super::{state::EvaluatorState, systems::init_evaluation::init_evaluation};
+use crate::root_state::RootState;
 
 pub struct EvaluatorPlugin;
 

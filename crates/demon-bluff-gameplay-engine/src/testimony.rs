@@ -1,6 +1,7 @@
+use std::fmt::Display;
+
 use itertools::Itertools;
 use serde::Serialize;
-use std::fmt::Display;
 
 use crate::{
     Expression, testimony,

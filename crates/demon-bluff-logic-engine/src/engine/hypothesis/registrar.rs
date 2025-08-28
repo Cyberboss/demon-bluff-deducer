@@ -3,6 +3,8 @@ use std::sync::{Arc, Mutex};
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, info};
 
+use super::{HypothesisReference, graph_data::HypothesisGraphData};
+use crate::engine::HypothesisBuilder;
 use crate::{
     Breakpoint, DebuggerContext, Node,
     engine::{
@@ -14,9 +16,6 @@ use crate::{
     },
     hypotheses::{DesireType, HypothesisBuilderType, HypothesisType},
 };
-
-use super::{HypothesisReference, graph_data::HypothesisGraphData};
-use crate::engine::HypothesisBuilder;
 
 pub trait HypothesisRegistrar<THypothesisBuilder, TDesire>
 where

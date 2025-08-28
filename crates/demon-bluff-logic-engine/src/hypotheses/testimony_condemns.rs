@@ -6,13 +6,12 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType, HypothesisType};
 use crate::engine::{
     Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
     HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
     HypothesisResult,
 };
-
-use super::{DesireType, HypothesisBuilderType, HypothesisType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TestimonyCondemnsHypothesisBuilder {

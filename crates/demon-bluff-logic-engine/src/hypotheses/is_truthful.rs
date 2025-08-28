@@ -4,6 +4,7 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType, desires::GetTestimonyDesire};
 use crate::{
     engine::{
         Depth, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis,
@@ -12,8 +13,6 @@ use crate::{
     },
     hypotheses::{HypothesisType, testimony_expression::TestimonyExpressionHypothesisBuilder},
 };
-
-use super::{DesireType, HypothesisBuilderType, desires::GetTestimonyDesire};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct IsTruthfulHypothesisBuilder {

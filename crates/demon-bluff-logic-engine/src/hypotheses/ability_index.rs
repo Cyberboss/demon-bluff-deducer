@@ -4,12 +4,11 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
 use crate::engine::{
     Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
     HypothesisRegistrar, HypothesisRepository, HypothesisResult,
 };
-
-use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct AbilityIndexHypothesisBuilder {

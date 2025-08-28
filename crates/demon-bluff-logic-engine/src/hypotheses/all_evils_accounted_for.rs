@@ -4,6 +4,7 @@ use demon_bluff_gameplay_engine::{game_state::GameState, villager::VillagerIndex
 use itertools::Itertools;
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType, is_evil::IsEvilHypothesisBuilder};
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
@@ -12,8 +13,6 @@ use crate::{
     },
     hypotheses::HypothesisType,
 };
-
-use super::{DesireType, HypothesisBuilderType, is_evil::IsEvilHypothesisBuilder};
 
 #[derive(Eq, PartialEq, Debug, Default, Clone)]
 pub struct AllEvilsAccountedForHypothesisBuilder {}

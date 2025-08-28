@@ -7,6 +7,9 @@ use demon_bluff_gameplay_engine::{
 };
 use log::{Log, error};
 
+use super::{
+    DesireType, HypothesisBuilderType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
+};
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
@@ -14,10 +17,6 @@ use crate::{
         HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_fitness, or_result,
     },
     hypotheses::HypothesisType,
-};
-
-use super::{
-    DesireType, HypothesisBuilderType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
 };
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]

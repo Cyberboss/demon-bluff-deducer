@@ -5,6 +5,7 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
+use super::{DesireType, HypothesisBuilderType};
 use crate::{
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
@@ -18,8 +19,6 @@ use crate::{
         is_truthful::IsTruthfulHypothesisBuilder, negate::NegateHypothesisBuilder,
     },
 };
-
-use super::{DesireType, HypothesisBuilderType};
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct TestimonyHypothesisBuilder {

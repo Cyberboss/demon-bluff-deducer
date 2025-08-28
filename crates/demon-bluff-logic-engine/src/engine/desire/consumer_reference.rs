@@ -1,8 +1,7 @@
 use std::fmt::{Display, Formatter};
 
-use crate::engine::index_reference::IndexReference;
-
 use super::fmt_desire;
+use crate::engine::index_reference::IndexReference;
 
 /// A reference to a [`DesireType`] that a [`Hypothesis`] uses in its own [`HypothesisResult`] calculation
 #[derive(Debug, PartialEq, Eq)]
