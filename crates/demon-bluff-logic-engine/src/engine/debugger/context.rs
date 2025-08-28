@@ -13,6 +13,14 @@ impl DebuggerContext {
 			desires: Vec::new(),
 		}
 	}
+
+	pub fn hypotheses(&self) -> &Vec<HypothesisNode> {
+		&self.hypotheses
+	}
+
+	pub fn desires(&self) -> &Vec<DesireNode> {
+		&self.desires
+	}
 }
 
 pub fn create_debugger_context() -> DebuggerContext {

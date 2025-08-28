@@ -1982,9 +1982,11 @@ name = "demon-bluff-deducer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-channel",
  "bevy",
  "demon-bluff-gameplay-engine",
  "demon-bluff-logic-engine",
+ "force_graph",
  "image",
  "log",
  "ocrs",
@@ -2012,7 +2014,6 @@ dependencies = [
  "demon-bluff-gameplay-engine",
  "enum-display-derive",
  "enum_delegate",
- "force_graph",
  "itertools 0.14.0",
  "log",
  "serde",

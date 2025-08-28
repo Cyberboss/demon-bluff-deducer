@@ -1,6 +1,7 @@
 mod components;
 mod events;
 mod plugin;
+mod resources;
 mod state;
 mod systems;
 

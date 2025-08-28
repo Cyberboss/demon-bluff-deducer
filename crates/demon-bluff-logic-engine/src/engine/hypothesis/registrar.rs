@@ -136,7 +136,7 @@ where
 
 				hypothesis_nodes_mut(&mut debugger_context).push(node);
 				drop(debugger_context);
-				debugger.breakpoint(Breakpoint::RegisterNode(index))
+				debugger.breakpoint(Breakpoint::RegisterHypothesis(index))
 			}
 
 			for dependency in &dependencies.hypotheses[index] {
@@ -177,6 +177,8 @@ where
 				let mut debugger_context = debugger.context();
 				let node = create_desire_node(definition.desire().clone(), definition.count());
 				desire_nodes_mut(&mut debugger_context).push(node);
+				drop(debugger_context);
+				debugger.breakpoint(Breakpoint::RegisterDesire(index))
 			}
 			desire_definitions.push(definition);
 		}

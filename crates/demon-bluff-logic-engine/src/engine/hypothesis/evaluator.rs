@@ -39,8 +39,9 @@ where
 			);
 
 			let cycle = self.create_cycle(hypothesis_reference);
+			let current_reference = current_reference.clone();
 			if let Some(debugger) = &mut self.debugger {
-				debugger.breakpoint(Breakpoint::BreakCycle(cycle));
+				debugger.breakpoint(Breakpoint::BreakCycle(cycle, current_reference.index()));
 			}
 
 			force_conclusive = true;

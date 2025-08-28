@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 demon-bluff-gameplay-engine = { path = "../demon-bluff-gameplay-engine" }
-force_graph = { git = "https://github.com/t-mw/force-graph-rs" }
 enum_delegate = "0.2.0"
 thiserror = "2.0.16"
 log = "0.4.27"

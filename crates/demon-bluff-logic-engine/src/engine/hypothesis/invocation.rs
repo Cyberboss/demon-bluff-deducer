@@ -30,7 +30,7 @@ where
 		info!(logger: self.log, "{} Entering: {}", self.depth(), hypothesis);
 
 		if let Some(debugger) = &mut self.debugger {
-			debugger.breakpoint(Breakpoint::EnterNode(reference.index()));
+			debugger.breakpoint(Breakpoint::EnterHypothesis(reference.index()));
 		}
 
 		let hypo_return = hypothesis.evaluate(
@@ -48,7 +48,7 @@ where
 				&result,
 			);
 			drop(guard);
-			debugger.breakpoint(Breakpoint::ExitNode(reference.index()));
+			debugger.breakpoint(Breakpoint::ExitHypothesis(reference.index()));
 		}
 
 		info!(logger: self.log, "{} Result: {}", self.depth(), result);
