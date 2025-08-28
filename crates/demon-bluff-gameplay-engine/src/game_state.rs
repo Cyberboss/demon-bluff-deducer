@@ -1,4 +1,4 @@
-use std::{iter::repeat, mem::replace};
+use std::mem::replace;
 
 use serde::Serialize;
 use thiserror::Error;
@@ -475,17 +475,11 @@ impl GameState {
                                         return Ok(GameStateMutationResult::Loss);
                                     }
                                     ExecutionResult::HealthDeduction(deduction) => {
-                                        health_deduction = health_deduction + deduction
+                                        health_deduction += deduction
                                     }
                                 }
 
-                                match confirmed_villager.true_identity() {
-                                    VillagerArchetype::Minion(minion) => match minion {
-                                        Minion::Witch => reset_cant_kills = true,
-                                        _ => {}
-                                    },
-                                    _ => {}
-                                }
+                                if let VillagerArchetype::Minion(minion) = confirmed_villager.true_identity() && minion == &Minion::Witch { reset_cant_kills = true }
 
                                 let _ = replace(
                                     target_villager,
@@ -536,17 +530,11 @@ impl GameState {
                                             return Ok(GameStateMutationResult::Loss);
                                         }
                                         ExecutionResult::HealthDeduction(deduction) => {
-                                            health_deduction = health_deduction + deduction
+                                            health_deduction += deduction
                                         }
                                     }
 
-                                    match confirmed_villager.true_identity() {
-                                        VillagerArchetype::Minion(minion) => match minion {
-                                            Minion::Witch => reset_cant_kills = true,
-                                            _ => {}
-                                        },
-                                        _ => {}
-                                    }
+                                    if let VillagerArchetype::Minion(minion) = confirmed_villager.true_identity() && minion == &Minion::Witch { reset_cant_kills = true }
                                     revealed = Some(attempt.target.clone());
                                     let _ = replace(
                                         target_villager,
@@ -632,13 +620,7 @@ impl GameState {
                                                 kill_data.true_identity.clone(),
                                                 kill_data.corrupted,
                                             );
-                                            match confirmed_villager.true_identity() {
-                                                VillagerArchetype::Minion(minion) => match minion {
-                                                    Minion::Witch => reset_cant_kills = true,
-                                                    _ => {}
-                                                },
-                                                _ => {}
-                                            }
+                                            if let VillagerArchetype::Minion(minion) = confirmed_villager.true_identity() && minion == &Minion::Witch { reset_cant_kills = true }
                                             let _ = replace(
                                                 target_villager,
                                                 Villager::Confirmed(confirmed_villager),
@@ -675,13 +657,7 @@ impl GameState {
                                                 kill_data.inner.true_identity.clone(),
                                                 kill_data.inner.corrupted,
                                             );
-                                            match confirmed_villager.true_identity() {
-                                                VillagerArchetype::Minion(minion) => match minion {
-                                                    Minion::Witch => reset_cant_kills = true,
-                                                    _ => {}
-                                                },
-                                                _ => {}
-                                            }
+                                            if let VillagerArchetype::Minion(minion) = confirmed_villager.true_identity() && minion == &Minion::Witch { reset_cant_kills = true }
                                             revealed = Some(slayer_kill.target.clone());
                                             let _ = replace(
                                                 target_villager,
@@ -775,7 +751,7 @@ impl GameState {
             return Ok(GameStateMutationResult::Win);
         }
 
-        return Ok(GameStateMutationResult::Continue);
+        Ok(GameStateMutationResult::Continue)
     }
 
     pub fn valid_draw(&self, archetype: &VillagerArchetype) -> bool {
@@ -794,8 +770,7 @@ pub fn new_game(
         if night_effects_active { Some(1) } else { None },
         draw_stats,
         deck,
-        repeat(0)
-            .take(total_villagers)
+        std::iter::repeat_n(0, total_villagers)
             .map(|_| Villager::Hidden(HiddenVillager::new(false, false, false)))
             .collect(),
         Vec::new(),
@@ -813,5 +788,5 @@ fn valid_draw(deck: &Vec<VillagerArchetype>, archetype: &VillagerArchetype) -> b
         }
     }
 
-    return false;
+    false
 }

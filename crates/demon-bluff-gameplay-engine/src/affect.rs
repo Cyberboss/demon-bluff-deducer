@@ -44,8 +44,8 @@ impl VillagerAffect {
                 break;
             }
 
-            test_index = test_index + 1;
-            left_distance = left_distance + 1;
+            test_index += 1;
+            left_distance += 1;
 
             if test_index == total_villagers {
                 test_index = 0;
@@ -59,12 +59,12 @@ impl VillagerAffect {
                 break;
             }
 
-            right_distance = right_distance + 1;
+            right_distance += 1;
 
             if test_index == 0 {
                 test_index = total_villagers - 1;
             } else {
-                test_index = test_index - 1;
+                test_index -= 1;
             }
         }
 

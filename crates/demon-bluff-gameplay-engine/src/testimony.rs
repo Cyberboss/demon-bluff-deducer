@@ -328,27 +328,27 @@ impl Testimony {
 impl Display for Testimony {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Good(villager_index) => write!(f, "{} is good", villager_index),
-            Self::Evil(villager_index) => write!(f, "{} is evil", villager_index),
-            Self::Corrupt(villager_index) => write!(f, "{} is corrupt", villager_index),
-            Self::NotCorrupt(villager_index) => write!(f, "{} is not corrupt", villager_index),
-            Self::Lying(villager_index) => write!(f, "{} is lying", villager_index),
-            Self::Cured(villager_index) => write!(f, "{} was cured of corruption", villager_index),
-            Self::Architect(architect_claim) => write!(f, "{} side(s) more evil", architect_claim),
+            Self::Good(villager_index) => write!(f, "{villager_index} is good"),
+            Self::Evil(villager_index) => write!(f, "{villager_index} is evil"),
+            Self::Corrupt(villager_index) => write!(f, "{villager_index} is corrupt"),
+            Self::NotCorrupt(villager_index) => write!(f, "{villager_index} is not corrupt"),
+            Self::Lying(villager_index) => write!(f, "{villager_index} is lying"),
+            Self::Cured(villager_index) => write!(f, "{villager_index} was cured of corruption"),
+            Self::Architect(architect_claim) => write!(f, "{architect_claim} side(s) more evil"),
             Self::Baker(baker_claim) => match baker_claim {
                 BakerClaim::Original => write!(f, "I was the OG Baker"),
-                BakerClaim::Was(villager_archetype) => write!(f, "I was a {}", villager_archetype),
+                BakerClaim::Was(villager_archetype) => write!(f, "I was a {villager_archetype}"),
             },
             Self::Role(role_claim) => {
                 write!(f, "{} is a {}", role_claim.villager, role_claim.archetype)
             }
-            Self::Enlightened(direction) => write!(f, "Closest evil is {}", direction),
-            Self::Invincible(villager_index) => write!(f, "{} is invincible", villager_index),
-            Self::Knitter(evil_pairs_claim) => write!(f, "{} evil pairs present", evil_pairs_claim),
-            Self::Affected(villager_index) => write!(f, "{} was affected", villager_index),
-            Self::FakeEvil(villager_index) => write!(f, "{} looks evil but isn't", villager_index),
+            Self::Enlightened(direction) => write!(f, "Closest evil is {direction}"),
+            Self::Invincible(villager_index) => write!(f, "{villager_index} is invincible"),
+            Self::Knitter(evil_pairs_claim) => write!(f, "{evil_pairs_claim} evil pairs present"),
+            Self::Affected(villager_index) => write!(f, "{villager_index} was affected"),
+            Self::FakeEvil(villager_index) => write!(f, "{villager_index} looks evil but isn't"),
             Self::SelfDestruct(villager_index) => {
-                write!(f, "{} will self destruct", villager_index)
+                write!(f, "{villager_index} will self destruct")
             }
             Self::Slayed(slay_result) => {
                 if slay_result.slayed {
@@ -357,7 +357,7 @@ impl Display for Testimony {
                     write!(f, "I couldn't kill {}", slay_result.index)
                 }
             }
-            Self::Confess(confessor_claim) => write!(f, "I confess to being {}", confessor_claim),
+            Self::Confess(confessor_claim) => write!(f, "I confess to being {confessor_claim}"),
         }
     }
 }
@@ -371,14 +371,14 @@ fn index_offset(
     let mut current_index = start_index.0;
     for _ in 0..offset {
         if clockwise {
-            current_index = current_index + 1;
+            current_index += 1;
             if current_index == total_villagers {
                 current_index = 0;
             }
         } else if current_index == 0 {
             current_index = total_villagers - 1;
         } else {
-            current_index = current_index - 1;
+            current_index -= 1;
         }
     }
 

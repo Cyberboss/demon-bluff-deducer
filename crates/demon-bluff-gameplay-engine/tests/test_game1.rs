@@ -228,6 +228,6 @@ pub fn test_game_1() {
     let mut i = 0;
     for revealed_index in state.reveal_order() {
         assert_eq!(VillagerIndex(i), *revealed_index);
-        i = i + 1;
+        i += 1;
     }
 }

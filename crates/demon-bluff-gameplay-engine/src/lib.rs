@@ -32,10 +32,10 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expression::Unary(item) => write!(f, "{}", item),
-            Expression::Not(expression) => write!(f, "!({})", expression),
-            Expression::And(lhs, rhs) => write!(f, "({} && {})", lhs, rhs),
-            Expression::Or(lhs, rhs) => write!(f, "({} || {})", lhs, rhs),
+            Expression::Unary(item) => write!(f, "{item}"),
+            Expression::Not(expression) => write!(f, "!({expression})"),
+            Expression::And(lhs, rhs) => write!(f, "({lhs} && {rhs})"),
+            Expression::Or(lhs, rhs) => write!(f, "({lhs} || {rhs})"),
         }
     }
 }

@@ -125,10 +125,10 @@ impl Display for VillagerIndex {
 impl VillagerArchetype {
     pub fn iter() -> impl Iterator<Item = VillagerArchetype> {
         GoodVillager::iter()
-            .map(|good| VillagerArchetype::GoodVillager(good))
-            .chain(Outcast::iter().map(|outcast| VillagerArchetype::Outcast(outcast)))
-            .chain(Minion::iter().map(|minion| VillagerArchetype::Minion(minion)))
-            .chain(Demon::iter().map(|demon| VillagerArchetype::Demon(demon)))
+            .map(VillagerArchetype::GoodVillager)
+            .chain(Outcast::iter().map(VillagerArchetype::Outcast))
+            .chain(Minion::iter().map(VillagerArchetype::Minion))
+            .chain(Demon::iter().map(VillagerArchetype::Demon))
     }
 
     pub fn is_evil(&self) -> bool {
@@ -183,11 +183,7 @@ impl VillagerArchetype {
     }
 
     pub fn appears_evil(&self) -> bool {
-        if VillagerArchetype::Outcast(Outcast::Wretch) == *self || self.is_evil() {
-            true
-        } else {
-            false
-        }
+        VillagerArchetype::Outcast(Outcast::Wretch) == *self || self.is_evil()
     }
 
     pub fn lies(&self) -> bool {
@@ -547,7 +543,7 @@ impl VillagerArchetype {
                         VillagerAffect::from_index(&index, &other_index, total_villagers)
                     }),
                 )
-                .map(|expr| Affect::Corrupt(expr)),
+                .map(Affect::Corrupt),
             },
             VillagerArchetype::Minion(minion) => match minion {
                 Minion::Counsellor => Some(Affect::Corrupt(Expression::Or(
