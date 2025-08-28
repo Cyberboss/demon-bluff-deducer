@@ -1,4 +1,3 @@
-use std::sync::{Arc, Mutex};
 
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, info};
@@ -7,7 +6,7 @@ use super::{HypothesisReference, graph_data::HypothesisGraphData};
 use crate::engine::HypothesisBuilder;
 use crate::engine::debugger::DebuggerData;
 use crate::{
-    Breakpoint, DebuggerContext, Node,
+    Breakpoint, Node,
     engine::{
         DesireConsumerReference, DesireProducerReference,
         debugger::{create_hypothesis_node, nodes_mut},

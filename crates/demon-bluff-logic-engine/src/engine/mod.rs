@@ -1,7 +1,6 @@
 use std::{
     cell::RefCell,
     collections::HashSet,
-    sync::{Arc, Mutex},
 };
 
 use debugger::DebuggerData;
@@ -60,7 +59,7 @@ where
     TLog: Log,
     F: FnMut(Breakpoint) + Clone,
 {
-    let mut debugger = breakpoint_handler.map(|mut breaker| DebuggerData::new(breaker));
+    let mut debugger = breakpoint_handler.map(|breaker| DebuggerData::new(breaker));
 
     let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 
