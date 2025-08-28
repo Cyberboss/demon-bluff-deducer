@@ -7,10 +7,12 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use super::{DesireType, HypothesisBuilderType, HypothesisType};
-use crate::engine::{
-    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-    HypothesisFunctions, HypothesisRegistrar, HypothesisRepository,
-    HypothesisResult,
+use crate::{
+    Breakpoint,
+    engine::{
+        Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+        HypothesisFunctions, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -68,15 +70,16 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let testimony = match game_state.villager(&self.testifier) {
             Villager::Active(active_villager) => active_villager.instance().testimony(),
@@ -109,11 +112,9 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
                         .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()))
                 }
             }
-            _ => {
-                repository.finalize(HypothesisResult::Conclusive(
-                    FitnessAndAction::unimplemented(),
-                ))
-            }
+            _ => repository.finalize(HypothesisResult::Conclusive(
+                FitnessAndAction::unimplemented(),
+            )),
         }
     }
 }

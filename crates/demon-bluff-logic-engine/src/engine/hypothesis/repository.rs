@@ -2,6 +2,7 @@ use log::{Log, info};
 
 use super::{HypothesisEvaluator, HypothesisResult};
 use crate::{
+    Breakpoint,
     engine::{
         fitness_and_action::FitnessAndAction, index_reference::IndexReference,
         stack_data::StackData,
@@ -10,19 +11,21 @@ use crate::{
 };
 
 /// A repository of hypotheses available to a single `Hypothesis` during evaluation.
-pub struct HypothesisRepository<'a, TLog>
+pub struct HypothesisRepository<'a, TLog, FDebugBreak>
 where
     TLog: Log,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
-    pub(super) stack_data: StackData<'a, TLog, HypothesisType, DesireType>,
+    pub(super) stack_data: StackData<'a, TLog, HypothesisType, DesireType, FDebugBreak>,
 }
 
-impl<'a, TLog> HypothesisRepository<'a, TLog>
+impl<'a, TLog, FDebugBreak> HypothesisRepository<'a, TLog, FDebugBreak>
 where
     TLog: Log,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     pub(in crate::engine) fn new(
-        stack_data: StackData<'a, TLog, HypothesisType, DesireType>,
+        stack_data: StackData<'a, TLog, HypothesisType, DesireType, FDebugBreak>,
     ) -> Self {
         Self { stack_data }
     }
@@ -31,7 +34,7 @@ where
     pub fn require_sub_evaluation(
         self,
         initial_fitness: f64,
-    ) -> impl HypothesisEvaluator<'a, TLog, HypothesisType, DesireType> {
+    ) -> impl HypothesisEvaluator<'a, TLog, HypothesisType, DesireType, FDebugBreak> {
         let mut data = self.stack_data.current_data.borrow_mut();
         match &data.results[self.stack_data.current_reference().index()] {
             Some(_) => {}

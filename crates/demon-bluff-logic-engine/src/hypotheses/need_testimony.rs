@@ -6,6 +6,7 @@ use super::{
     desires::{DesireType, GetTestimonyDesire},
 };
 use crate::{
+    Breakpoint,
     engine::{
         Depth, DesireConsumerReference, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
         HypothesisFunctions, HypothesisRegistrar, HypothesisRepository,
@@ -52,15 +53,16 @@ impl Hypothesis for NeedTestimonyHypothesis {
         write!(f, "Need testimony of {}", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let result = repository.desire_result(&self.get_testimony_desire);
         repository.finalize(result)

@@ -1,5 +1,6 @@
 use crate::engine::{FitnessAndAction, HypothesisResult};
 
+#[derive(Debug)]
 pub struct HypothesisNode {
     description: String,
     hypothesis_dependencies: Vec<usize>,

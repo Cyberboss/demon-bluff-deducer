@@ -7,6 +7,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
         HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
@@ -63,15 +64,16 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         log: &TLog,
         depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         // step one, eliminate the possibility if it's not in the deck
         // currently the only case where an archetype not in the deck can appear is the puppeteer

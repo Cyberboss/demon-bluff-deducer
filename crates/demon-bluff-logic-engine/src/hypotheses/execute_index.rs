@@ -3,6 +3,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
         HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
@@ -50,15 +51,16 @@ impl Hypothesis for ExecuteIndexHypothesis {
         write!(f, "Execute Villager {}", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let estimated_evils =
             (game_state.draw_stats().demons() + game_state.draw_stats().minions()) as f64;

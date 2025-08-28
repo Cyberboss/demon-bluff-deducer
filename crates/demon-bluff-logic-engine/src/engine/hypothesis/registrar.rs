@@ -5,6 +5,7 @@ use log::{Log, info};
 
 use super::{HypothesisReference, graph_data::HypothesisGraphData};
 use crate::engine::HypothesisBuilder;
+use crate::engine::debugger::DebuggerData;
 use crate::{
     Breakpoint, DebuggerContext, Node,
     engine::{
@@ -73,11 +74,11 @@ where
         mut self,
         game_state: &GameState,
         builder: THypothesisBuilderImpl,
-        debugger: Option<&mut (Arc<Mutex<DebuggerContext>>, FDebugBreak)>,
+        mut debugger: Option<&mut DebuggerData<FDebugBreak>>,
     ) -> HypothesisGraphData<HypothesisType, DesireType>
     where
         HypothesisBuilderType: From<THypothesisBuilderImpl>,
-        FDebugBreak: FnMut(Breakpoint),
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let mut current_reference = self.builders.len();
         let root_reference = HypothesisReference::new(current_reference);
@@ -117,8 +118,8 @@ where
             let hypothesis = builder.build(game_state, &mut self);
 
             info!(logger: self.log, "{}: {}", HypothesisReference::new(index), hypothesis);
-            if let Some((debugger, breaker)) = debugger {
-                let mut debugger = debugger.lock().expect("Debugger lock was poisoned!");
+            if let Some(debugger) = &mut debugger {
+                let mut debugger_context = debugger.context();
                 let node = create_hypothesis_node(
                     format!("{hypothesis}"),
                     dependencies.hypotheses[index]
@@ -135,8 +136,9 @@ where
                         .collect(),
                 );
 
-                nodes_mut(&mut debugger).push(Node::Hypothesis(node));
-                breaker(Breakpoint::RegisterNode(index))
+                nodes_mut(&mut debugger_context).push(Node::Hypothesis(node));
+                drop(debugger_context);
+                debugger.breaker(Breakpoint::RegisterNode(index))
             }
 
             for dependency in &dependencies.hypotheses[index] {

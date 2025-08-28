@@ -5,9 +5,12 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
-use crate::engine::{
-    Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+use crate::{
+    Breakpoint,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -47,15 +50,16 @@ impl Hypothesis for TrueIdentityHypothesis {
         write!(f, "{} is a {}", self.index, self.archetype)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         repository.finalize(HypothesisResult::unimplemented())
     }

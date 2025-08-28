@@ -1,5 +1,6 @@
 use super::node::Node;
 
+#[derive(Debug)]
 pub struct DebuggerContext {
     nodes: Vec<Node>,
 }

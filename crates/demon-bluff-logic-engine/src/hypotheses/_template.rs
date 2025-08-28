@@ -1,12 +1,11 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
+use super::HypothesisType;
 use crate::engine::{
     Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
     HypothesisReference, HypothesisRegistrar, HypothesisRepository,
 };
-
-use super::HypothesisType;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct TemplateHypothesisBuilder {}
@@ -37,12 +36,12 @@ impl Hypothesis for TemplateHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,

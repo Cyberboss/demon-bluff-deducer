@@ -3,6 +3,7 @@ use log::Log;
 
 use super::{HypothesisBuilderType, desires::DesireType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
         HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
@@ -44,15 +45,16 @@ impl Hypothesis for MasterHypothesis {
         write!(f, "Master Hypothesis")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let mut evaluator = repository.require_sub_evaluation(0.0);
         let mut result = evaluator.sub_evaluate(&self.execute_hypothesis);

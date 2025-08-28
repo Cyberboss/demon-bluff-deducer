@@ -18,13 +18,13 @@ pub use self::{
 };
 use crate::hypotheses::MasterHypothesisBuilder;
 
-pub fn predict_with_debugger<F>(
+pub fn predict_with_debugger<FDebugBreak>(
     log: &impl Log,
     state: &GameState,
-    breakpoint_handler: F,
+    breakpoint_handler: FDebugBreak,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
-    F: FnMut(Breakpoint),
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     evaluate(
         state,

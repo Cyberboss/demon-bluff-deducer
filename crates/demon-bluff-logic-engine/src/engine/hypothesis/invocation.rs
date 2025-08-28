@@ -2,6 +2,7 @@ use log::{Log, info};
 
 use super::{Hypothesis, HypothesisResult};
 use crate::{
+    Breakpoint,
     engine::{HypothesisRepository, index_reference::IndexReference, stack_data::StackData},
     hypotheses::{DesireType, HypothesisType},
 };
@@ -10,9 +11,11 @@ pub trait HypothesisInvocation {
     fn invoke(&mut self) -> HypothesisResult;
 }
 
-impl<'a, TLog> HypothesisInvocation for StackData<'a, TLog, HypothesisType, DesireType>
+impl<'a, TLog, FDebugBreak> HypothesisInvocation
+    for StackData<'a, TLog, HypothesisType, DesireType, FDebugBreak>
 where
     TLog: Log,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     fn invoke(&mut self) -> HypothesisResult {
         let reference = self.current_reference();

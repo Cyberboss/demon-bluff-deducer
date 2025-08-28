@@ -3,6 +3,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
         HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
@@ -56,15 +57,16 @@ impl Hypothesis for ExecuteHypothesis {
         write!(f, "Execution Decision")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         if self.executable_hypotheses.is_empty() {
             return repository.finalize(HypothesisResult::impossible());

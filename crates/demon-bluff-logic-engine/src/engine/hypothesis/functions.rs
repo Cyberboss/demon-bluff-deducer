@@ -3,9 +3,13 @@ use std::fmt::Display;
 use log::{Log, info};
 
 use super::{Hypothesis, HypothesisEvaluation, HypothesisRepository, HypothesisResult};
-use crate::engine::{
-    DesireConsumerReference, DesireProducerReference, desire::Desire,
-    fitness_and_action::FitnessAndAction, index_reference::IndexReference, stack_data::StackData,
+use crate::{
+    Breakpoint,
+    engine::{
+        DesireConsumerReference, DesireProducerReference, desire::Desire,
+        fitness_and_action::FitnessAndAction, index_reference::IndexReference,
+        stack_data::StackData,
+    },
 };
 
 pub trait HypothesisFunctions {
@@ -14,12 +18,13 @@ pub trait HypothesisFunctions {
     fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
 }
 
-impl<'a, TLog, THypothesis, TDesire> HypothesisFunctions
-    for StackData<'a, TLog, THypothesis, TDesire>
+impl<'a, TLog, THypothesis, TDesire, FDebugBreak> HypothesisFunctions
+    for StackData<'a, TLog, THypothesis, TDesire, FDebugBreak>
 where
     TLog: Log,
     THypothesis: Hypothesis,
     TDesire: Desire + Display,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     fn finalize(self, result: HypothesisResult) -> HypothesisEvaluation {
         HypothesisEvaluation::new(result)
@@ -68,9 +73,10 @@ where
     }
 }
 
-impl<'a, TLog> HypothesisFunctions for HypothesisRepository<'a, TLog>
+impl<'a, TLog, FDebugBreak> HypothesisFunctions for HypothesisRepository<'a, TLog, FDebugBreak>
 where
     TLog: Log,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     fn finalize(self, result: HypothesisResult) -> HypothesisEvaluation {
         self.stack_data.finalize(result)

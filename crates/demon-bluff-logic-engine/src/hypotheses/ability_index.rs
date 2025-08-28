@@ -5,9 +5,12 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use super::{HypothesisBuilderType, HypothesisType, desires::DesireType};
-use crate::engine::{
-    Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
-    HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+use crate::{
+    Breakpoint,
+    engine::{
+        Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
+        HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+    },
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
@@ -45,15 +48,16 @@ impl Hypothesis for AbilityIndexHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         log: &TLog,
         depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let archetype = match game_state.villager(&self.index) {
             Villager::Hidden(_) => panic!("We shouldn't be evaluating a hidden villager!"),

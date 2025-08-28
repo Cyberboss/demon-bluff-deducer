@@ -3,6 +3,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType, ability_index::AbilityIndexHypothesisBuilder};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
         HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
@@ -50,15 +51,16 @@ impl Hypothesis for AbilityHypothesis {
         write!(f, "Ability Decision")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         if self.index_hypotheses.is_empty() {
             return repository.finalize(HypothesisResult::impossible());

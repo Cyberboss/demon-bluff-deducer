@@ -2,6 +2,7 @@ use log::{Log, info};
 
 use super::{HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult};
 use crate::{
+    Breakpoint,
     engine::{
         DesireConsumerReference, DesireProducerReference, fitness_and_action::FitnessAndAction,
         hypothesis::invocation::HypothesisInvocation, index_reference::IndexReference,
@@ -11,16 +12,19 @@ use crate::{
 };
 
 /// Used to evaluate sub-hypotheses via their `HypothesisReference`s.
-pub trait HypothesisEvaluator<'a, TLog, THypothesis, TDesire>: HypothesisFunctions {
+pub trait HypothesisEvaluator<'a, TLog, THypothesis, TDesire, FDebugBreak>:
+    HypothesisFunctions
+{
     fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult;
     fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool);
     fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
 }
 
-impl<'a, TLog> HypothesisEvaluator<'a, TLog, HypothesisType, DesireType>
-    for StackData<'a, TLog, HypothesisType, DesireType>
+impl<'a, TLog, FDebugBreak> HypothesisEvaluator<'a, TLog, HypothesisType, DesireType, FDebugBreak>
+    for StackData<'a, TLog, HypothesisType, DesireType, FDebugBreak>
 where
     TLog: Log,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     fn sub_evaluate(&mut self, hypothesis_reference: &HypothesisReference) -> HypothesisResult {
         let current_reference = self.current_reference();

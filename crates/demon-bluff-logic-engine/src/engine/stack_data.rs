@@ -4,22 +4,23 @@ use demon_bluff_gameplay_engine::game_state::GameState;
 use log::Log;
 
 use super::{
-    HypothesisReference, IndexReference,
+    Breakpoint, HypothesisReference, IndexReference,
     cycle::Cycle,
+    debugger::DebuggerData,
     dependencies::DependencyData,
     depth::Depth,
     desire::{Desire, DesireData, DesireDefinition},
     hypothesis::Hypothesis,
     iteration_data::IterationData,
-    misc::GraphBuilder,
 };
 
 #[derive(Debug)]
-pub struct StackData<'a, TLog, THypothesis, TDesire>
+pub struct StackData<'a, TLog, THypothesis, TDesire, FDebugBreak>
 where
     TLog: Log,
     THypothesis: Hypothesis,
     TDesire: Desire + Display,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     iteration: u32,
     reference_stack: Vec<HypothesisReference>,
@@ -29,18 +30,20 @@ where
     pub hypotheses: &'a Vec<RefCell<THypothesis>>,
     pub previous_data: Option<&'a IterationData>,
     pub current_data: &'a RefCell<IterationData>,
-    graph_builder: Option<&'a RefCell<GraphBuilder>>,
+    pub debugger: Option<DebuggerData<FDebugBreak>>,
     pub break_at: &'a Option<HypothesisReference>,
     pub desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
     pub desire_data: &'a RefCell<Vec<DesireData>>,
     pub dependencies: &'a DependencyData,
 }
 
-impl<'a, TLog, THypothesis, TDesire> StackData<'a, TLog, THypothesis, TDesire>
+impl<'a, TLog, THypothesis, TDesire, FDebugBreak>
+    StackData<'a, TLog, THypothesis, TDesire, FDebugBreak>
 where
     TLog: Log,
     THypothesis: Hypothesis,
     TDesire: Desire + Display,
+    FDebugBreak: FnMut(Breakpoint) + Clone,
 {
     pub fn new(
         iteration: u32,
@@ -52,7 +55,7 @@ where
         current_data: &'a RefCell<IterationData>,
         break_at: &'a Option<HypothesisReference>,
         root_reference: &HypothesisReference,
-        graph_builder: Option<&'a RefCell<GraphBuilder>>,
+        debugger: Option<DebuggerData<FDebugBreak>>,
         desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
         desire_data: &'a RefCell<Vec<DesireData>>,
         dependencies: &'a DependencyData,
@@ -67,7 +70,7 @@ where
             current_data,
             break_at,
             cycles,
-            graph_builder,
+            debugger,
             desire_definitions,
             desire_data,
             dependencies,
@@ -106,7 +109,7 @@ where
             hypotheses: self.hypotheses,
             current_data: self.current_data,
             break_at: self.break_at,
-            graph_builder: self.graph_builder,
+            debugger: self.debugger.clone(),
             previous_data: self.previous_data,
             cycles: self.cycles,
             desire_definitions: self.desire_definitions,
@@ -135,7 +138,7 @@ where
             hypotheses: self.hypotheses,
             current_data: self.current_data,
             break_at: self.break_at,
-            graph_builder: self.graph_builder,
+            debugger: self.debugger.clone(),
             previous_data: self.previous_data,
             cycles: self.cycles,
             desire_definitions: self.desire_definitions,

@@ -3,6 +3,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
         HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
@@ -65,15 +66,16 @@ impl Hypothesis for IsCorruptHypothesis {
         write!(f, "{} is corrupt", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 

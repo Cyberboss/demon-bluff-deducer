@@ -11,6 +11,7 @@ use super::{
     testimony_condemns::TestimonyCondemnsHypothesisBuilder,
 };
 use crate::{
+    Breakpoint,
     engine::{
         Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
         HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
@@ -119,15 +120,16 @@ impl Hypothesis for IsEvilHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let initial_evils = game_state.draw_stats().demons() + game_state.draw_stats().minions();
         let mut evaluator = repository.require_sub_evaluation(

@@ -11,6 +11,7 @@ use super::{
     DesireType, HypothesisBuilderType, archetype_in_play::ArchetypeInPlayHypothesisBuilder,
 };
 use crate::{
+    Breakpoint,
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
@@ -62,15 +63,16 @@ impl Hypothesis for RevealingIsSafeHypothesis {
         true // I want better probabilities, see below TODO comment
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         log: &TLog,
         depth: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let mut all_hidden = true;
         for villager in game_state.villagers() {

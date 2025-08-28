@@ -6,6 +6,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType, desires::GetTestimonyDesire};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, DesireProducerReference, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis,
         HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions,
@@ -87,15 +88,16 @@ impl Hypothesis for IsTruthfulHypothesis {
         write!(f, "{} is truthful", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         game_state: &GameState,
-        mut repository: HypothesisRepository<TLog>,
+        mut repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         match &self.sub_reference {
             Some(sub_reference) => match sub_reference {

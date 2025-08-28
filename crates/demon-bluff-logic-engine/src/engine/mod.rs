@@ -4,12 +4,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use debugger::DebuggerData;
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, error, info};
 
 use self::{
     cycle::Cycle,
-    debugger::create_debugger_context,
     desire::DesireData,
     hypothesis::{HypothesisInvocation, HypothesisRegistrarImpl},
     index_reference::IndexReference,
@@ -44,7 +44,6 @@ mod fitness_and_action;
 mod hypothesis;
 mod index_reference;
 mod iteration_data;
-mod misc;
 mod stack_data;
 
 const ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE: u32 = 100;
@@ -59,30 +58,19 @@ where
     TBuilder: HypothesisBuilder,
     HypothesisBuilderType: From<TBuilder>,
     TLog: Log,
-    F: FnMut(Breakpoint),
+    F: FnMut(Breakpoint) + Clone,
 {
-    let mut debugger = breakpoint_handler.map(|mut breaker| {
-        let debugger_arc = Arc::new(Mutex::new(create_debugger_context()));
-        breaker(Breakpoint::Initialize(debugger_arc.clone()));
-        (debugger_arc, breaker)
-    });
+    let mut debugger = breakpoint_handler.map(|mut breaker| DebuggerData::new(breaker));
 
     let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 
     info!(logger: log, target: "evaluate", "Evaluate dependencies");
-    let graph = registrar.run(
-        game_state,
-        initial_hypothesis_builder,
-        debugger.as_mut(),
-    );
+    let graph = registrar.run(game_state, initial_hypothesis_builder, debugger.as_mut());
 
     info!(logger: log, target: "evaluate", "Registered {} hypotheses. Root: {}", graph.hypotheses.len(), graph.hypotheses[graph.root.index()]);
 
-    let hypotheses: Vec<RefCell<HypothesisType>> = graph
-        .hypotheses
-        .into_iter()
-        .map(RefCell::new)
-        .collect();
+    let hypotheses: Vec<RefCell<HypothesisType>> =
+        graph.hypotheses.into_iter().map(RefCell::new).collect();
 
     let mut previous_results = None;
 
@@ -135,7 +123,7 @@ where
             &data,
             &break_at,
             &graph.root,
-            None,
+            debugger.clone(),
             &graph.desires,
             &desire_data,
             &graph.dependencies,
@@ -226,9 +214,7 @@ where
                                 .expect("At least one stagnate desire should have been found!");
                             info!(logger: log, "Selected {} for unblocking", DesireProducerReference::new(least_pending_index));
                             let unblocking_data = &mut borrow[least_pending_index];
-                            for pending_hypothesis in
-                                std::mem::take(&mut unblocking_data.pending)
-                            {
+                            for pending_hypothesis in std::mem::take(&mut unblocking_data.pending) {
                                 info!(logger: log, "Force setting {pending_hypothesis}'s desire to false");
                                 unblocking_data.undesired.insert(pending_hypothesis);
                             }

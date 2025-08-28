@@ -6,6 +6,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType, is_evil::IsEvilHypothesisBuilder};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
@@ -49,15 +50,16 @@ impl Hypothesis for AllEvilsAccountedForHypothesis {
         write!(f, "All evils accounted for")
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         game_state: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         if self.index_evil_hypotheses.is_empty() {
             return repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::certainty(

@@ -7,6 +7,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
         HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
@@ -119,15 +120,16 @@ impl Hypothesis for TestimonyHypothesis {
         true
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         match &self.testimony {
             Testimony::Confess(_) => repository.finalize(HypothesisResult::Conclusive(

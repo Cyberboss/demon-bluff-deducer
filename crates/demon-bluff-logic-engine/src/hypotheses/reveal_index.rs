@@ -3,6 +3,7 @@ use log::Log;
 
 use super::{DesireType, HypothesisBuilderType};
 use crate::{
+    Breakpoint,
     engine::{
         Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
         HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
@@ -57,15 +58,16 @@ impl Hypothesis for RevealIndexHypothesis {
         write!(f, "Reveal {}", self.index)
     }
 
-    fn evaluate<TLog>(
+    fn evaluate<TLog, FDebugBreak>(
         &mut self,
         _: &TLog,
         _: Depth,
         _: &GameState,
-        repository: HypothesisRepository<TLog>,
+        repository: HypothesisRepository<TLog, FDebugBreak>,
     ) -> HypothesisEvaluation
     where
         TLog: Log,
+        FDebugBreak: FnMut(Breakpoint) + Clone,
     {
         let mut evaluator = repository.require_sub_evaluation(0.0);
 
