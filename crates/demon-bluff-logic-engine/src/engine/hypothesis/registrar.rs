@@ -5,10 +5,10 @@ use super::{HypothesisReference, graph_data::HypothesisGraphData};
 use crate::engine::HypothesisBuilder;
 use crate::engine::debugger::DebuggerData;
 use crate::{
-	Breakpoint, Node,
+	Breakpoint,
 	engine::{
 		DesireConsumerReference, DesireProducerReference,
-		debugger::{create_hypothesis_node, nodes_mut},
+		debugger::{create_hypothesis_node, hypothesis_nodes_mut},
 		dependencies::DependencyData,
 		desire::{Desire, DesireDefinition},
 		index_reference::IndexReference,
@@ -134,7 +134,7 @@ where
 						.collect(),
 				);
 
-				nodes_mut(&mut debugger_context).push(Node::Hypothesis(node));
+				hypothesis_nodes_mut(&mut debugger_context).push(node);
 				drop(debugger_context);
 				debugger.breaker(Breakpoint::RegisterNode(index))
 			}

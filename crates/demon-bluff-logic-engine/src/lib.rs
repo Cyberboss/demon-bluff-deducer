@@ -12,7 +12,7 @@ use engine::evaluate;
 use log::Log;
 
 pub use self::{
-	engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node},
+	engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode},
 	player_action::PlayerAction,
 	prediction_error::PredictionError,
 };

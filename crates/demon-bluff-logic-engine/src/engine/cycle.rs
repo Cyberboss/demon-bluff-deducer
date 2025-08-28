@@ -3,12 +3,12 @@ use std::fmt::{Display, Formatter};
 use super::HypothesisReference;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub(super) struct Cycle {
+pub struct Cycle {
 	order_from_root: Vec<HypothesisReference>,
 }
 
 impl Cycle {
-	pub fn new(order_from_root: Vec<HypothesisReference>) -> Self {
+	fn new(order_from_root: Vec<HypothesisReference>) -> Self {
 		Self { order_from_root }
 	}
 
@@ -32,4 +32,8 @@ impl Display for Cycle {
 
 		Ok(())
 	}
+}
+
+pub fn new_cycle(order_from_root: Vec<HypothesisReference>) -> Cycle {
+	Cycle::new(order_from_root)
 }

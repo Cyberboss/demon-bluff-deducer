@@ -13,7 +13,7 @@ use self::{
 	stack_data::StackData,
 };
 pub use self::{
-	debugger::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node},
+	debugger::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode},
 	depth::Depth,
 	desire::{Desire, DesireConsumerReference, DesireProducerReference},
 	fitness_and_action::{
@@ -102,6 +102,10 @@ where
 		iteration += 1;
 		info!(logger: log, "Iteration: {iteration}");
 
+		if let Some(debugger) = &mut debugger {
+			debugger.breaker(Breakpoint::IterationStart(iteration));
+		}
+
 		let mut data = Vec::with_capacity(hypotheses.len());
 		for _ in 0..hypotheses.len() {
 			data.push(None);
@@ -110,7 +114,6 @@ where
 		let data = RefCell::new(IterationData { results: data });
 		let cycles = RefCell::new(HashSet::new());
 		let mut stack_data = StackData::new(
-			iteration,
 			game_state,
 			log,
 			&hypotheses,

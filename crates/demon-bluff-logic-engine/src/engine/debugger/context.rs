@@ -1,17 +1,17 @@
-use super::node::Node;
+use super::{DesireNode, HypothesisNode};
 
 #[derive(Debug)]
 pub struct DebuggerContext {
-	nodes: Vec<Node>,
+	hypotheses: Vec<HypothesisNode>,
+	desires: Vec<DesireNode>,
 }
 
 impl DebuggerContext {
 	fn new() -> Self {
-		Self { nodes: Vec::new() }
-	}
-
-	pub fn nodes(&self) -> &Vec<Node> {
-		&self.nodes
+		Self {
+			hypotheses: Vec::new(),
+			desires: Vec::new(),
+		}
 	}
 }
 
@@ -19,6 +19,10 @@ pub fn create_debugger_context() -> DebuggerContext {
 	DebuggerContext::new()
 }
 
-pub fn nodes_mut(debugger: &mut DebuggerContext) -> &mut Vec<Node> {
-	&mut debugger.nodes
+pub fn hypothesis_nodes_mut(context: &mut DebuggerContext) -> &mut Vec<HypothesisNode> {
+	&mut context.hypotheses
+}
+
+pub fn desire_nodes_mut(context: &mut DebuggerContext) -> &mut Vec<DesireNode> {
+	&mut context.desires
 }

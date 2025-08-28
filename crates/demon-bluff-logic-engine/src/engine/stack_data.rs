@@ -5,7 +5,7 @@ use log::Log;
 
 use super::{
 	Breakpoint, HypothesisReference, IndexReference,
-	cycle::Cycle,
+	cycle::{Cycle, new_cycle},
 	debugger::DebuggerData,
 	dependencies::DependencyData,
 	depth::Depth,
@@ -22,7 +22,6 @@ where
 	TDesire: Desire + Display,
 	FDebugBreak: FnMut(Breakpoint) + Clone,
 {
-	iteration: u32,
 	reference_stack: Vec<HypothesisReference>,
 	pub log: &'a TLog,
 	pub game_state: &'a GameState,
@@ -46,7 +45,6 @@ where
 	FDebugBreak: FnMut(Breakpoint) + Clone,
 {
 	pub fn new(
-		iteration: u32,
 		game_state: &'a GameState,
 		log: &'a TLog,
 		hypotheses: &'a Vec<RefCell<THypothesis>>,
@@ -61,7 +59,6 @@ where
 		dependencies: &'a DependencyData,
 	) -> Self {
 		Self {
-			iteration,
 			reference_stack: vec![root_reference.clone()],
 			log,
 			game_state,
@@ -89,7 +86,7 @@ where
 			}
 		}
 
-		Cycle::new(order_from_root)
+		new_cycle(order_from_root)
 	}
 
 	pub fn share(&self) -> Self {
@@ -102,7 +99,6 @@ where
 			reference_stack.push(mapped_reference);
 		}
 		Self {
-			iteration: self.iteration,
 			reference_stack,
 			log: self.log,
 			game_state: self.game_state,
@@ -131,7 +127,6 @@ where
 		reference_stack.push(new_reference);
 
 		Self {
-			iteration: self.iteration,
 			reference_stack,
 			log: self.log,
 			game_state: self.game_state,

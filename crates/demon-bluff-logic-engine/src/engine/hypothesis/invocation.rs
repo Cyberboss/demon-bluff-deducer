@@ -3,7 +3,12 @@ use log::{Log, info};
 use super::{Hypothesis, HypothesisResult};
 use crate::{
 	Breakpoint,
-	engine::{HypothesisRepository, index_reference::IndexReference, stack_data::StackData},
+	engine::{
+		HypothesisRepository,
+		debugger::{hypothesis_nodes_mut, update_hypothesis_node},
+		index_reference::IndexReference,
+		stack_data::StackData,
+	},
 	hypotheses::{DesireType, HypothesisType},
 };
 
@@ -18,11 +23,15 @@ where
 	FDebugBreak: FnMut(Breakpoint) + Clone,
 {
 	fn invoke(&mut self) -> HypothesisResult {
-		let reference = self.current_reference();
+		let reference = self.current_reference().clone();
 
 		let mut hypothesis = self.hypotheses[reference.index()].borrow_mut();
 
 		info!(logger: self.log, "{} Entering: {}", self.depth(), hypothesis);
+
+		if let Some(debugger) = &mut self.debugger {
+			debugger.breaker(Breakpoint::EnterNode(reference.index()));
+		}
 
 		let hypo_return = hypothesis.evaluate(
 			self.log,
@@ -32,6 +41,16 @@ where
 		);
 
 		let result = hypo_return.unpack();
+		if let Some(debugger) = &mut self.debugger {
+			let mut guard = debugger.context();
+			update_hypothesis_node(
+				&mut hypothesis_nodes_mut(&mut guard)[reference.index()],
+				&result,
+			);
+			drop(guard);
+			debugger.breaker(Breakpoint::ExitNode(reference.index()));
+		}
+
 		info!(logger: self.log, "{} Result: {}", self.depth(), result);
 
 		if let HypothesisResult::Conclusive(_) = &result {
@@ -40,7 +59,7 @@ where
 				if desire_data[producer_reference.index()]
 					.pending
 					.iter()
-					.any(|pending_reference| pending_reference == reference)
+					.any(|pending_reference| *pending_reference == reference)
 				{
 					panic!(
 						"{reference}: {hypothesis} was supposed to produce a result for {producer_reference} before concluding but didn't!"

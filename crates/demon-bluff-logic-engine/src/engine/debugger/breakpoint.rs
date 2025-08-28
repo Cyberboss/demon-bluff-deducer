@@ -12,5 +12,4 @@ pub enum Breakpoint {
 	DesireUpdate(usize),
 	DetectCycle(Cycle),
 	BreakCycle(Cycle),
-	IterationEnd(usize),
 }
