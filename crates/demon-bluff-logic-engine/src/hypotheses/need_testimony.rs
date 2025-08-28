@@ -58,7 +58,7 @@ impl Hypothesis for NeedTestimonyHypothesis {
 		_: &TLog,
 		_: Depth,
 		_: &GameState,
-		repository: HypothesisRepository<TLog, FDebugBreak>,
+		mut repository: HypothesisRepository<TLog, FDebugBreak>,
 	) -> HypothesisEvaluation
 	where
 		TLog: Log,

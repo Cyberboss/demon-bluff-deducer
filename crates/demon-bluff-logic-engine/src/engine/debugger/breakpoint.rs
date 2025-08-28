@@ -10,6 +10,7 @@ pub enum Breakpoint {
 	EnterNode(usize),
 	ExitNode(usize),
 	DesireUpdate(usize),
+	DesireRead(usize),
 	DetectCycle(Cycle),
 	BreakCycle(Cycle),
 }

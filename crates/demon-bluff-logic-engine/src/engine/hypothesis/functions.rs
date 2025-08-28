@@ -6,8 +6,11 @@ use super::{Hypothesis, HypothesisEvaluation, HypothesisRepository, HypothesisRe
 use crate::{
 	Breakpoint,
 	engine::{
-		DesireConsumerReference, DesireProducerReference, desire::Desire,
-		fitness_and_action::FitnessAndAction, index_reference::IndexReference,
+		DesireConsumerReference, DesireProducerReference,
+		debugger::{desire_nodes_mut, update_desire_node},
+		desire::Desire,
+		fitness_and_action::FitnessAndAction,
+		index_reference::IndexReference,
 		stack_data::StackData,
 	},
 };
@@ -15,7 +18,7 @@ use crate::{
 pub trait HypothesisFunctions {
 	fn finalize(self, result: HypothesisResult) -> HypothesisEvaluation;
 	fn set_desire(&mut self, desire_reference: &DesireProducerReference, desired: bool);
-	fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
+	fn desire_result(&mut self, desire_reference: &DesireConsumerReference) -> HypothesisResult;
 }
 
 impl<'a, TLog, THypothesis, TDesire, FDebugBreak> HypothesisFunctions
@@ -46,15 +49,30 @@ where
 		}
 
 		info!(logger: self.log, "{} Set {}: {}. Now {}", self.depth(), desire_reference, desired, data);
+		if let Some(debugger) = &mut self.debugger {
+			let mut guard = debugger.context();
+			update_desire_node(
+				&mut desire_nodes_mut(&mut guard)[desire_reference.index()],
+				data.pending.len(),
+				data.desired.len(),
+				data.undesired.len(),
+			);
+			drop(guard);
+			debugger.breaker(Breakpoint::DesireUpdate(desire_reference.index()));
+		}
 	}
 
-	fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
+	fn desire_result(&mut self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
 		let definition = &self.desire_definitions[desire_reference.index()];
 		let borrow = self.desire_data.borrow();
 
 		let data = &borrow[desire_reference.index()];
 
 		info!(logger: self.log, "{} Read desire {} {} - {}", self.depth(), desire_reference, definition.desire(), data);
+		if let Some(debugger) = &mut self.debugger {
+			debugger.breaker(Breakpoint::DesireRead(desire_reference.index()));
+		}
+
 		let total = data.total();
 		let fitness = FitnessAndAction::new(
 			if data.desired.is_empty() {
@@ -86,7 +104,7 @@ where
 		self.stack_data.set_desire(desire_reference, desired)
 	}
 
-	fn desire_result(&self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
+	fn desire_result(&mut self, desire_reference: &DesireConsumerReference) -> HypothesisResult {
 		self.stack_data.desire_result(desire_reference)
 	}
 }

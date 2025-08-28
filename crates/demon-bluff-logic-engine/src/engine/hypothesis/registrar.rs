@@ -3,7 +3,7 @@ use log::{Log, info};
 
 use super::{HypothesisReference, graph_data::HypothesisGraphData};
 use crate::engine::HypothesisBuilder;
-use crate::engine::debugger::DebuggerData;
+use crate::engine::debugger::{DebuggerData, create_desire_node, desire_nodes_mut};
 use crate::{
 	Breakpoint,
 	engine::{
@@ -173,6 +173,11 @@ where
 			);
 
 			info!(logger: self.log, "- {}: {}", DesireProducerReference::new(index), definition);
+			if let Some(debugger) = &mut debugger {
+				let mut debugger_context = debugger.context();
+				let node = create_desire_node(definition.desire().clone(), definition.count());
+				desire_nodes_mut(&mut debugger_context).push(node);
+			}
 			desire_definitions.push(definition);
 		}
 
