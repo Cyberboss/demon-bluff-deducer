@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 #[enum_delegate::register]
 pub trait HypothesisBuilder {
     fn build(

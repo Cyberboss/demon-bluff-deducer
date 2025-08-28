@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 #[enum_delegate::register]
 pub trait Hypothesis {
     fn describe(&self, f: &mut ::std::fmt::Formatter<'_>) -> Result<(), ::std::fmt::Error>;
