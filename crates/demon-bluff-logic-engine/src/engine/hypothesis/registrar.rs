@@ -3,7 +3,7 @@ use log::{Log, info};
 
 use super::{HypothesisReference, graph_data::HypothesisGraphData};
 use crate::engine::HypothesisBuilder;
-use crate::engine::debugger::{DebuggerData, create_desire_node, desire_nodes_mut};
+use crate::engine::debugger::{Debugger, create_desire_node, desire_nodes_mut};
 use crate::{
 	Breakpoint,
 	engine::{
@@ -72,7 +72,7 @@ where
 		mut self,
 		game_state: &GameState,
 		builder: THypothesisBuilderImpl,
-		mut debugger: Option<&mut DebuggerData<FDebugBreak>>,
+		mut debugger: Option<&mut Debugger<FDebugBreak>>,
 	) -> HypothesisGraphData<HypothesisType, DesireType>
 	where
 		HypothesisBuilderType: From<THypothesisBuilderImpl>,
@@ -136,7 +136,7 @@ where
 
 				hypothesis_nodes_mut(&mut debugger_context).push(node);
 				drop(debugger_context);
-				debugger.breaker(Breakpoint::RegisterNode(index))
+				debugger.breakpoint(Breakpoint::RegisterNode(index))
 			}
 
 			for dependency in &dependencies.hypotheses[index] {

@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use super::HypothesisReference;
+use super::{HypothesisReference, IndexReference};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Cycle {
@@ -32,6 +32,16 @@ impl Display for Cycle {
 
 		Ok(())
 	}
+}
+
+pub fn clone_cycle(cycle: &Cycle) -> Cycle {
+	Cycle::new(
+		cycle
+			.order_from_root
+			.iter()
+			.map(|reference| reference.clone())
+			.collect(),
+	)
 }
 
 pub fn new_cycle(order_from_root: Vec<HypothesisReference>) -> Cycle {

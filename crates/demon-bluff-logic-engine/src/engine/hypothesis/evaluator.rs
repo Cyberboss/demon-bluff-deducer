@@ -4,9 +4,9 @@ use super::{HypothesisFunctions, reference::HypothesisReference, result::Hypothe
 use crate::{
 	Breakpoint,
 	engine::{
-		DesireConsumerReference, DesireProducerReference, fitness_and_action::FitnessAndAction,
-		hypothesis::invocation::HypothesisInvocation, index_reference::IndexReference,
-		stack_data::StackData,
+		DesireConsumerReference, DesireProducerReference, cycle::clone_cycle,
+		fitness_and_action::FitnessAndAction, hypothesis::invocation::HypothesisInvocation,
+		index_reference::IndexReference, stack_data::StackData,
 	},
 	hypotheses::{DesireType, HypothesisType},
 };
@@ -39,6 +39,11 @@ where
 				hypothesis_reference
 			);
 
+			let cycle = self.create_cycle(hypothesis_reference);
+			if let Some(debugger) = &mut self.debugger {
+				debugger.breakpoint(Breakpoint::BreakCycle(cycle));
+			}
+
 			force_conclusive = true;
 		} else if let Some(previous_data) = self.previous_data
 			&& let Some(HypothesisResult::Conclusive(previously_conclusive_result)) =
@@ -68,6 +73,9 @@ where
 					);
 
 					let cycle = self.create_cycle(hypothesis_reference);
+					if let Some(debugger) = &mut self.debugger {
+						debugger.breakpoint(Breakpoint::DetectCycle(clone_cycle(&cycle)));
+					}
 
 					let mut cycles = self.cycles.borrow_mut();
 					cycles.insert(cycle);

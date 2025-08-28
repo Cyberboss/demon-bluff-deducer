@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashSet};
 
-use debugger::DebuggerData;
+use cycle::clone_cycle;
+use debugger::Debugger;
 use demon_bluff_gameplay_engine::game_state::GameState;
 use log::{Log, error, info};
 
@@ -56,7 +57,7 @@ where
 	TLog: Log,
 	F: FnMut(Breakpoint) + Clone,
 {
-	let mut debugger = breakpoint_handler.map(|breaker| DebuggerData::new(breaker));
+	let mut debugger = breakpoint_handler.map(|breaker| Debugger::new(breaker));
 
 	let registrar = HypothesisRegistrarImpl::<TLog, HypothesisBuilderType, DesireType>::new(log);
 
@@ -103,7 +104,7 @@ where
 		info!(logger: log, "Iteration: {iteration}");
 
 		if let Some(debugger) = &mut debugger {
-			debugger.breaker(Breakpoint::IterationStart(iteration));
+			debugger.breakpoint(Breakpoint::IterationStart(iteration));
 		}
 
 		let mut data = Vec::with_capacity(hypotheses.len());
@@ -217,6 +218,11 @@ where
 								info!(logger: log, "Force setting {pending_hypothesis}'s desire to false");
 								unblocking_data.undesired.insert(pending_hypothesis);
 							}
+
+							if let Some(debugger) = &mut debugger {
+								debugger
+									.breakpoint(Breakpoint::CollapseDesire(least_pending_index));
+							}
 						} else {
 							info!(logger: log, "I-{}: We must break a cycle, of which there are {}",
                                 iteration,cycles.len());
@@ -270,7 +276,6 @@ where
 								best_break_candidate
 									.expect("At least one break candidate should exist");
 							info!(logger: log, "Breaking cycle {break_cycle} at {break_reference} which has a pending fitness value of {break_fitness}");
-
 							break_at = Some(break_reference.clone());
 						}
 					}

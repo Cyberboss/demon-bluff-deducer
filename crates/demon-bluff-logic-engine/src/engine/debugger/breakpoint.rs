@@ -13,4 +13,5 @@ pub enum Breakpoint {
 	DesireRead(usize),
 	DetectCycle(Cycle),
 	BreakCycle(Cycle),
+	CollapseDesire(usize),
 }

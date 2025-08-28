@@ -58,7 +58,7 @@ where
 				data.undesired.len(),
 			);
 			drop(guard);
-			debugger.breaker(Breakpoint::DesireUpdate(desire_reference.index()));
+			debugger.breakpoint(Breakpoint::DesireUpdate(desire_reference.index()));
 		}
 	}
 
@@ -70,7 +70,7 @@ where
 
 		info!(logger: self.log, "{} Read desire {} {} - {}", self.depth(), desire_reference, definition.desire(), data);
 		if let Some(debugger) = &mut self.debugger {
-			debugger.breaker(Breakpoint::DesireRead(desire_reference.index()));
+			debugger.breakpoint(Breakpoint::DesireRead(desire_reference.index()));
 		}
 
 		let total = data.total();
