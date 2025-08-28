@@ -4,8 +4,7 @@ use super::{HypothesisFunctions, reference::HypothesisReference, result::Hypothe
 use crate::{
 	Breakpoint,
 	engine::{
-		DesireConsumerReference, DesireProducerReference, cycle::clone_cycle,
-		fitness_and_action::FitnessAndAction, hypothesis::invocation::HypothesisInvocation,
+		cycle::clone_cycle, hypothesis::invocation::HypothesisInvocation,
 		index_reference::IndexReference, stack_data::StackData,
 	},
 	hypotheses::{DesireType, HypothesisType},

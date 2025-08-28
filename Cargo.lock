@@ -1986,6 +1986,7 @@ dependencies = [
  "demon-bluff-gameplay-engine",
  "demon-bluff-logic-engine",
  "image",
+ "log",
  "ocrs",
  "rten",
  "rustautogui",

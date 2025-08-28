@@ -1,20 +1,25 @@
+use std::process::{ExitCode, Termination};
+
 use bevy::prelude::*;
+use evaluator::EvaluatorPlugin;
 use menu::MenuPlugin;
-use root_state::RootState;
+use state::RootState;
 
 mod evaluator;
 mod menu;
-mod root_state;
+mod state;
 
-fn main() {
+fn main() -> ExitCode {
 	println!("Hello, world!");
 
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.init_state::<RootState>()
 		.add_plugins(MenuPlugin)
+		.add_plugins(EvaluatorPlugin)
 		.add_systems(Startup, setup)
-		.run();
+		.run()
+		.report()
 }
 
 fn setup(mut commands: Commands) {

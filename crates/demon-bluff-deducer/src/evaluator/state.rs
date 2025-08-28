@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
-use crate::root_state::RootState;
+use crate::state::RootState;
 
 #[derive(Default, Debug, Hash, PartialEq, Eq, Clone, SubStates)]
-#[source(RootState = RootState::Menu)]
+#[source(RootState = RootState::Evaluation)]
 pub enum EvaluatorState {
 	#[default]
 	Running,
