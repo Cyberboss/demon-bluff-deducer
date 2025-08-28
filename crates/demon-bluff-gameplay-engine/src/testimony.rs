@@ -4,8 +4,8 @@ use itertools::Itertools;
 use serde::Serialize;
 
 use crate::{
-    Expression, testimony,
-    villager::{self, VillagerArchetype, VillagerIndex},
+    Expression,
+    villager::{VillagerArchetype, VillagerIndex},
 };
 const ALCHEMIST_CURE_RANGE: usize = 2;
 

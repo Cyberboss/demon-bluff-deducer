@@ -1,15 +1,15 @@
 use demon_bluff_gameplay_engine::{
     Expression,
     game_state::GameState,
-    testimony::{self, ConfessorClaim, Testimony},
+    testimony::{ConfessorClaim, Testimony},
     villager::{Villager, VillagerIndex},
 };
 use log::Log;
 
 use super::{DesireType, HypothesisBuilderType, HypothesisType};
 use crate::engine::{
-    Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-    HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+    Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+    HypothesisFunctions, HypothesisRegistrar, HypothesisRepository,
     HypothesisResult,
 };
 

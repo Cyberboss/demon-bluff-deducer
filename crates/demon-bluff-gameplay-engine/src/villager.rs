@@ -771,7 +771,7 @@ impl ConfirmedVillager {
 
 pub gen fn other_indicies(index: &VillagerIndex, total_villagers: usize) -> VillagerIndex {
     for other_index in 0..total_villagers {
-        if (index.0 != other_index) {
+        if index.0 != other_index {
             yield VillagerIndex(other_index)
         }
     }

@@ -1,6 +1,6 @@
 use std::{iter::repeat, mem::replace};
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::{

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use super::context::DebuggerContext;
-use crate::engine::{Cycle, FitnessAndAction};
+use crate::engine::Cycle;
 
 pub enum Breakpoint {
     Initialize(Arc<Mutex<DebuggerContext>>),

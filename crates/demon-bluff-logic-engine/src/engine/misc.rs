@@ -5,9 +5,7 @@ use std::{
 
 use force_graph::{DefaultNodeIdx, ForceGraph};
 
-use super::{
-    HypothesisReference, fitness_and_action::FitnessAndAction, hypothesis::HypothesisResult,
-};
+use super::HypothesisReference;
 
 pub(super) struct GraphBuilder {
     graph: ForceGraph<GraphNodeData>,

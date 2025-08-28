@@ -84,7 +84,7 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
             }
         });
 
-        let mut testimonies_exonerating = Vec::new(); // TODO
+        let testimonies_exonerating = Vec::new(); // TODO
 
         let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
             IsTruthfulHypothesisBuilder::new(self.index.clone()),
