@@ -2,23 +2,23 @@ use super::node::Node;
 
 #[derive(Debug)]
 pub struct DebuggerContext {
-    nodes: Vec<Node>,
+	nodes: Vec<Node>,
 }
 
 impl DebuggerContext {
-    fn new() -> Self {
-        Self { nodes: Vec::new() }
-    }
+	fn new() -> Self {
+		Self { nodes: Vec::new() }
+	}
 
-    pub fn nodes(&self) -> &Vec<Node> {
-        &self.nodes
-    }
+	pub fn nodes(&self) -> &Vec<Node> {
+		&self.nodes
+	}
 }
 
 pub fn create_debugger_context() -> DebuggerContext {
-    DebuggerContext::new()
+	DebuggerContext::new()
 }
 
 pub fn nodes_mut(debugger: &mut DebuggerContext) -> &mut Vec<Node> {
-    &mut debugger.nodes
+	&mut debugger.nodes
 }

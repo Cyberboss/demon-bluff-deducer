@@ -11,14 +11,14 @@ mod result;
 mod r#trait;
 
 pub use self::{
-    builder::HypothesisBuilder,
-    evaluation::HypothesisEvaluation,
-    evaluator::HypothesisEvaluator,
-    functions::HypothesisFunctions,
-    invocation::HypothesisInvocation,
-    reference::HypothesisReference,
-    registrar::{HypothesisRegistrar, HypothesisRegistrarImpl},
-    repository::HypothesisRepository,
-    result::HypothesisResult,
-    r#trait::Hypothesis,
+	builder::HypothesisBuilder,
+	evaluation::HypothesisEvaluation,
+	evaluator::HypothesisEvaluator,
+	functions::HypothesisFunctions,
+	invocation::HypothesisInvocation,
+	reference::HypothesisReference,
+	registrar::{HypothesisRegistrar, HypothesisRegistrarImpl},
+	repository::HypothesisRepository,
+	result::HypothesisResult,
+	r#trait::Hypothesis,
 };

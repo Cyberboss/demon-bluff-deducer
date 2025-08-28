@@ -7,10 +7,10 @@ mod r#trait;
 use std::fmt::Formatter;
 
 pub use self::{
-    consumer_reference::DesireConsumerReference, data::DesireData, definition::DesireDefinition,
-    producer_reference::DesireProducerReference, r#trait::Desire,
+	consumer_reference::DesireConsumerReference, data::DesireData, definition::DesireDefinition,
+	producer_reference::DesireProducerReference, r#trait::Desire,
 };
 
 fn fmt_desire(index: usize, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "D-{:05}", index + 1)
+	write!(f, "D-{:05}", index + 1)
 }

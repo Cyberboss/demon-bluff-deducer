@@ -12,36 +12,36 @@ use engine::evaluate;
 use log::Log;
 
 pub use self::{
-    engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node},
-    player_action::PlayerAction,
-    prediction_error::PredictionError,
+	engine::{Breakpoint, DebuggerContext, DesireNode, HypothesisNode, Node},
+	player_action::PlayerAction,
+	prediction_error::PredictionError,
 };
 use crate::hypotheses::MasterHypothesisBuilder;
 
 pub fn predict_with_debugger<FDebugBreak>(
-    log: &impl Log,
-    state: &GameState,
-    breakpoint_handler: FDebugBreak,
+	log: &impl Log,
+	state: &GameState,
+	breakpoint_handler: FDebugBreak,
 ) -> Result<HashSet<PlayerAction>, PredictionError>
 where
-    FDebugBreak: FnMut(Breakpoint) + Clone,
+	FDebugBreak: FnMut(Breakpoint) + Clone,
 {
-    evaluate(
-        state,
-        MasterHypothesisBuilder::default(),
-        log,
-        Some(breakpoint_handler),
-    )
+	evaluate(
+		state,
+		MasterHypothesisBuilder::default(),
+		log,
+		Some(breakpoint_handler),
+	)
 }
 
 pub fn predict(
-    log: &impl Log,
-    state: &GameState,
+	log: &impl Log,
+	state: &GameState,
 ) -> Result<HashSet<PlayerAction>, PredictionError> {
-    evaluate(
-        state,
-        MasterHypothesisBuilder::default(),
-        log,
-        None::<fn(Breakpoint)>,
-    )
+	evaluate(
+		state,
+		MasterHypothesisBuilder::default(),
+		log,
+		None::<fn(Breakpoint)>,
+	)
 }

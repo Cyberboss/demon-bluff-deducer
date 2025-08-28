@@ -2,6 +2,6 @@ use crate::engine::debugger::{desire_node::DesireNode, hypothesis_node::Hypothes
 
 #[derive(Debug)]
 pub enum Node {
-    Hypothesis(HypothesisNode),
-    Desire(DesireNode),
+	Hypothesis(HypothesisNode),
+	Desire(DesireNode),
 }
