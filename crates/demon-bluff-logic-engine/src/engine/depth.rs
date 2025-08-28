@@ -20,7 +20,7 @@ impl Display for Depth {
         }
 
         if let Some(reference) = self.reference.as_ref() {
-            write!(f, "- [{}]", reference)
+            write!(f, "- [{reference}]")
         } else {
             Ok(())
         }

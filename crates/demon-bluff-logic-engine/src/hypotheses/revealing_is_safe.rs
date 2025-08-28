@@ -91,7 +91,7 @@ impl Hypothesis for RevealingIsSafeHypothesis {
         }
 
         if self.unsafe_reveal_archetype_presence_hypotheses.is_empty() {
-            error!(logger: log, "{} Found no archetypes that could make revealing unsafe? Bug?", depth);
+            error!(logger: log, "{depth} Found no archetypes that could make revealing unsafe? Bug?");
             return repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::new(
                 FITNESS_UNKNOWN,
                 None,

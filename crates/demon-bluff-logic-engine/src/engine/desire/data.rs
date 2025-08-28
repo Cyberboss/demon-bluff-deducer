@@ -24,7 +24,7 @@ impl Display for DesireData {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}/{}", self.desired.len(), self.total())?;
 
-        if self.pending.len() > 0 {
+        if !self.pending.is_empty() {
             write!(f, " ({} Pending)", self.pending.len())
         } else {
             Ok(())

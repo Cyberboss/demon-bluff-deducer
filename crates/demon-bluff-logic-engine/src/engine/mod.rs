@@ -72,7 +72,7 @@ where
     info!(logger: log, target: "evaluate", "Evaluate dependencies");
     let graph = registrar.run(
         game_state,
-        initial_hypothesis_builder.into(),
+        initial_hypothesis_builder,
         debugger.as_mut(),
     );
 
@@ -81,7 +81,7 @@ where
     let hypotheses: Vec<RefCell<HypothesisType>> = graph
         .hypotheses
         .into_iter()
-        .map(|hypothesis| RefCell::new(hypothesis))
+        .map(RefCell::new)
         .collect();
 
     let mut previous_results = None;
@@ -115,8 +115,8 @@ where
 
     loop {
         log.flush();
-        iteration = iteration + 1;
-        info!(logger: log, "Iteration: {}", iteration);
+        iteration += 1;
+        info!(logger: log, "Iteration: {iteration}");
 
         let mut data = Vec::with_capacity(hypotheses.len());
         for _ in 0..hypotheses.len() {
@@ -147,13 +147,13 @@ where
 
         match result {
             HypothesisResult::Pending(fitness_and_action) => {
-                info!(logger: log, "Pending result. Fitness: {}", fitness_and_action);
+                info!(logger: log, "Pending result. Fitness: {fitness_and_action}");
 
                 let data = data.borrow();
                 if let Some(previous_results) = &previous_results {
                     let mut graph_stable = *previous_results == *data;
 
-                    stability_iteration = stability_iteration + 1;
+                    stability_iteration += 1;
                     if !graph_stable {
                         /*
                         let mut f1 =
@@ -177,7 +177,7 @@ where
                         log.flush();
                         */
                         if stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE {
-                            info!(logger: log, "Graph not stable after {} iterations, assuming stable enough for progression", ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE);
+                            info!(logger: log, "Graph not stable after {ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE} iterations, assuming stable enough for progression");
                             graph_stable = true;
                         }
                     } else {
@@ -188,14 +188,14 @@ where
                         stability_iteration = 0;
 
                         let cycles = cycles.borrow();
-                        if cycles.len() == 0 {
+                        if cycles.is_empty() {
                             let mut borrow = desire_data.borrow_mut();
                             info!(
                                 "I-{}: We have a stagnate graph due to one of the following desires not concluding. We will forcefully set the hypotheses that are not evaluating it to false {}",
                                 iteration,
                                 borrow
                                     .iter()
-                                    .filter(|desire| desire.pending.len() > 0)
+                                    .filter(|desire| !desire.pending.is_empty())
                                     .enumerate()
                                     .map(|(index, data)| {
                                         format!("{}: {}", DesireProducerReference::new(index), data)
@@ -207,7 +207,7 @@ where
                             let mut least_pending_option = None;
                             for (index, desire_data) in borrow
                                 .iter_mut()
-                                .filter(|desire| desire.pending.len() > 0)
+                                .filter(|desire| !desire.pending.is_empty())
                                 .enumerate()
                             {
                                 least_pending_option = Some(match least_pending_option {
@@ -227,9 +227,9 @@ where
                             info!(logger: log, "Selected {} for unblocking", DesireProducerReference::new(least_pending_index));
                             let unblocking_data = &mut borrow[least_pending_index];
                             for pending_hypothesis in
-                                std::mem::replace(&mut unblocking_data.pending, HashSet::new())
+                                std::mem::take(&mut unblocking_data.pending)
                             {
-                                info!(logger: log, "Force setting {}'s desire to false", pending_hypothesis);
+                                info!(logger: log, "Force setting {pending_hypothesis}'s desire to false");
                                 unblocking_data.undesired.insert(pending_hypothesis);
                             }
                         } else {
@@ -284,7 +284,7 @@ where
                             let (break_cycle, break_reference, break_fitness) =
                                 best_break_candidate
                                     .expect("At least one break candidate should exist");
-                            info!(logger: log, "Breaking cycle {} at {} which has a pending fitness value of {}", break_cycle, break_reference, break_fitness);
+                            info!(logger: log, "Breaking cycle {break_cycle} at {break_reference} which has a pending fitness value of {break_fitness}");
 
                             break_at = Some(break_reference.clone());
                         }
@@ -294,16 +294,16 @@ where
                 previous_results = Some(data.clone());
             }
             HypothesisResult::Conclusive(fitness_and_action) => {
-                if fitness_and_action.action().len() == 0 {
+                if fitness_and_action.action().is_empty() {
                     error!(logger: log, "Obtained conclusive result with no actions!");
                     return Err(PredictionError::ConclusiveNoAction);
                 }
 
-                info!(logger: log, "Conclusive result obtained. Fitness: {}", fitness_and_action);
+                info!(logger: log, "Conclusive result obtained. Fitness: {fitness_and_action}");
 
                 if fitness_and_action.action().len() == 1 {
                     for action in fitness_and_action.action() {
-                        info!(logger: log, "Conclusive action: {}", action);
+                        info!(logger: log, "Conclusive action: {action}");
                     }
                 }
 

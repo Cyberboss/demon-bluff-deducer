@@ -100,19 +100,19 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
         match expression {
             Expression::Unary(Testimony::Confess(confession)) => {
                 if self.defendant == self.testifier {
-                    return repository.finalize(HypothesisResult::Conclusive(match confession {
+                    repository.finalize(HypothesisResult::Conclusive(match confession {
                         ConfessorClaim::Good => FitnessAndAction::impossible(),
                         ConfessorClaim::Dizzy => FitnessAndAction::certainty(None),
-                    }));
+                    }))
                 } else {
-                    return repository
-                        .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()));
+                    repository
+                        .finalize(HypothesisResult::Conclusive(FitnessAndAction::impossible()))
                 }
             }
             _ => {
-                return repository.finalize(HypothesisResult::Conclusive(
+                repository.finalize(HypothesisResult::Conclusive(
                     FitnessAndAction::unimplemented(),
-                ));
+                ))
             }
         }
     }

@@ -95,7 +95,7 @@ impl Display for FitnessAndAction {
                     write!(f, "or ")?
                 }
 
-                write!(f, "[{}]", action)?
+                write!(f, "[{action}]")?
             }
         }
 
@@ -183,8 +183,8 @@ pub fn average_result(results: impl Iterator<Item = HypothesisResult>) -> Option
             HypothesisResult::Conclusive(fitness_and_action) => fitness_and_action,
         };
 
-        fitness_sum = fitness_sum + fitness.fitness;
-        total_items = total_items + 1;
+        fitness_sum += fitness.fitness;
+        total_items += 1;
     }
 
     if total_items == 0 {
@@ -242,7 +242,7 @@ pub fn and_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessA
     }
 
     // P(A and B) = P(A) * P(B)
-    lhs.fitness = lhs.fitness * rhs.fitness;
+    lhs.fitness *= rhs.fitness;
     lhs
 }
 

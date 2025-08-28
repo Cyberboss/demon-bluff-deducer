@@ -27,7 +27,7 @@ impl Display for Cycle {
                 write!(f, " -> ")?;
             }
 
-            write!(f, "{}", reference)?;
+            write!(f, "{reference}")?;
         }
 
         Ok(())

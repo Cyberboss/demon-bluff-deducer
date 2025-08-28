@@ -99,7 +99,7 @@ where
             // intentionally dropping the initially built hypotheis
             _ = current_builder.build(game_state, &mut self);
 
-            current_reference = current_reference + 1;
+            current_reference += 1;
             if current_reference == self.builders.len() {
                 break;
             }
@@ -114,13 +114,13 @@ where
         let mut hypotheses = Vec::with_capacity(current_reference);
 
         for (index, builder) in self.builders.clone().into_iter().enumerate() {
-            let hypothesis = builder.build(game_state, &mut self).into();
+            let hypothesis = builder.build(game_state, &mut self);
 
             info!(logger: self.log, "{}: {}", HypothesisReference::new(index), hypothesis);
             if let Some((debugger, breaker)) = debugger {
                 let mut debugger = debugger.lock().expect("Debugger lock was poisoned!");
                 let node = create_hypothesis_node(
-                    format!("{}", hypothesis),
+                    format!("{hypothesis}"),
                     dependencies.hypotheses[index]
                         .iter()
                         .map(|reference| reference.index())
@@ -140,7 +140,7 @@ where
             }
 
             for dependency in &dependencies.hypotheses[index] {
-                info!(logger: self.log, "- {}", dependency);
+                info!(logger: self.log, "- {dependency}");
             }
 
             hypotheses.push(hypothesis);

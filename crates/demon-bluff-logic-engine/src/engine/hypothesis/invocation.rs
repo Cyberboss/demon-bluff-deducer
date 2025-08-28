@@ -40,8 +40,7 @@ where
                     .any(|pending_reference| pending_reference == reference)
                 {
                     panic!(
-                        "{}: {} was supposed to produce a result for {} before concluding but didn't!",
-                        reference, hypothesis, producer_reference
+                        "{reference}: {hypothesis} was supposed to produce a result for {producer_reference} before concluding but didn't!"
                     )
                 }
             }

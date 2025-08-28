@@ -52,17 +52,17 @@ where
         info!(logger: self.log, "{} Read desire {} {} - {}", self.depth(), desire_reference, definition.desire(), data);
         let total = data.total();
         let fitness = FitnessAndAction::new(
-            if data.desired.len() == 0 {
+            if data.desired.is_empty() {
                 0.0 // stop divide by 0
             } else {
                 (data.desired.len() as f64) / (total as f64)
             },
             None,
         );
-        if data.pending.len() == 0 {
+        if data.pending.is_empty() {
             HypothesisResult::Conclusive(fitness)
         } else {
-            info!(logger: self.log, "{} Remaining Pending: {}", self.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{}", producer_hypothesis_reference)).collect::<Vec<String>>().join(", "));
+            info!(logger: self.log, "{} Remaining Pending: {}", self.depth(), data.pending.iter().map(|producer_hypothesis_reference| format!("{producer_hypothesis_reference}")).collect::<Vec<String>>().join(", "));
             HypothesisResult::Pending(fitness)
         }
     }

@@ -41,10 +41,10 @@ impl Display for HypothesisResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             HypothesisResult::Pending(fitness_and_action) => {
-                write!(f, "Pending: {}", fitness_and_action)
+                write!(f, "Pending: {fitness_and_action}")
             }
             HypothesisResult::Conclusive(fitness_and_action) => {
-                write!(f, "Conclusive: {}", fitness_and_action)
+                write!(f, "Conclusive: {fitness_and_action}")
             }
         }
     }

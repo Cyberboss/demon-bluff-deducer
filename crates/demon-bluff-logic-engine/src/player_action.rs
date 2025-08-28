@@ -47,8 +47,8 @@ impl Hash for AbilityAttempt {
 impl Display for PlayerAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::TryReveal(villager_index) => write!(f, "Reveal {}", villager_index),
-            Self::TryExecute(villager_index) => write!(f, "Execute {}", villager_index),
+            Self::TryReveal(villager_index) => write!(f, "Reveal {villager_index}"),
+            Self::TryExecute(villager_index) => write!(f, "Execute {villager_index}"),
             Self::Ability(ability_attempt) => {
                 write!(f, "Use {}'s ability on ", ability_attempt.source,)?;
 
@@ -59,9 +59,9 @@ impl Display for PlayerAction {
                     }
 
                     if index == length && length > 1 {
-                        write!(f, "and {}", target)?;
+                        write!(f, "and {target}")?;
                     } else {
-                        write!(f, "{}", target)?
+                        write!(f, "{target}")?
                     }
                 }
 
