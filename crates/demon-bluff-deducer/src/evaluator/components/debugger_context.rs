@@ -11,7 +11,7 @@ use bevy::{
 	},
 	ecs::component::Component,
 	gizmos::gizmos::Gizmos,
-	math::{Isometry2d, Vec2},
+	math::{Isometry2d, Quat, Rot2, Vec2},
 	tasks::Task,
 	time::Time,
 };
@@ -76,20 +76,20 @@ impl DebuggerContextComponent {
 			.lock()
 			.expect("Debugger context was poisoned!");
 		for (index, hypo_node) in guard.hypotheses().iter().enumerate() {
-			let lhs = self
+			let hypothesis_node_index = self
 				.hypothesis_map
 				.get(&index)
 				.expect("This hypothesis index was not mapped in the graph!");
 
 			for dep in hypo_node.hypothesis_dependencies() {
-				let rhs = self
+				let dependency_hypothesis_node_index = self
 					.hypothesis_map
 					.get(&dep)
 					.expect("This hypothesis index was not mapped in the graph!");
 
 				self.graph.add_edge(
-					*lhs,
-					*rhs,
+					*dependency_hypothesis_node_index,
+					*hypothesis_node_index,
 					EdgeData {
 						user_data: Edge::Hypothesis(*dep),
 					},
@@ -97,14 +97,14 @@ impl DebuggerContextComponent {
 			}
 
 			for dep in hypo_node.desire_consumer_dependencies() {
-				let rhs = self
+				let desire_node_index = self
 					.desire_map
 					.get(&dep)
 					.expect("This desire index was not mapped in the graph!");
 
 				self.graph.add_edge(
-					*lhs,
-					*rhs,
+					*desire_node_index,
+					*hypothesis_node_index,
 					EdgeData {
 						user_data: Edge::DesireConsumer(*dep),
 					},
@@ -112,14 +112,14 @@ impl DebuggerContextComponent {
 			}
 
 			for dep in hypo_node.desire_producer_dependencies() {
-				let rhs = self
+				let desire_node_index = self
 					.desire_map
 					.get(&dep)
 					.expect("This desire index was not mapped in the graph!");
 
 				self.graph.add_edge(
-					*lhs,
-					*rhs,
+					*hypothesis_node_index,
+					*desire_node_index,
 					EdgeData {
 						user_data: Edge::DesireProducer(*dep, None),
 					},
@@ -189,39 +189,54 @@ impl DebuggerContextComponent {
 			);
 		});
 
+		let clockwise_rotation = Rot2::degrees(-30.0);
+		let counterclockwise_rotation = Rot2::degrees(30.0);
 		self.graph.visit_edges(|lhs, rhs, edge| {
-			gizmos.line_2d(
-				Vec2::new(lhs.x(), lhs.y()),
-				Vec2::new(rhs.x(), rhs.y()),
-				match edge.user_data {
-					Edge::Hypothesis(dependency_hypothesis_index) => {
-						let dependency = &guard.hypotheses()[dependency_hypothesis_index];
+			let dependency_vec = Vec2::new(lhs.x(), lhs.y());
+			let dependent_vec = Vec2::new(rhs.x(), rhs.y());
+			let colour = match edge.user_data {
+				Edge::Hypothesis(dependency_hypothesis_index) => {
+					let dependency = &guard.hypotheses()[dependency_hypothesis_index];
 
-						match dependency.current_fitness() {
-							Some(fitness_and_action) => COLOUR_HYPOTHESIS_NEGATIVE.mix(
-								&COLOUR_HYPOTHESIS_POSITIVE,
-								fitness_and_action.fitness() as f32,
-							),
-							None => COLOUR_NEUTRAL,
-						}
-					}
-					Edge::DesireProducer(_, desired) => match desired {
-						Some(desired) => {
-							if desired {
-								COLOUR_DESIRE_POSITIVE
-							} else {
-								COLOUR_DESIRE_NEGATIVE
-							}
-						}
+					match dependency.current_fitness() {
+						Some(fitness_and_action) => COLOUR_HYPOTHESIS_NEGATIVE.mix(
+							&COLOUR_HYPOTHESIS_POSITIVE,
+							fitness_and_action.fitness() as f32,
+						),
 						None => COLOUR_NEUTRAL,
-					},
-					Edge::DesireConsumer(desire_index) => {
-						let desire = &guard.desires()[desire_index];
-						COLOUR_DESIRE_NEGATIVE
-							.mix(&COLOUR_DESIRE_POSITIVE, desire.fitness_value() as f32)
 					}
+				}
+				Edge::DesireProducer(_, desired) => match desired {
+					Some(desired) => {
+						if desired {
+							COLOUR_DESIRE_POSITIVE
+						} else {
+							COLOUR_DESIRE_NEGATIVE
+						}
+					}
+					None => COLOUR_NEUTRAL,
 				},
-			);
+				Edge::DesireConsumer(desire_index) => {
+					let desire = &guard.desires()[desire_index];
+					COLOUR_DESIRE_NEGATIVE
+						.mix(&COLOUR_DESIRE_POSITIVE, desire.fitness_value() as f32)
+				}
+			};
+			gizmos.line_2d(dependency_vec, dependent_vec, colour);
+
+			let midpoint_vec = (dependency_vec + dependent_vec) / 2.0;
+			let ray = dependency_vec - midpoint_vec;
+			let absolute_ray = ray.normalize();
+			let sized_ray = absolute_ray * 5.0;
+
+			let arrow_ray_clockwise = clockwise_rotation * sized_ray;
+			let arrow_ray_counterclockwise = counterclockwise_rotation * sized_ray;
+
+			let arrow_dash_clockwise = midpoint_vec + arrow_ray_clockwise;
+			let arrow_dash_counterclockwise = midpoint_vec + arrow_ray_counterclockwise;
+
+			gizmos.line_2d(arrow_dash_clockwise, midpoint_vec, colour);
+			gizmos.line_2d(arrow_dash_counterclockwise, midpoint_vec, colour);
 		});
 	}
 }
