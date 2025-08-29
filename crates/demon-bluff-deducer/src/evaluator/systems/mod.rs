@@ -1,3 +1,4 @@
+pub mod camera_controls;
 pub mod check_for_break;
 pub mod check_for_resume;
 pub mod draw_graph;

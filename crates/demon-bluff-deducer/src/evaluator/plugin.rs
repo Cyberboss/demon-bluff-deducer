@@ -3,9 +3,9 @@ use bevy::prelude::*;
 use super::{
 	state::EvaluatorState,
 	systems::{
-		check_for_break::check_for_break, check_for_resume::check_for_resume,
-		draw_graph::draw_graph, get_prediction_result::get_prediction_result,
-		init_evaluation::init_evaluation,
+		camera_controls::camera_controls, check_for_break::check_for_break,
+		check_for_resume::check_for_resume, draw_graph::draw_graph,
+		get_prediction_result::get_prediction_result, init_evaluation::init_evaluation,
 		update_graph_from_breakpoint::update_graph_from_breakpoint,
 	},
 };
@@ -28,6 +28,7 @@ impl Plugin for EvaluatorPlugin {
 			.add_systems(
 				Update,
 				(
+					camera_controls,
 					draw_graph.after(update_graph_from_breakpoint),
 					(check_for_break, get_prediction_result)
 						.run_if(in_state(EvaluatorState::Running)),
