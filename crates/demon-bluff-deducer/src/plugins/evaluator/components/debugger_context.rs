@@ -68,7 +68,7 @@ impl DebuggerContextComponent {
 		&self.graph.get_graph()[graph_index].data
 	}
 
-	pub fn register_desire(&mut self, index: usize) {
+	pub fn register_desire(&mut self, index: usize) -> &NodeData<Node> {
 		let guard = self
 			.debug_context
 			.read()
@@ -92,6 +92,7 @@ impl DebuggerContextComponent {
 			user_data: Node::Desire(index),
 		});
 		self.desire_map.insert(index, graph_index);
+		&self.graph.get_graph()[graph_index].data
 	}
 
 	pub fn finalize_edges(&mut self) {

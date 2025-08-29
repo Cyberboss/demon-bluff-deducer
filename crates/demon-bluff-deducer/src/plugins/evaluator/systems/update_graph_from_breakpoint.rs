@@ -23,7 +23,10 @@ pub fn update_graph_from_breakpoint(
 			let node = context.register_hypothesis(*index, *root);
 			node_spawn_writer.write(NodeSpawnEvent::new(clone_node_data(node), *root));
 		}
-		Breakpoint::RegisterDesire(index) => context.register_desire(*index),
+		Breakpoint::RegisterDesire(index) => {
+			let node = context.register_desire(*index);
+			node_spawn_writer.write(NodeSpawnEvent::new(clone_node_data(node), false));
+		}
 		Breakpoint::IterationStart(iteration) => {
 			if *iteration == 1 {
 				context.finalize_edges();
