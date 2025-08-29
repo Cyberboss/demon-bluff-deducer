@@ -1,6 +1,6 @@
 use std::process::{ExitCode, Termination};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::RenderLayers};
 use evaluator::EvaluatorPlugin;
 use menu::MenuPlugin;
 use state::RootState;
@@ -22,6 +22,10 @@ fn main() -> ExitCode {
 		.report()
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut gizmos_config_store: ResMut<GizmoConfigStore>) {
 	commands.spawn(Camera2d);
+
+	let (default, _) = gizmos_config_store.config_mut::<DefaultGizmoConfigGroup>();
+	// TODO: ensure gizmos are layered below other stuff
+	default.render_layers = RenderLayers::from_layers(&[0]);
 }
