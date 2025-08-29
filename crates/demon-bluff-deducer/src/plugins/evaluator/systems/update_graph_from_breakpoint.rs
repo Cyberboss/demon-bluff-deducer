@@ -1,42 +1,27 @@
 use bevy::{
-	asset::Assets,
-	ecs::system::{Commands, ResMut, Single},
+	ecs::{event::EventWriter, system::Single},
 	log::warn,
-	math::primitives::Circle,
-	render::mesh::{Mesh, Mesh2d},
-	sprite::{ColorMaterial, MeshMaterial2d},
-	transform::components::Transform,
 };
 use demon_bluff_logic_engine::Breakpoint;
+use force_graph::NodeData;
 
 use crate::plugins::evaluator::{
-	colours::COLOUR_NEUTRAL,
-	components::{
-		breakpoint::BreakpointComponent, debugger_context::DebuggerContextComponent,
-		node::NodeComponent,
-	},
-	node_radius::NodeRadius,
+	components::{breakpoint::BreakpointComponent, debugger_context::DebuggerContextComponent},
+	events::node_spawn::NodeSpawnEvent,
+	node::Node,
 };
 
 pub fn update_graph_from_breakpoint(
-	mut commands: Commands,
-	mut meshes: ResMut<Assets<Mesh>>,
-	mut materials: ResMut<Assets<ColorMaterial>>,
-	context: Single<&mut DebuggerContextComponent>,
+	mut node_spawn_writer: EventWriter<NodeSpawnEvent>,
 	breakpoint: Single<&BreakpointComponent>,
+	context: Single<&mut DebuggerContextComponent>,
 ) {
 	let mut context = context.into_inner();
 	match breakpoint.breakpoint() {
 		Breakpoint::Initialize(_) => {}
 		Breakpoint::RegisterHypothesis(index, root) => {
 			let node = context.register_hypothesis(*index, *root);
-
-			commands.spawn((
-				NodeComponent::new(node.user_data.clone()),
-				Mesh2d(meshes.add(Circle::new(node.radius(*root)))),
-				MeshMaterial2d(materials.add(COLOUR_NEUTRAL)),
-				Transform::from_xyz(node.x, node.y, 0.0),
-			));
+			node_spawn_writer.write(NodeSpawnEvent::new(clone_node_data(node), *root));
 		}
 		Breakpoint::RegisterDesire(index) => context.register_desire(*index),
 		Breakpoint::IterationStart(iteration) => {
@@ -53,5 +38,15 @@ pub fn update_graph_from_breakpoint(
 				breakpoint.breakpoint()
 			);
 		}
+	}
+}
+
+fn clone_node_data(this: &NodeData<Node>) -> NodeData<Node> {
+	NodeData {
+		x: this.x.clone(),
+		y: this.y.clone(),
+		mass: this.mass.clone(),
+		is_anchor: this.is_anchor.clone(),
+		user_data: this.user_data.clone(),
 	}
 }

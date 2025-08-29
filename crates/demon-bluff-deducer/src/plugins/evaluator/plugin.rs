@@ -1,12 +1,14 @@
 use bevy::prelude::*;
 
 use super::{
+	events::node_spawn::NodeSpawnEvent,
 	state::EvaluatorState,
 	systems::{
 		camera_controls::camera_controls, check_for_break::check_for_break,
 		check_for_resume::check_for_resume, draw_graph_edges::draw_graph_edges,
-		get_prediction_result::get_prediction_result, init_evaluation::init_evaluation,
-		update_graph::update_graph, update_graph_from_breakpoint::update_graph_from_breakpoint,
+		get_prediction_result::get_prediction_result, handle_node_spawn::handle_node_spawn,
+		init_evaluation::init_evaluation, update_graph::update_graph,
+		update_graph_from_breakpoint::update_graph_from_breakpoint,
 		update_node_entities::update_node_entities,
 	},
 };
@@ -21,6 +23,7 @@ impl Plugin for EvaluatorPlugin {
 			// entering the `GameState::Menu` state.
 			// Current screen in the menu is handled by an independent state from `GameState`
 			.add_sub_state::<EvaluatorState>()
+			.add_event::<NodeSpawnEvent>()
 			.add_systems(OnEnter(RootState::Evaluation), init_evaluation)
 			.add_systems(
 				OnEnter(EvaluatorState::Break),
@@ -30,6 +33,7 @@ impl Plugin for EvaluatorPlugin {
 				Update,
 				(
 					camera_controls,
+					handle_node_spawn,
 					update_graph.after(update_graph_from_breakpoint),
 					(draw_graph_edges, update_node_entities).after(update_graph),
 					(check_for_break, get_prediction_result)
