@@ -8,6 +8,10 @@ pub trait NodeRadius {
 
 impl NodeRadius for NodeData<Node> {
 	fn radius(&self, is_root: bool) -> f32 {
-		5.0 * if is_root { 1.0 } else { self.mass }
+		5.0 * if is_root {
+			1.0
+		} else {
+			f32::max(self.mass * 0.7, 1.0)
+		}
 	}
 }
