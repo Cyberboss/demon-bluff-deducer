@@ -2,9 +2,9 @@ use bevy::{
 	prelude::*,
 	tasks::{AsyncComputeTaskPool, block_on},
 };
-use demon_bluff_logic_engine::{Breakpoint, predict, predict_with_debugger};
+use demon_bluff_logic_engine::predict_with_debugger;
 
-use crate::evaluator::components::{
+use crate::plugins::evaluator::components::{
 	debugger_channels::DebuggerChannels, game_state::GameStateComponent,
 	prediction::PredictionComponent,
 };

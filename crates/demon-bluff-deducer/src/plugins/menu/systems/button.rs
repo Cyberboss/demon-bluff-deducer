@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::menu::colours::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
+use crate::plugins::menu::colours::{HOVERED_BUTTON, NORMAL_BUTTON, PRESSED_BUTTON};
 
 pub fn button(
 	mut interaction_query: Query<

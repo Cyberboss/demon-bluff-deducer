@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::CRIMSON, prelude::*};
 
-use crate::menu::{
+use crate::plugins::menu::{
 	colours::{NORMAL_BUTTON, TEXT_COLOR},
 	components::{button_action::MenuButtonAction, on_main_menu_screen::OnMainMenuScreen},
 };

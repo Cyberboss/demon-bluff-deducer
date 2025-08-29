@@ -10,7 +10,7 @@ use bevy::{
 };
 use demon_bluff_logic_engine::Breakpoint;
 
-use crate::evaluator::{
+use crate::plugins::evaluator::{
 	components::{
 		breakpoint::BreakpointComponent, debugger_channels::DebuggerChannels,
 		debugger_context::DebuggerContextComponent,

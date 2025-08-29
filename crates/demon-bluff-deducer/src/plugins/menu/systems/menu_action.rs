@@ -5,8 +5,8 @@ use demon_bluff_gameplay_engine::{
 };
 
 use crate::{
-	evaluator::GameStateComponent, menu::components::button_action::MenuButtonAction,
-	state::RootState,
+	plugins::{evaluator::GameStateComponent, menu::components::button_action::MenuButtonAction},
+	root_state::RootState,
 };
 
 pub fn menu_action(

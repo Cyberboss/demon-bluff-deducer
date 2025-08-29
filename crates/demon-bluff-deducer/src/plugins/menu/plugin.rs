@@ -8,7 +8,7 @@ use super::{
 		menu_setup::menu_setup,
 	},
 };
-use crate::state::RootState;
+use crate::root_state::RootState;
 
 pub struct MenuPlugin;
 

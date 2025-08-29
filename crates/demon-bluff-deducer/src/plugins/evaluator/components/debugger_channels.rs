@@ -1,11 +1,6 @@
 use async_channel::{Receiver, Sender, TryRecvError};
-use bevy::{
-	ecs::{component::Component, resource::Resource},
-	tasks::block_on,
-};
+use bevy::{ecs::component::Component, tasks::block_on};
 use demon_bluff_logic_engine::Breakpoint;
-
-use crate::evaluator::events::breakpoint;
 
 #[derive(Component)]
 pub struct DebuggerChannels {

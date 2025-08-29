@@ -20,7 +20,7 @@ use demon_bluff_logic_engine::{
 };
 use force_graph::{DefaultNodeIdx, EdgeData, ForceGraph, NodeData};
 
-use crate::evaluator::{
+use crate::plugins::evaluator::{
 	colours::{
 		COLOUR_DESIRE_NEGATIVE, COLOUR_DESIRE_POSITIVE, COLOUR_HYPOTHESIS_NEGATIVE,
 		COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL, COLOUR_UNIMPLEMENTED,

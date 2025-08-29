@@ -4,7 +4,7 @@ use bevy::{
 	time::Time,
 };
 
-use crate::evaluator::components::debugger_context::DebuggerContextComponent;
+use crate::plugins::evaluator::components::debugger_context::DebuggerContextComponent;
 
 pub fn draw_graph(gizmos: Gizmos, time: Res<Time>, context: Single<&mut DebuggerContextComponent>) {
 	context.into_inner().update_and_draw_graph(gizmos, &*time);

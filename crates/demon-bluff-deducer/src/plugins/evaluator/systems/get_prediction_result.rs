@@ -6,7 +6,7 @@ use bevy::{
 	tasks::{block_on, poll_once},
 };
 
-use crate::evaluator::components::prediction::PredictionComponent;
+use crate::plugins::evaluator::components::prediction::PredictionComponent;
 
 pub fn get_prediction_result(
 	mut commands: Commands,
