@@ -13,7 +13,13 @@ fn main() -> ExitCode {
 	println!("Hello, world!");
 
 	App::new()
-		.add_plugins(DefaultPlugins)
+		.add_plugins(DefaultPlugins.set(WindowPlugin {
+			primary_window: Some(Window {
+				title: "Demon Bluff Deducer".to_string(),
+				..Default::default()
+			}),
+			..Default::default()
+		}))
 		.init_state::<RootState>()
 		.add_plugins(MenuPlugin)
 		.add_plugins(EvaluatorPlugin)
