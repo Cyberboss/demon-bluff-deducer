@@ -115,7 +115,8 @@ where
 		for (index, builder) in self.builders.clone().into_iter().enumerate() {
 			let hypothesis = builder.build(game_state, &mut self);
 
-			info!(logger: self.log, "{}: {}", HypothesisReference::new(index), hypothesis);
+			let index_reference = HypothesisReference::new(index);
+			info!(logger: self.log, "{}: {}", index_reference, hypothesis);
 			if let Some(debugger) = &mut debugger {
 				let mut debugger_context = debugger.context();
 				let node = create_hypothesis_node(
@@ -136,7 +137,10 @@ where
 
 				hypothesis_nodes_mut(&mut debugger_context).push(node);
 				drop(debugger_context);
-				debugger.breakpoint(Breakpoint::RegisterHypothesis(index))
+				debugger.breakpoint(Breakpoint::RegisterHypothesis(
+					index,
+					root_reference == index_reference,
+				))
 			}
 
 			for dependency in &dependencies.hypotheses[index] {

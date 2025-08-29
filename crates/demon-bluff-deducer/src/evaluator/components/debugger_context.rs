@@ -46,12 +46,12 @@ impl DebuggerContextComponent {
 		}
 	}
 
-	pub fn register_hypothesis(&mut self, index: usize) {
+	pub fn register_hypothesis(&mut self, index: usize, is_root: bool) {
 		let graph_index = self.graph.add_node(NodeData {
 			x: 1.0 * index as f32,
 			y: 0.0,
-			mass: 1.0,
-			is_anchor: false,
+			mass: if is_root { 50.0 } else { 1.0 },
+			is_anchor: is_root,
 			user_data: Node::Hypothesis(index),
 		});
 		self.hypothesis_map.insert(index, graph_index);

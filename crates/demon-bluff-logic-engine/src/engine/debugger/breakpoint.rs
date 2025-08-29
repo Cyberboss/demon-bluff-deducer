@@ -11,7 +11,7 @@ use crate::engine::{
 
 pub enum Breakpoint {
 	Initialize(Arc<Mutex<DebuggerContext>>),
-	RegisterHypothesis(usize),
+	RegisterHypothesis(usize, bool),
 	RegisterDesire(usize),
 	IterationStart(usize),
 	EnterHypothesis(usize),
@@ -27,8 +27,9 @@ impl Display for Breakpoint {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Initialize(_) => write!(f, "Initialize"),
-			Self::RegisterHypothesis(index) => {
-				write!(f, "Register {}", HypothesisReference::new(*index))
+			Self::RegisterHypothesis(index, root) => {
+				write!(f, "Register {}", HypothesisReference::new(*index))?;
+				if *root { write!(f, " (ROOT)") } else { Ok(()) }
 			}
 			Self::RegisterDesire(index) => {
 				write!(f, "Register {}", DesireProducerReference::new(*index))

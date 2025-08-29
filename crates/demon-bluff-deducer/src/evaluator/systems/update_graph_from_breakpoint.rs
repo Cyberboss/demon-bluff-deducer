@@ -15,7 +15,7 @@ pub fn update_graph_from_breakpoint(
 	let mut context = context.into_inner();
 	match breakpoint.breakpoint() {
 		Breakpoint::Initialize(_) => {}
-		Breakpoint::RegisterHypothesis(index) => context.register_hypothesis(*index),
+		Breakpoint::RegisterHypothesis(index, root) => context.register_hypothesis(*index, *root),
 		Breakpoint::RegisterDesire(index) => context.register_desire(*index),
 		Breakpoint::IterationStart(iteration) => {
 			if *iteration == 1 {
