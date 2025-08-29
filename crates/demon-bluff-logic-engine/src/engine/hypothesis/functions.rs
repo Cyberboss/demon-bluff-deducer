@@ -49,6 +49,7 @@ where
 		}
 
 		info!(logger: self.log, "{} Set {}: {}. Now {}", self.depth(), desire_reference, desired, data);
+		let current_hypothesis_index = current_reference.index();
 		if let Some(debugger) = &mut self.debugger {
 			let mut guard = debugger.context();
 			update_desire_node(
@@ -58,7 +59,11 @@ where
 				data.undesired.len(),
 			);
 			drop(guard);
-			debugger.breakpoint(Breakpoint::DesireUpdate(desire_reference.index()));
+			debugger.breakpoint(Breakpoint::DesireUpdate(
+				current_hypothesis_index,
+				desire_reference.index(),
+				desired,
+			));
 		}
 	}
 

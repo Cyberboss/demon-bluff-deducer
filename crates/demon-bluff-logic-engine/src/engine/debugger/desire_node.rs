@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::hypotheses::DesireType;
 
 #[derive(Debug)]
@@ -15,6 +17,36 @@ impl DesireNode {
 			pending: producers,
 			desired: 0,
 			undesired: 0,
+		}
+	}
+
+	pub fn pending(&self) -> usize {
+		self.pending
+	}
+
+	pub fn total(&self) -> usize {
+		self.desired + self.pending + self.undesired
+	}
+
+	pub fn fitness_value(&self) -> f64 {
+		self.desired as f64 / self.total() as f64
+	}
+}
+
+impl Display for DesireNode {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"{} ({}/{})",
+			self.desire_type,
+			self.desired,
+			self.total()
+		)?;
+
+		if self.pending > 0 {
+			write!(f, " ({} Pending)", self.pending)
+		} else {
+			Ok(())
 		}
 	}
 }

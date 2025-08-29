@@ -8,4 +8,5 @@ pub enum EvaluatorState {
 	#[default]
 	Running,
 	Break,
+	Complete,
 }

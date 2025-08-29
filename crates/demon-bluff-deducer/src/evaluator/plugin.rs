@@ -4,7 +4,8 @@ use super::{
 	state::EvaluatorState,
 	systems::{
 		check_for_break::check_for_break, check_for_resume::check_for_resume,
-		draw_graph::draw_graph, init_evaluation::init_evaluation,
+		draw_graph::draw_graph, get_prediction_result::get_prediction_result,
+		init_evaluation::init_evaluation,
 		update_graph_from_breakpoint::update_graph_from_breakpoint,
 	},
 };
@@ -20,13 +21,19 @@ impl Plugin for EvaluatorPlugin {
 			// Current screen in the menu is handled by an independent state from `GameState`
 			.add_sub_state::<EvaluatorState>()
 			.add_systems(OnEnter(RootState::Evaluation), init_evaluation)
-			.add_systems(OnEnter(EvaluatorState::Break), update_graph_from_breakpoint)
+			.add_systems(
+				OnEnter(EvaluatorState::Break),
+				update_graph_from_breakpoint.after(check_for_break),
+			)
 			.add_systems(
 				Update,
 				(
-					draw_graph,
-					check_for_break.run_if(in_state(EvaluatorState::Running)),
-					check_for_resume.run_if(in_state(EvaluatorState::Break)),
+					draw_graph.after(update_graph_from_breakpoint),
+					(check_for_break, get_prediction_result)
+						.run_if(in_state(EvaluatorState::Running)),
+					check_for_resume
+						.after(update_graph_from_breakpoint)
+						.run_if(in_state(EvaluatorState::Break)),
 				),
 			);
 	}

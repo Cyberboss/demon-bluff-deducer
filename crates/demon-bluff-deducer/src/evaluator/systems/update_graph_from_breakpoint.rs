@@ -3,11 +3,13 @@ use demon_bluff_logic_engine::{Breakpoint, DebuggerContext};
 
 use crate::evaluator::components::{
 	breakpoint::{self, BreakpointComponent},
+	debugger_channels::DebuggerChannels,
 	debugger_context::DebuggerContextComponent,
 };
 
 pub fn update_graph_from_breakpoint(
-	mut context: Single<&mut DebuggerContextComponent>,
+	context: Single<&mut DebuggerContextComponent>,
+	channels: Single<&mut DebuggerChannels>,
 	breakpoint: Single<&BreakpointComponent>,
 ) {
 	let mut context = context.into_inner();
@@ -20,9 +22,14 @@ pub fn update_graph_from_breakpoint(
 				context.register_edges();
 			}
 		}
-		_ => warn!(
-			"Unhandled graph update from breakpoint: {}",
-			breakpoint.breakpoint()
-		),
+		Breakpoint::DesireUpdate(producer_hypothesis_index, desire_index, desired) => {
+			context.update_desire_producer(*producer_hypothesis_index, *desire_index, *desired)
+		}
+		_ => {
+			warn!(
+				"Unhandled graph update from breakpoint: {}",
+				breakpoint.breakpoint()
+			);
+		}
 	}
 }

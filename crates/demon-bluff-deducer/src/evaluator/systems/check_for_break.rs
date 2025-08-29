@@ -18,10 +18,7 @@ pub fn check_for_break(
 	channels: Single<&DebuggerChannels>,
 	mut next_state: ResMut<NextState<EvaluatorState>>,
 ) {
-	if let Some(breakpoint) = match channels.try_get_breakpoint() {
-		Ok(breakpoint) => breakpoint,
-		Err(_) => panic!("Could not get next breakpoint! Channel unexpectedly closed"),
-	} {
+	if let Ok(Some(breakpoint)) = channels.try_get_breakpoint() {
 		info!("Breakpoint: {}", breakpoint);
 
 		match &breakpoint {

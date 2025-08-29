@@ -25,7 +25,7 @@ pub fn check_for_resume(
 	keys: Res<ButtonInput<KeyCode>>,
 	mut next_state: ResMut<NextState<EvaluatorState>>,
 ) {
-	if keys.just_pressed(KeyCode::Space) {
+	if true || keys.just_pressed(KeyCode::Space) {
 		info!("Resuming from breakpoint");
 		commands.entity(*breakpoint).despawn();
 		channels.send_continue();

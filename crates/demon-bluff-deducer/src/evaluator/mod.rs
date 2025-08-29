@@ -1,5 +1,9 @@
+mod colours;
 mod components;
+mod edge;
+mod edge_link;
 mod events;
+mod node;
 mod plugin;
 mod resources;
 mod state;

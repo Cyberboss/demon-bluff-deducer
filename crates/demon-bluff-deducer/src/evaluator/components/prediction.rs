@@ -12,4 +12,8 @@ impl PredictionComponent {
 	pub fn new(task: Task<Result<HashSet<PlayerAction>, PredictionError>>) -> Self {
 		Self { task }
 	}
+
+	pub fn task_mut(&mut self) -> &mut Task<Result<HashSet<PlayerAction>, PredictionError>> {
+		&mut self.task
+	}
 }
