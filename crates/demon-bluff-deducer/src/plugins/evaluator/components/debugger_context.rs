@@ -21,6 +21,7 @@ use crate::plugins::evaluator::{
 	},
 	edge::Edge,
 	node::Node,
+	node_radius::NodeRadius,
 };
 
 #[derive(Component)]
@@ -239,9 +240,15 @@ impl DebuggerContextComponent {
 
 		let clockwise_rotation = Rot2::degrees(-30.0);
 		let counterclockwise_rotation = Rot2::degrees(30.0);
-		self.graph.visit_edges(|lhs, rhs, edge| {
-			let dependency_vec = Vec2::new(lhs.x(), lhs.y());
-			let dependent_vec = Vec2::new(rhs.x(), rhs.y());
+		self.graph.visit_edges(|dependency, dependent, edge| {
+			let dependency_vec = Vec2::new(dependency.x(), dependency.y());
+			let dependent_vec = Vec2::new(dependent.x(), dependent.y());
+
+			let dependent_vec =
+				dependent_vec.move_towards(dependency_vec, dependent.data.radius(false));
+			let dependency_vec =
+				dependency_vec.move_towards(dependent_vec, dependency.data.radius(false));
+
 			let colour = match edge.user_data {
 				Edge::Hypothesis(dependency_hypothesis_index) => {
 					let dependency = &guard.hypotheses()[dependency_hypothesis_index];
