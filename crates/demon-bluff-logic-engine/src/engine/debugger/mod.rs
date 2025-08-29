@@ -3,7 +3,7 @@ mod context;
 mod desire_node;
 mod hypothesis_node;
 
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockWriteGuard};
 
 use context::create_debugger_context;
 
@@ -19,7 +19,7 @@ pub struct Debugger<FDebugBreak>
 where
 	FDebugBreak: FnMut(Breakpoint),
 {
-	context: Arc<Mutex<DebuggerContext>>,
+	context: Arc<RwLock<DebuggerContext>>,
 	breaker: FDebugBreak,
 }
 
@@ -28,13 +28,13 @@ where
 	FDebugBreak: FnMut(Breakpoint),
 {
 	pub fn new(mut breaker: FDebugBreak) -> Self {
-		let context = Arc::new(Mutex::new(create_debugger_context()));
+		let context = Arc::new(RwLock::new(create_debugger_context()));
 		breaker(Breakpoint::Initialize(context.clone()));
 		Self { context, breaker }
 	}
 
-	pub fn context<'a>(&'a mut self) -> MutexGuard<'a, DebuggerContext> {
-		self.context.lock().expect("Debugger mutex was poisoned")
+	pub fn context<'a>(&'a mut self) -> RwLockWriteGuard<'a, DebuggerContext> {
+		self.context.write().expect("Debugger mutex was poisoned")
 	}
 
 	pub fn breakpoint(&mut self, breakpoint: Breakpoint) {

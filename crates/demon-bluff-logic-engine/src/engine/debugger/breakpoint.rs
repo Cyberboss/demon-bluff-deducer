@@ -1,6 +1,6 @@
 use std::{
 	fmt::Display,
-	sync::{Arc, Mutex},
+	sync::{Arc, Mutex, RwLock},
 	usize,
 };
 
@@ -10,7 +10,7 @@ use crate::engine::{
 };
 
 pub enum Breakpoint {
-	Initialize(Arc<Mutex<DebuggerContext>>),
+	Initialize(Arc<RwLock<DebuggerContext>>),
 	RegisterHypothesis(usize, bool),
 	RegisterDesire(usize),
 	IterationStart(usize),

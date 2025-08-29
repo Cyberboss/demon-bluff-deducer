@@ -1,6 +1,6 @@
 use std::{
 	collections::{HashMap, HashSet},
-	sync::{Arc, Mutex, MutexGuard},
+	sync::{Arc, Mutex, MutexGuard, RwLock},
 };
 
 use bevy::{
@@ -32,14 +32,14 @@ use crate::evaluator::{
 
 #[derive(Component)]
 pub struct DebuggerContextComponent {
-	debug_context: Arc<Mutex<DebuggerContext>>,
+	debug_context: Arc<RwLock<DebuggerContext>>,
 	graph: ForceGraph<Node, Edge>,
 	hypothesis_map: HashMap<usize, DefaultNodeIdx>,
 	desire_map: HashMap<usize, DefaultNodeIdx>,
 }
 
 impl DebuggerContextComponent {
-	pub fn new(debug_context: Arc<Mutex<DebuggerContext>>) -> Self {
+	pub fn new(debug_context: Arc<RwLock<DebuggerContext>>) -> Self {
 		Self {
 			debug_context,
 			graph: ForceGraph::new(Default::default()),
@@ -73,7 +73,7 @@ impl DebuggerContextComponent {
 	pub fn register_edges(&mut self) {
 		let guard = self
 			.debug_context
-			.lock()
+			.read()
 			.expect("Debugger context was poisoned!");
 		for (index, hypo_node) in guard.hypotheses().iter().enumerate() {
 			let hypothesis_node_index = self
@@ -152,7 +152,7 @@ impl DebuggerContextComponent {
 	pub fn update_and_draw_graph(&mut self, mut gizmos: Gizmos, time: &Time) {
 		let guard = self
 			.debug_context
-			.lock()
+			.read()
 			.expect("Debugger context was poisoned!");
 		self.graph.update(time.delta_secs());
 		self.graph.visit_nodes(|node| {
