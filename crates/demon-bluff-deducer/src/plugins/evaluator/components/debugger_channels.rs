@@ -34,7 +34,7 @@ impl DebuggerChannels {
 	}
 
 	pub fn send_continue(&self) {
-		if let Err(_) = block_on(self.continue_sender.send(())) {
+		if block_on(self.continue_sender.send(())).is_err() {
 			panic!("Continue channel was closed unexpectedly")
 		}
 	}

@@ -1,6 +1,6 @@
 use std::{
 	fmt::Display,
-	sync::{Arc, Mutex, RwLock},
+	sync::{Arc, RwLock},
 	usize,
 };
 
@@ -34,7 +34,7 @@ impl Display for Breakpoint {
 			Self::RegisterDesire(index) => {
 				write!(f, "Register {}", DesireProducerReference::new(*index))
 			}
-			Self::IterationStart(iteration) => write!(f, "Start Iteration #{}", iteration),
+			Self::IterationStart(iteration) => write!(f, "Start Iteration #{iteration}"),
 			Self::EnterHypothesis(index) => {
 				write!(f, "Enter {}", HypothesisReference::new(*index))
 			}
@@ -51,7 +51,7 @@ impl Display for Breakpoint {
 				)
 			}
 			Self::DesireRead(index) => write!(f, "Read {}", DesireConsumerReference::new(*index)),
-			Self::DetectCycle(cycle) => write!(f, "Dependency Cycle Encountered: {}", cycle),
+			Self::DetectCycle(cycle) => write!(f, "Dependency Cycle Encountered: {cycle}"),
 			Self::BreakCycle(cycle, index) => write!(
 				f,
 				"Dependency Cycle broken at {}: {}",

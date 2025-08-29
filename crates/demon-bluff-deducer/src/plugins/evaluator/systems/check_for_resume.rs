@@ -5,15 +5,13 @@ use bevy::{
 		system::{Commands, Res, ResMut, Single},
 	},
 	input::{ButtonInput, keyboard::KeyCode},
-	log::{info, warn},
+	log::info,
 	state::state::NextState,
 };
-use demon_bluff_logic_engine::Breakpoint;
 
 use crate::plugins::evaluator::{
 	components::{
 		breakpoint::BreakpointComponent, debugger_channels::DebuggerChannels,
-		debugger_context::DebuggerContextComponent,
 	},
 	state::EvaluatorState,
 };

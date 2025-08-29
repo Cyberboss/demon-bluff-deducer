@@ -1,22 +1,17 @@
 use std::{
-	collections::{HashMap, HashSet},
-	sync::{Arc, Mutex, MutexGuard, RwLock},
+	collections::HashMap,
+	sync::{Arc, RwLock},
 };
 
 use bevy::{
-	animation::graph,
-	color::{
-		Color, Mix,
-		color_difference::{self, EuclideanDistance},
-	},
+	color::Mix,
 	ecs::component::Component,
 	gizmos::gizmos::Gizmos,
-	math::{Isometry2d, Quat, Rot2, Vec2},
-	tasks::Task,
+	math::{Isometry2d, Rot2, Vec2},
 	time::Time,
 };
 use demon_bluff_logic_engine::{
-	DebuggerContext, FITNESS_UNIMPLEMENTED, PlayerAction, PredictionError,
+	DebuggerContext, FITNESS_UNIMPLEMENTED,
 };
 use force_graph::{DefaultNodeIdx, EdgeData, ForceGraph, NodeData};
 
@@ -79,14 +74,13 @@ impl DebuggerContextComponent {
 		let dependent_hypotheses = guard
 			.hypotheses()
 			.iter()
-			.map(|hypothesis_node| {
+			.flat_map(|hypothesis_node| {
 				hypothesis_node
 					.desire_consumer_dependencies()
 					.iter()
 					.chain(hypothesis_node.desire_producer_dependencies())
 					.filter(|desire_dependency| **desire_dependency == index)
 			})
-			.flatten()
 			.count();
 		let graph_index = self.graph.add_node(NodeData {
 			x: 0.0,
@@ -112,7 +106,7 @@ impl DebuggerContextComponent {
 			for dep in hypo_node.hypothesis_dependencies() {
 				let dependency_hypothesis_node_index = self
 					.hypothesis_map
-					.get(&dep)
+					.get(dep)
 					.expect("This hypothesis index was not mapped in the graph!");
 
 				self.graph.add_edge(
@@ -127,7 +121,7 @@ impl DebuggerContextComponent {
 			for dep in hypo_node.desire_consumer_dependencies() {
 				let desire_node_index = self
 					.desire_map
-					.get(&dep)
+					.get(dep)
 					.expect("This desire index was not mapped in the graph!");
 
 				self.graph.add_edge(
@@ -142,7 +136,7 @@ impl DebuggerContextComponent {
 			for dep in hypo_node.desire_producer_dependencies() {
 				let desire_node_index = self
 					.desire_map
-					.get(&dep)
+					.get(dep)
 					.expect("This desire index was not mapped in the graph!");
 
 				self.graph.add_edge(

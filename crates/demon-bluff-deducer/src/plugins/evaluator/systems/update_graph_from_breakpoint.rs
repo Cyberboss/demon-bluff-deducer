@@ -2,7 +2,7 @@ use bevy::{ecs::system::Single, log::warn};
 use demon_bluff_logic_engine::Breakpoint;
 
 use crate::plugins::evaluator::components::{
-	breakpoint::BreakpointComponent, debugger_channels::DebuggerChannels,
+	breakpoint::BreakpointComponent,
 	debugger_context::DebuggerContextComponent,
 };
 

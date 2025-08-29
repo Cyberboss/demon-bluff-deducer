@@ -13,7 +13,7 @@ pub fn get_prediction_result(
 	task: Single<(Entity, &mut PredictionComponent)>,
 ) {
 	let (entity, mut task) = task.into_inner();
-	if let Some(_) = block_on(poll_once(task.task_mut())) {
+	if block_on(poll_once(task.task_mut())).is_some() {
 		commands.entity(entity).despawn();
 	}
 }

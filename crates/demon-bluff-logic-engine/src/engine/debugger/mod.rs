@@ -3,7 +3,7 @@ mod context;
 mod desire_node;
 mod hypothesis_node;
 
-use std::sync::{Arc, Mutex, MutexGuard, RwLock, RwLockWriteGuard};
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
 
 use context::create_debugger_context;
 
