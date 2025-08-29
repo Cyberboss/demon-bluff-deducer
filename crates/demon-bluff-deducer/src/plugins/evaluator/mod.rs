@@ -3,6 +3,7 @@ mod components;
 mod edge;
 mod events;
 mod node;
+mod node_radius;
 mod plugin;
 mod resources;
 mod state;

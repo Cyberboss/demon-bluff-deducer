@@ -1,18 +1,17 @@
 use std::{
 	collections::HashMap,
-	sync::{Arc, RwLock},
+	sync::{Arc, RwLock, RwLockReadGuard},
 };
 
 use bevy::{
-	color::Mix,
+	color::{Color, Mix},
 	ecs::component::Component,
 	gizmos::gizmos::Gizmos,
-	math::{Isometry2d, Rot2, Vec2},
+	math::{Rot2, Vec2},
 	time::Time,
+	transform::components::Transform,
 };
-use demon_bluff_logic_engine::{
-	DebuggerContext, FITNESS_UNIMPLEMENTED,
-};
+use demon_bluff_logic_engine::{DebuggerContext, FITNESS_UNIMPLEMENTED};
 use force_graph::{DefaultNodeIdx, EdgeData, ForceGraph, NodeData};
 
 use crate::plugins::evaluator::{
@@ -44,7 +43,7 @@ impl DebuggerContextComponent {
 		}
 	}
 
-	pub fn register_hypothesis(&mut self, index: usize, is_root: bool) {
+	pub fn register_hypothesis(&mut self, index: usize, is_root: bool) -> &NodeData<Node> {
 		let guard = self
 			.debug_context
 			.read()
@@ -64,6 +63,8 @@ impl DebuggerContextComponent {
 		});
 
 		self.hypothesis_map.insert(index, graph_index);
+
+		&self.graph.get_graph()[graph_index].data
 	}
 
 	pub fn register_desire(&mut self, index: usize) {
@@ -171,49 +172,70 @@ impl DebuggerContextComponent {
 		);
 	}
 
-	pub fn update_and_draw_graph(&mut self, mut gizmos: Gizmos, time: &Time) {
+	pub fn update_graph(&mut self, time: &Time) {
+		self.graph.update(time.delta_secs());
+	}
+
+	pub fn with_context<'a>(&'a self) -> RwLockReadGuard<'a, DebuggerContext> {
+		self.debug_context
+			.read()
+			.expect("Debugger context was poisoned!")
+	}
+
+	pub fn update_node_entity<'a>(
+		&'a self,
+		context: &DebuggerContext,
+		node: &Node,
+	) -> (Color, Vec2) {
+		let graph_index = match node {
+			Node::Hypothesis(index) => self
+				.hypothesis_map
+				.get(index)
+				.expect("Requested update for node that wasn't registered!"),
+			Node::Desire(index) => self
+				.desire_map
+				.get(index)
+				.expect("Requested update for node that wasn't registered!"),
+		};
+
+		let node = &self.graph.get_graph()[*graph_index];
+
+		let (negative_colour, positive_colour, fitness) = match node.data.user_data {
+			Node::Hypothesis(index) => (
+				COLOUR_HYPOTHESIS_NEGATIVE,
+				COLOUR_HYPOTHESIS_POSITIVE,
+				context.hypotheses()[index]
+					.current_fitness()
+					.map(|fitness_and_action| fitness_and_action.fitness()),
+			),
+			Node::Desire(index) => (
+				COLOUR_DESIRE_NEGATIVE,
+				COLOUR_DESIRE_POSITIVE,
+				Some(context.desires()[index].fitness_value()),
+			),
+		};
+
+		let color = match fitness {
+			Some(fitness) => {
+				if fitness == FITNESS_UNIMPLEMENTED {
+					COLOUR_UNIMPLEMENTED
+				} else {
+					negative_colour.mix(&positive_colour, fitness as f32)
+				}
+			}
+			None => COLOUR_NEUTRAL,
+		};
+
+		let vec = Vec2::new(node.x(), node.y());
+
+		(color, vec)
+	}
+
+	pub fn draw_edges(&self, mut gizmos: Gizmos) {
 		let guard = self
 			.debug_context
 			.read()
 			.expect("Debugger context was poisoned!");
-		self.graph.update(time.delta_secs());
-		self.graph.visit_nodes(|node| {
-			let (negative_colour, positive_colour, fitness) = match node.data.user_data {
-				Node::Hypothesis(index) => (
-					COLOUR_HYPOTHESIS_NEGATIVE,
-					COLOUR_HYPOTHESIS_POSITIVE,
-					guard.hypotheses()[index]
-						.current_fitness()
-						.map(|fitness_and_action| fitness_and_action.fitness()),
-				),
-				Node::Desire(index) => (
-					COLOUR_DESIRE_NEGATIVE,
-					COLOUR_DESIRE_POSITIVE,
-					Some(guard.desires()[index].fitness_value()),
-				),
-			};
-
-			let color = match fitness {
-				Some(fitness) => {
-					if fitness == FITNESS_UNIMPLEMENTED {
-						COLOUR_UNIMPLEMENTED
-					} else {
-						negative_colour.mix(&positive_colour, fitness as f32)
-					}
-				}
-				None => COLOUR_NEUTRAL,
-			};
-
-			gizmos.circle_2d(
-				Isometry2d::from_translation(Vec2::new(node.x(), node.y())),
-				5.0 * if node.data.user_data == Node::Hypothesis(self.root_index) {
-					1.0
-				} else {
-					node.data.mass
-				},
-				color,
-			);
-		});
 
 		let clockwise_rotation = Rot2::degrees(-30.0);
 		let counterclockwise_rotation = Rot2::degrees(30.0);
