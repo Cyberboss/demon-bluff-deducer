@@ -3,4 +3,5 @@ pub mod debugger_channels;
 pub mod debugger_context;
 pub mod game_state;
 pub mod node;
+pub mod node_highlighted;
 pub mod prediction;

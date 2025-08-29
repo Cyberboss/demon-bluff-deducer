@@ -7,8 +7,8 @@ use super::{
 		camera_controls::camera_controls, check_for_break::check_for_break,
 		check_for_resume::check_for_resume, draw_graph_edges::draw_graph_edges,
 		get_prediction_result::get_prediction_result, handle_node_spawn::handle_node_spawn,
-		init_evaluation::init_evaluation, update_graph::update_graph,
-		update_graph_from_breakpoint::update_graph_from_breakpoint,
+		highlighting::draw_highlights, init_evaluation::init_evaluation,
+		update_graph::update_graph, update_graph_from_breakpoint::update_graph_from_breakpoint,
 		update_node_entities::update_node_entities,
 	},
 };
@@ -18,10 +18,7 @@ pub struct EvaluatorPlugin;
 
 impl Plugin for EvaluatorPlugin {
 	fn build(&self, app: &mut App) {
-		app
-			// At start, the menu is not enabled. This will be changed in `menu_setup` when
-			// entering the `GameState::Menu` state.
-			// Current screen in the menu is handled by an independent state from `GameState`
+		app.add_plugins(MeshPickingPlugin)
 			.add_sub_state::<EvaluatorState>()
 			.add_event::<NodeSpawnEvent>()
 			.add_systems(OnEnter(RootState::Evaluation), init_evaluation)
@@ -35,7 +32,7 @@ impl Plugin for EvaluatorPlugin {
 					camera_controls,
 					handle_node_spawn,
 					update_graph.after(update_graph_from_breakpoint),
-					(draw_graph_edges, update_node_entities).after(update_graph),
+					(draw_graph_edges, update_node_entities, draw_highlights).after(update_graph),
 					(check_for_break, get_prediction_result)
 						.run_if(in_state(EvaluatorState::Running)),
 					check_for_resume

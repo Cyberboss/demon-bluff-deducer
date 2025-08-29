@@ -7,17 +7,17 @@ use bevy::{
 	color::{Color, Mix},
 	ecs::component::Component,
 	gizmos::gizmos::Gizmos,
-	math::{Rot2, Vec2},
+	math::{Isometry2d, Rot2, Vec2},
 	time::Time,
-	transform::components::Transform,
 };
 use demon_bluff_logic_engine::{DebuggerContext, FITNESS_UNIMPLEMENTED};
 use force_graph::{DefaultNodeIdx, EdgeData, ForceGraph, NodeData};
 
 use crate::plugins::evaluator::{
 	colours::{
-		COLOUR_DESIRE_NEGATIVE, COLOUR_DESIRE_POSITIVE, COLOUR_HYPOTHESIS_NEGATIVE,
-		COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL, COLOUR_UNIMPLEMENTED,
+		COLOUR_DESIRE_NEGATIVE, COLOUR_DESIRE_POSITIVE, COLOUR_HIGHLIGHT,
+		COLOUR_HYPOTHESIS_NEGATIVE, COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL,
+		COLOUR_UNIMPLEMENTED,
 	},
 	edge::Edge,
 	node::Node,
@@ -231,6 +231,30 @@ impl DebuggerContextComponent {
 		let vec = Vec2::new(node.x(), node.y());
 
 		(color, vec)
+	}
+
+	pub fn draw_highlight(&self, node: &Node, gizmos: &mut Gizmos) {
+		let is_root;
+		let graph_idx = match node {
+			Node::Hypothesis(index) => {
+				is_root = *index == self.root_index;
+				self.hypothesis_map.get(index)
+			}
+			Node::Desire(index) => {
+				is_root = *index == self.root_index;
+				self.desire_map.get(index)
+			}
+		}
+		.expect("Attempting to highlight unregistered node!");
+
+		let data = &self.graph.get_graph()[*graph_idx].data;
+		let radius = data.radius(is_root);
+
+		gizmos.circle_2d(
+			Isometry2d::from_translation(Vec2::new(data.x, data.y)),
+			radius,
+			COLOUR_HIGHLIGHT,
+		);
 	}
 
 	pub fn draw_edges(&self, mut gizmos: Gizmos) {
