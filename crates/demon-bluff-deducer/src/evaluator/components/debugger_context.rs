@@ -15,13 +15,15 @@ use bevy::{
 	tasks::Task,
 	time::Time,
 };
-use demon_bluff_logic_engine::{DebuggerContext, PlayerAction, PredictionError};
+use demon_bluff_logic_engine::{
+	DebuggerContext, FITNESS_UNIMPLEMENTED, PlayerAction, PredictionError,
+};
 use force_graph::{DefaultNodeIdx, EdgeData, ForceGraph, NodeData};
 
 use crate::evaluator::{
 	colours::{
 		COLOUR_DESIRE_NEGATIVE, COLOUR_DESIRE_POSITIVE, COLOUR_HYPOTHESIS_NEGATIVE,
-		COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL,
+		COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL, COLOUR_UNIMPLEMENTED,
 	},
 	edge::Edge,
 	edge_link::EdgeLink,
@@ -170,7 +172,13 @@ impl DebuggerContextComponent {
 			};
 
 			let color = match fitness {
-				Some(fitness) => negative_colour.mix(&positive_colour, fitness as f32),
+				Some(fitness) => {
+					if fitness == FITNESS_UNIMPLEMENTED {
+						COLOUR_UNIMPLEMENTED
+					} else {
+						negative_colour.mix(&positive_colour, fitness as f32)
+					}
+				}
 				None => COLOUR_NEUTRAL,
 			};
 

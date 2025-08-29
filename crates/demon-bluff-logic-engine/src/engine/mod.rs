@@ -17,7 +17,8 @@ pub use self::{
 	depth::Depth,
 	desire::{Desire, DesireConsumerReference, DesireProducerReference},
 	fitness_and_action::{
-		FITNESS_UNKNOWN, FitnessAndAction, and_fitness, and_result, decide_result, or_result,
+		FITNESS_UNIMPLEMENTED, FITNESS_UNKNOWN, FitnessAndAction, and_fitness, and_result,
+		decide_result, or_result,
 	},
 	hypothesis::{
 		Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
