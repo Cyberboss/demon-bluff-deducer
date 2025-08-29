@@ -19,7 +19,7 @@ pub fn update_graph_from_breakpoint(
 		Breakpoint::RegisterDesire(index) => context.register_desire(*index),
 		Breakpoint::IterationStart(iteration) => {
 			if *iteration == 1 {
-				context.register_edges();
+				context.finalize_edges();
 			}
 		}
 		Breakpoint::DesireUpdate(producer_hypothesis_index, desire_index, desired) => {

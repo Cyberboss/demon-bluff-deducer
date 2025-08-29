@@ -26,7 +26,6 @@ use crate::evaluator::{
 		COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL, COLOUR_UNIMPLEMENTED,
 	},
 	edge::Edge,
-	edge_link::EdgeLink,
 	node::Node,
 };
 
@@ -36,6 +35,7 @@ pub struct DebuggerContextComponent {
 	graph: ForceGraph<Node, Edge>,
 	hypothesis_map: HashMap<usize, DefaultNodeIdx>,
 	desire_map: HashMap<usize, DefaultNodeIdx>,
+	root_index: usize,
 }
 
 impl DebuggerContextComponent {
@@ -45,32 +45,60 @@ impl DebuggerContextComponent {
 			graph: ForceGraph::new(Default::default()),
 			hypothesis_map: HashMap::new(),
 			desire_map: HashMap::new(),
+			root_index: 0,
 		}
 	}
 
 	pub fn register_hypothesis(&mut self, index: usize, is_root: bool) {
+		let guard = self
+			.debug_context
+			.read()
+			.expect("Debugger context was poisoned!");
+		let dependent_hypotheses = guard.hypotheses()[index].hypothesis_dependencies().len();
 		let graph_index = self.graph.add_node(NodeData {
 			x: 1.0 * index as f32,
 			y: 0.0,
-			mass: if is_root { 50.0 } else { 1.0 },
+			mass: if is_root {
+				self.root_index = index;
+				50.0
+			} else {
+				1.0 + dependent_hypotheses as f32
+			},
 			is_anchor: is_root,
 			user_data: Node::Hypothesis(index),
 		});
+
 		self.hypothesis_map.insert(index, graph_index);
 	}
 
 	pub fn register_desire(&mut self, index: usize) {
+		let guard = self
+			.debug_context
+			.read()
+			.expect("Debugger context was poisoned!");
+		let dependent_hypotheses = guard
+			.hypotheses()
+			.iter()
+			.map(|hypothesis_node| {
+				hypothesis_node
+					.desire_consumer_dependencies()
+					.iter()
+					.chain(hypothesis_node.desire_producer_dependencies())
+					.filter(|desire_dependency| **desire_dependency == index)
+			})
+			.flatten()
+			.count();
 		let graph_index = self.graph.add_node(NodeData {
 			x: 0.0,
 			y: 1.0 * index as f32,
-			mass: 1.0,
+			mass: 1.0 + dependent_hypotheses as f32,
 			is_anchor: false,
 			user_data: Node::Desire(index),
 		});
 		self.desire_map.insert(index, graph_index);
 	}
 
-	pub fn register_edges(&mut self) {
+	pub fn finalize_edges(&mut self) {
 		let guard = self
 			.debug_context
 			.read()
@@ -184,7 +212,11 @@ impl DebuggerContextComponent {
 
 			gizmos.circle_2d(
 				Isometry2d::from_translation(Vec2::new(node.x(), node.y())),
-				5.0,
+				5.0 * if node.data.user_data == Node::Hypothesis(self.root_index) {
+					1.0
+				} else {
+					node.data.mass
+				},
 				color,
 			);
 		});
