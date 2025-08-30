@@ -3,24 +3,16 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use super::{DesireType, HypothesisBuilderType};
+use super::{DesireType, HypothesisBuilderType, hypothesis_expression::HypothesisExpression};
 use crate::{
 	Breakpoint,
 	engine::{
 		Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
-		HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-		HypothesisRepository, and_result, or_result,
+		HypothesisEvaluator, HypothesisFunctions, HypothesisRegistrar, HypothesisRepository,
+		and_result, or_result,
 	},
 	hypotheses::{HypothesisType, testimony::TestimonyHypothesisBuilder},
 };
-
-#[derive(Debug)]
-enum HypothesisExpression {
-	Unary(HypothesisReference),
-	Not(HypothesisReference),
-	And((HypothesisReference, HypothesisReference)),
-	Or((HypothesisReference, HypothesisReference)),
-}
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TestimonyExpressionHypothesisBuilder {
@@ -51,6 +43,18 @@ impl TestimonyExpressionHypothesisBuilder {
 			index,
 			testimony_expression,
 			is_root_testimony: false,
+		}
+	}
+
+	pub fn new_with_root_status(
+		index: VillagerIndex,
+		testimony_expression: Expression<Testimony>,
+		is_root_testimony: bool,
+	) -> Self {
+		if is_root_testimony {
+			Self::new(index, testimony_expression)
+		} else {
+			Self::sub_new(index, testimony_expression)
 		}
 	}
 }
@@ -114,7 +118,7 @@ impl Hypothesis for TestimonyExpressionHypothesis {
 
 		write!(
 			f,
-			"estimony from {}: {}",
+			"estimony expression from {}: {}",
 			self.index, self.expression_friendly
 		)
 	}

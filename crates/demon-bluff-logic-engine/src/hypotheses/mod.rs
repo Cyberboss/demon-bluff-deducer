@@ -4,6 +4,9 @@ use all_evils_accounted_for::{
 	AllEvilsAccountedForHypothesis, AllEvilsAccountedForHypothesisBuilder,
 };
 use appears_evil::{AppearsEvilHypothesis, AppearsEvilHypothesisBuilder};
+use testimony_condemns_expression::{
+	TestimonyCondemnsExpressionHypothesis, TestimonyCondemnsExpressionHypothesisBuilder,
+};
 
 use self::{
 	ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder},
@@ -47,6 +50,7 @@ mod desires;
 mod execute;
 mod execute_index;
 mod gather_information;
+mod hypothesis_expression;
 mod is_corrupt;
 mod is_evil;
 mod is_truly_archetype;
@@ -59,6 +63,7 @@ mod reveal_index;
 mod revealing_is_safe;
 mod testimony;
 mod testimony_condemns;
+mod testimony_condemns_expression;
 mod testimony_expression;
 mod true_identity;
 
@@ -88,6 +93,7 @@ pub enum HypothesisBuilderType {
 	TestimonyCondemns(TestimonyCondemnsHypothesisBuilder),
 	AllEvilsAccountedFor(AllEvilsAccountedForHypothesisBuilder),
 	AppearsEvil(AppearsEvilHypothesisBuilder),
+	TestimonyCondemnsExpression(TestimonyCondemnsExpressionHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]
@@ -116,6 +122,7 @@ pub enum HypothesisType {
 	TestimonyCondemns(TestimonyCondemnsHypothesis),
 	AllEvilsAccountedFor(AllEvilsAccountedForHypothesis),
 	AppearsEvil(AppearsEvilHypothesis),
+	TestimonyCondemnsExpression(TestimonyCondemnsExpressionHypothesis),
 }
 
 impl Display for HypothesisType {

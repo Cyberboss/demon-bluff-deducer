@@ -161,7 +161,7 @@ impl Hypothesis for TestimonyHypothesis {
 	fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		write!(
 			f,
-			"Testimony from {} is truthful: {}",
+			"Unary from {} is truthful: {}",
 			self.index, self.testimony
 		)
 	}
