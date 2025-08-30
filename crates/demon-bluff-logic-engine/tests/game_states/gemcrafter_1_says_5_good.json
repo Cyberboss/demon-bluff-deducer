@@ -1,0 +1,77 @@
+{
+  "next_day": null,
+  "draw_stats": {
+    "villagers": 4,
+    "outcasts": 0,
+    "minions": 1,
+    "demons": 0
+  },
+  "deck": [
+    {
+      "GoodVillager": "Enlightened"
+    },
+    {
+      "GoodVillager": "Gemcrafter"
+    },
+    {
+      "GoodVillager": "Hunter"
+    },
+    {
+      "GoodVillager": "Lover"
+    },
+    {
+      "Minion": "Minion"
+    }
+  ],
+  "villagers": [
+    {
+      "Active": {
+        "instance": {
+          "archetype": {
+            "GoodVillager": "Gemcrafter"
+          },
+          "testimony": {
+            "Unary": {
+              "Good": 4
+            }
+          },
+          "action_available": false
+        },
+        "cant_kill": false
+      }
+    },
+    {
+      "Hidden": {
+        "dead": false,
+        "cant_reveal": false,
+        "cant_kill": false
+      }
+    },
+    {
+      "Hidden": {
+        "dead": false,
+        "cant_reveal": false,
+        "cant_kill": false
+      }
+    },
+    {
+      "Hidden": {
+        "dead": false,
+        "cant_reveal": false,
+        "cant_kill": false
+      }
+    },
+    {
+      "Hidden": {
+        "dead": false,
+        "cant_reveal": false,
+        "cant_kill": false
+      }
+    }
+  ],
+  "reveal_order": [
+    0
+  ],
+  "hitpoints": 10,
+  "total_evils": 1
+}
