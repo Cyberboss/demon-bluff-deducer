@@ -30,7 +30,6 @@ pub struct DebuggerContextComponent {
 	graph: ForceGraph<Node, Edge>,
 	hypothesis_map: HashMap<usize, DefaultNodeIdx>,
 	desire_map: HashMap<usize, DefaultNodeIdx>,
-	root_index: usize,
 }
 
 impl DebuggerContextComponent {
@@ -40,7 +39,6 @@ impl DebuggerContextComponent {
 			graph: ForceGraph::new(Default::default()),
 			hypothesis_map: HashMap::new(),
 			desire_map: HashMap::new(),
-			root_index: 0,
 		}
 	}
 
@@ -54,13 +52,12 @@ impl DebuggerContextComponent {
 			x: 1.0 * index as f32,
 			y: 0.0,
 			mass: if is_root {
-				self.root_index = index;
 				50.0
 			} else {
 				1.0 + dependent_hypotheses as f32
 			},
 			is_anchor: is_root,
-			user_data: Node::Hypothesis(index),
+			user_data: Node::Hypothesis(index, is_root),
 		});
 
 		self.hypothesis_map.insert(index, graph_index);
@@ -190,7 +187,7 @@ impl DebuggerContextComponent {
 		node: &Node,
 	) -> (Color, Vec2) {
 		let graph_index = match node {
-			Node::Hypothesis(index) => self
+			Node::Hypothesis(index, _) => self
 				.hypothesis_map
 				.get(index)
 				.expect("Requested update for node that wasn't registered!"),
@@ -203,7 +200,7 @@ impl DebuggerContextComponent {
 		let node = &self.graph.get_graph()[*graph_index];
 
 		let (negative_colour, positive_colour, fitness) = match node.data.user_data {
-			Node::Hypothesis(index) => (
+			Node::Hypothesis(index, _) => (
 				COLOUR_HYPOTHESIS_NEGATIVE,
 				COLOUR_HYPOTHESIS_POSITIVE,
 				context.hypotheses()[index]
@@ -236,12 +233,12 @@ impl DebuggerContextComponent {
 	pub fn draw_highlight(&self, node: &Node, gizmos: &mut Gizmos) {
 		let is_root;
 		let graph_idx = match node {
-			Node::Hypothesis(index) => {
-				is_root = *index == self.root_index;
+			Node::Hypothesis(index, is_root_inner) => {
+				is_root = *is_root_inner;
 				self.hypothesis_map.get(index)
 			}
 			Node::Desire(index) => {
-				is_root = *index == self.root_index;
+				is_root = false;
 				self.desire_map.get(index)
 			}
 		}
@@ -269,8 +266,14 @@ impl DebuggerContextComponent {
 			let dependency_vec = Vec2::new(dependency.x(), dependency.y());
 			let dependent_vec = Vec2::new(dependent.x(), dependent.y());
 
-			let dependent_vec =
-				dependent_vec.move_towards(dependency_vec, dependent.data.radius(false));
+			let dependent_is_root = if let Node::Hypothesis(_, is_root) = dependent.data.user_data {
+				is_root
+			} else {
+				false
+			};
+
+			let dependent_vec = dependent_vec
+				.move_towards(dependency_vec, dependent.data.radius(dependent_is_root));
 			let dependency_vec =
 				dependency_vec.move_towards(dependent_vec, dependency.data.radius(false));
 

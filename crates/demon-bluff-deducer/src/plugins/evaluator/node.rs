@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Node {
-	Hypothesis(usize),
+	Hypothesis(usize, bool),
 	Desire(usize),
 }
