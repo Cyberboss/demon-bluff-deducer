@@ -32,6 +32,16 @@ impl FitnessAndAction {
 		}
 	}
 
+	pub fn map_action<F>(&self, mut fitness_mutator: F) -> Self
+	where
+		F: FnMut(f64) -> f64,
+	{
+		Self {
+			action: self.action.clone(),
+			fitness: fitness_mutator(self.fitness),
+		}
+	}
+
 	pub fn invert(mut self) -> Self {
 		self.fitness = 1.0 - self.fitness;
 		self

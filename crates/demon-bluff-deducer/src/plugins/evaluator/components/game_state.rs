@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use bevy::prelude::*;
 use demon_bluff_gameplay_engine::{
 	game_state::{DrawStats, GameState, new_game},
@@ -11,24 +13,9 @@ pub struct GameStateComponent {
 
 impl GameStateComponent {
 	pub fn new() -> Self {
-		Self {
-			game_state: new_game(
-				vec![
-					VillagerArchetype::GoodVillager(GoodVillager::Druid),
-					VillagerArchetype::GoodVillager(GoodVillager::Architect),
-					VillagerArchetype::GoodVillager(GoodVillager::Medium),
-					VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
-					VillagerArchetype::GoodVillager(GoodVillager::Slayer),
-					VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
-					VillagerArchetype::Outcast(Outcast::Bombardier),
-					VillagerArchetype::Minion(Minion::Witch),
-					VillagerArchetype::Demon(Demon::Pooka),
-				],
-				DrawStats::new(4, 1, 1, 1),
-				2,
-				false,
-			),
-		}
+		let file_reader = File::open("S:\\workspace\\demon-bluff-bot\\crates\\demon-bluff-logic-engine\\tests\\game_states\\gemcrafter_1_says_5_good.json").unwrap();
+		let game_state: GameState = serde_json::from_reader(file_reader).unwrap();
+		Self { game_state }
 	}
 
 	pub fn game_state(&self) -> &GameState {

@@ -7,7 +7,7 @@ use crate::{
 	engine::{
 		Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
 		HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-		HypothesisRepository, HypothesisResult, or_result,
+		HypothesisRepository, HypothesisResult, and_result, or_result,
 	},
 	hypotheses::{
 		HypothesisType, need_testimony::NeedTestimonyHypothesisBuilder,
@@ -71,25 +71,13 @@ impl Hypothesis for RevealIndexHypothesis {
 	{
 		let mut evaluator = repository.require_sub_evaluation(0.0);
 
-		let reveal_result = evaluator.sub_evaluate(&self.revealing_is_safe_hypothesis);
-		match &reveal_result {
-			HypothesisResult::Pending(_) => {}
-			HypothesisResult::Conclusive(fitness_and_action) => {
-				if fitness_and_action.is_certain() {
-					return evaluator.finalize(HypothesisResult::Conclusive(
-						FitnessAndAction::certainty(Some(PlayerAction::TryReveal(
-							self.index.clone(),
-						))),
-					));
-				}
-			}
-		}
+		let revealing_safe_result = evaluator.sub_evaluate(&self.revealing_is_safe_hypothesis);
 
 		let info_desire_result = evaluator.sub_evaluate(&self.need_testimony_hypothesis);
 
-		let fittest = or_result(reveal_result, info_desire_result);
+		let fitness = and_result(revealing_safe_result, info_desire_result);
 
-		let result = fittest.map(|fitness| {
+		let result = fitness.map(|fitness| {
 			FitnessAndAction::new(
 				fitness.fitness(),
 				Some(PlayerAction::TryReveal(self.index.clone())),

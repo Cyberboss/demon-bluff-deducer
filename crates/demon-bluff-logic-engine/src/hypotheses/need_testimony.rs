@@ -14,6 +14,8 @@ use crate::{
 	hypotheses::HypothesisType,
 };
 
+const BASE_INFORMATION_DESIRE: f64 = 0.9;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NeedTestimonyHypothesisBuilder {
 	index: VillagerIndex,
@@ -65,6 +67,11 @@ impl Hypothesis for NeedTestimonyHypothesis {
 		FDebugBreak: FnMut(Breakpoint) + Clone,
 	{
 		let result = repository.desire_result(&self.get_testimony_desire);
-		repository.finalize(result)
+
+		repository.finalize(result.map(|fitness_and_action| {
+			fitness_and_action.map_action(|fitness| {
+				(fitness * (1.0 - BASE_INFORMATION_DESIRE)) + BASE_INFORMATION_DESIRE
+			})
+		}))
 	}
 }
