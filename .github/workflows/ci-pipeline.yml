@@ -19,14 +19,14 @@ jobs:
           - windows-latest
           - ubuntu-latest
     steps:
-      - name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@nightly
-
       - name: Install Native Depedencies
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt update
-          sudo apt install -y libx11-dev libxtst-dev
+          sudo apt install -y libx11-dev libxtst-dev g++ pkg-config libasound2-dev libudev-dev libxkbcommon-x11-0
+
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Checkout
         uses: actions/checkout@v5
@@ -53,14 +53,14 @@ jobs:
           - windows-latest
           - ubuntu-latest
     steps:
-      - name: Setup Toolchain
-        uses: dtolnay/rust-toolchain@nightly
-
       - name: Install Native Depedencies
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt update
-          sudo apt install -y libx11-dev libxtst-dev
+          sudo apt install -y libx11-dev libxtst-dev g++ pkg-config libasound2-dev libudev-dev libxkbcommon-x11-0
+
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Checkout
         uses: actions/checkout@v5
@@ -86,6 +86,12 @@ jobs:
         os:
           - ubuntu-latest
     steps:
+      - name: Install Native Depedencies
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt update
+          sudo apt install -y libx11-dev libxtst-dev g++ pkg-config libasound2-dev libudev-dev libxkbcommon-x11-0
+
       - name: Setup Toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
