@@ -49,7 +49,7 @@ impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
 
 				if let Some(affect) = archetype.affect(game_state.total_villagers(), None) {
 					match affect {
-						Affect::Puppet(_) | Affect::Outcast(_) => {
+						Affect::Puppet(_) | Affect::Outcast(_) | Affect::DupeVillager => {
 							converter_in_play_hypotheses.insert(
 								archetype.clone(),
 								registrar
@@ -109,6 +109,7 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 		let mut can_be_adjacent_converted_to_by = HashMap::new();
 		let mut can_have_conversion_stolen_by_adjacent = HashMap::new();
 		let mut can_be_converted_away_from_by_adjacent = HashMap::new();
+		let mut can_be_converted_away_by_affectors_presence = HashMap::new();
 		let mut in_deck = false;
 		for archetype in game_state.deck() {
 			if *archetype == self.archetype {
@@ -119,9 +120,9 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 			// index doesn't matter for this question
 			if let Some(affect) = archetype.affect(game_state.total_villagers(), None) {
 				match affect {
-					Affect::Corrupt(_)
+					Affect::DupeVillager
+					| Affect::Corrupt(_)
 					| Affect::Night(_)
-					| Affect::DupeVillager
 					| Affect::FakeOutcast
 					| Affect::BlockLastNReveals(_) => {}
 					Affect::Outcast(_) => {
@@ -177,6 +178,23 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 				{
 					can_be_converted_away_from_by_adjacent
 						.insert(converter_archetype.clone(), hypothesis_reference);
+				}
+				for archetype in VillagerArchetype::iter().filter(|archetype| {
+					if let Some(Affect::DupeVillager) =
+						archetype.affect(game_state.total_villagers(), None)
+						&& *archetype != self.archetype
+					{
+						true
+					} else {
+						false
+					}
+				}) {
+					let hypothesis_reference =
+						self.converter_in_play_hypotheses.get(&archetype).expect(
+							"The dupe villager archetype in-play hypothesis should have been registeres",
+						);
+					can_be_converted_away_by_affectors_presence
+						.insert(archetype, hypothesis_reference);
 				}
 			}
 		}
