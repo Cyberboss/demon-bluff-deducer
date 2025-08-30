@@ -1,6 +1,6 @@
 use bevy::{
 	DefaultPlugins,
-	app::{Plugin, Startup},
+	app::{Plugin, Startup, Update},
 	prelude::PluginGroup,
 	state::app::AppExtStates,
 	window::{Window, WindowPlugin},
@@ -9,7 +9,7 @@ use bevy::{
 use crate::{
 	plugins::{evaluator::EvaluatorPlugin, menu::MenuPlugin},
 	root_state::RootState,
-	systems::setup::setup,
+	systems::{on_resize::on_resize, setup::setup},
 };
 
 pub struct RootPlugin;
@@ -26,6 +26,7 @@ impl Plugin for RootPlugin {
 		.init_state::<RootState>()
 		.add_plugins(MenuPlugin)
 		.add_plugins(EvaluatorPlugin)
-		.add_systems(Startup, setup);
+		.add_systems(Startup, setup)
+		.add_systems(Update, on_resize);
 	}
 }
