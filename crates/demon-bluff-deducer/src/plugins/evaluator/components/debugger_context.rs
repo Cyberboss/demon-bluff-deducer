@@ -200,8 +200,8 @@ impl DebuggerContextComponent {
 			.expect("Debugger context was poisoned!")
 	}
 
-	pub fn update_node_entity<'a>(
-		&'a self,
+	pub fn update_node_entity(
+		&self,
 		context: &DebuggerContext,
 		node: &Node,
 	) -> (Color, Vec2, Option<f32>) {

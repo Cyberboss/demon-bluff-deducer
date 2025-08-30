@@ -21,7 +21,7 @@ pub fn update_highlighted_node_description(
 	description: Single<&mut Text, With<HighlightedNodeDescriptionComponent>>,
 ) {
 	let mut description = description.into_inner();
-	for highlighted_node in highlighted_nodes_query {
+	if let Some(highlighted_node) = highlighted_nodes_query.into_iter().next() {
 		let context = context.into_inner();
 		let context = context.with_context();
 		match &highlighted_node.node().node {
@@ -32,6 +32,7 @@ pub fn update_highlighted_node_description(
 				description.0 = format!("{}", context.desires()[*index]);
 			}
 		}
+
 		return;
 	}
 

@@ -1,4 +1,3 @@
-use std::ops::Index;
 
 use bevy::{
 	ecs::{event::EventWriter, system::Single},
@@ -50,10 +49,10 @@ pub fn update_graph_from_breakpoint(
 
 fn clone_node_data(this: &NodeData<NodeAndLocked>) -> NodeData<NodeAndLocked> {
 	NodeData {
-		x: this.x.clone(),
-		y: this.y.clone(),
-		mass: this.mass.clone(),
-		is_anchor: this.is_anchor.clone(),
+		x: this.x,
+		y: this.y,
+		mass: this.mass,
+		is_anchor: this.is_anchor,
 		user_data: this.user_data.clone(),
 	}
 }

@@ -178,7 +178,7 @@ where
 			);
 
 			let reference = DesireProducerReference::new(index);
-			info!(logger: self.log, "- {}: {}", reference, definition);
+			info!(logger: self.log, "- {reference}: {definition}");
 			if let Some(debugger) = &mut debugger {
 				let mut debugger_context = debugger.context();
 				let node =

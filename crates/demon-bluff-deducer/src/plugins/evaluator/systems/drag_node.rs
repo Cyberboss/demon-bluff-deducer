@@ -3,10 +3,8 @@ use bevy::{
 		entity::Entity,
 		observer::Trigger,
 		query::With,
-		system::{Commands, Query, Res, Single},
+		system::{Commands, Query, Single},
 	},
-	input::{ButtonInput, mouse::MouseButton},
-	math::Vec2,
 	picking::events::{Drag, Pointer},
 	render::camera::{Camera, Projection},
 };
