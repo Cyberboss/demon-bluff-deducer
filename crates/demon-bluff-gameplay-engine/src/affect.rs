@@ -19,6 +19,7 @@ pub enum Affect {
 	Corrupt(Expression<VillagerAffect>),
 	Puppet(Expression<VillagerAffect>),
 	Night(NightEffect),
+	Outcast(Expression<VillagerAffect>),
 	DupeVillager,
 	FakeOutcast,
 	BlockLastNReveals(u8),

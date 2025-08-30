@@ -101,9 +101,9 @@ impl Hypothesis for RevealingIsSafeHypothesis {
 		}
 
 		let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
-		let mut result = None;
+		let mut not_safe_result = None;
 		for (archetype, archetype_hypothesis) in &self.unsafe_reveal_archetype_presence_hypotheses {
-			let new_result = evaluator.sub_evaluate(archetype_hypothesis).map(|fitness| {
+			let new_not_safe_result = evaluator.sub_evaluate(archetype_hypothesis).map(|fitness| {
 				and_fitness(
 					fitness,
 					FitnessAndAction::new(
@@ -117,13 +117,17 @@ impl Hypothesis for RevealingIsSafeHypothesis {
 					),
 				)
 			});
-			result = Some(match result {
-				Some(old_result) => or_result(old_result, new_result),
-				None => new_result,
+			not_safe_result = Some(match not_safe_result {
+				Some(old_result) => or_result(old_result, new_not_safe_result),
+				None => new_not_safe_result,
 			})
 		}
 
-		evaluator.finalize(result.expect("Dumb logic error in RevealingIsSafeHypothesis"))
+		let final_result = not_safe_result
+			.expect("Dumb logic error in RevealingIsSafeHypothesis")
+			.map(|fitness| fitness.invert());
+
+		evaluator.finalize(final_result)
 	}
 }
 
@@ -138,7 +142,11 @@ fn position_unaware_affect(
 fn affect_makes_revealing_unsafe(affect: &Affect, game_state: &GameState) -> Option<f64> {
 	// TODO: Maybe revisit this implementation
 	match affect {
-		Affect::Corrupt(_) | Affect::Puppet(_) | Affect::DupeVillager | Affect::FakeOutcast => None,
+		Affect::Corrupt(_)
+		| Affect::Puppet(_)
+		| Affect::DupeVillager
+		| Affect::FakeOutcast
+		| Affect::Outcast(_) => None,
 		// revealing is NOT safe. That's all we're here to say
 		Affect::BlockLastNReveals(_) => Some(0.0),
 		Affect::Night(night_effect) => {

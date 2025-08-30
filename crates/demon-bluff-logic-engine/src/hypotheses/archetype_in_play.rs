@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use demon_bluff_gameplay_engine::{
-	affect::Affect,
+	affect::{self, Affect, NightEffect},
 	game_state::GameState,
-	villager::{Minion, VillagerArchetype},
+	villager::{Minion, VillagerArchetype, VillagerIndex},
 };
 use log::Log;
 
@@ -9,8 +11,9 @@ use super::{DesireType, HypothesisBuilderType};
 use crate::{
 	Breakpoint,
 	engine::{
-		Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisFunctions,
-		HypothesisReference, HypothesisRegistrar, HypothesisRepository, HypothesisResult,
+		Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+		HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
+		HypothesisResult,
 	},
 	hypotheses::HypothesisType,
 };
@@ -23,7 +26,7 @@ pub struct ArchetypeInPlayHypothesisBuilder {
 #[derive(Debug)]
 pub struct ArchetypeInPlayHypothesis {
 	archetype: VillagerArchetype,
-	counsellor_in_play_hypothesis: Option<HypothesisReference>,
+	converter_in_play_hypotheses: HashMap<VillagerArchetype, HypothesisReference>,
 }
 
 impl ArchetypeInPlayHypothesisBuilder {
@@ -38,18 +41,32 @@ impl HypothesisBuilder for ArchetypeInPlayHypothesisBuilder {
 		game_state: &GameState,
 		registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
 	) -> HypothesisType {
-		let counsellor_in_play_hypothesis = match self.archetype {
-			VillagerArchetype::GoodVillager(_) => {
-				Some(registrar.register(ArchetypeInPlayHypothesisBuilder::new(
-					VillagerArchetype::Minion(Minion::Counsellor),
-				)))
+		let mut converter_in_play_hypotheses = HashMap::new();
+
+		if let VillagerArchetype::GoodVillager(_) = &self.archetype {
+			for archetype in VillagerArchetype::iter() {
+				if archetype == self.archetype {
+					continue;
+				}
+
+				if let Some(affect) = archetype.affect(game_state.total_villagers(), None) {
+					match affect {
+						Affect::Puppet(_) | Affect::Outcast(_) => {
+							converter_in_play_hypotheses.insert(
+								archetype.clone(),
+								registrar
+									.register(ArchetypeInPlayHypothesisBuilder::new(archetype)),
+							);
+						}
+						_ => {}
+					}
+				}
 			}
-			_ => None,
-		};
+		}
 
 		ArchetypeInPlayHypothesis {
 			archetype: self.archetype,
-			counsellor_in_play_hypothesis,
+			converter_in_play_hypotheses,
 		}
 		.into()
 	}
@@ -75,9 +92,25 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 		TLog: Log,
 		FDebugBreak: FnMut(Breakpoint) + Clone,
 	{
+		// special case: remove proability if card has a night effect and night effects aren't active
+		let has_night_effect = if let Some(Affect::Night(_)) =
+			self.archetype.affect(game_state.total_villagers(), None)
+		{
+			true
+		} else {
+			false
+		};
+
+		if has_night_effect && !game_state.night_actions_in_play() {
+			return repository.finalize(HypothesisResult::impossible());
+		}
+
 		// step one, eliminate the possibility if it's not in the deck
+		// also collect specific conversion possibilities
 		// currently the only case where an archetype not in the deck can appear is the puppeteer
-		let mut can_be_converted = false;
+		let mut can_be_adjacent_converted_to_by = HashMap::new();
+		let mut can_have_conversion_stolen_by_adjacent = HashMap::new();
+		let mut can_be_converted_away_from_by_adjacent = HashMap::new();
 		let mut in_deck = false;
 		for archetype in game_state.deck() {
 			if *archetype == self.archetype {
@@ -93,15 +126,95 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 					| Affect::DupeVillager
 					| Affect::FakeOutcast
 					| Affect::BlockLastNReveals(_) => {}
-					Affect::Puppet(_) => can_be_converted = true,
+					Affect::Outcast(_) => {
+						for archetype in VillagerArchetype::iter().filter(|archetype| {
+							if let Some(Affect::Outcast(_)) =
+								archetype.affect(game_state.total_villagers(), None)
+							{
+								true
+							} else {
+								false
+							}
+						}) {
+							for (converter_archetype, hypothesis_reference) in
+								&self.converter_in_play_hypotheses
+							{
+								if archetype == *converter_archetype {
+									can_be_adjacent_converted_to_by
+										.insert(archetype.clone(), hypothesis_reference);
+								} else {
+									can_have_conversion_stolen_by_adjacent
+										.insert(archetype.clone(), hypothesis_reference);
+								}
+							}
+						}
+					}
+					Affect::Puppet(_) => {
+						for archetype in VillagerArchetype::iter().filter(|archetype| {
+							if let Some(Affect::Puppet(_)) =
+								archetype.affect(game_state.total_villagers(), None)
+							{
+								true
+							} else {
+								false
+							}
+						}) {
+							for (converter_archetype, hypothesis_reference) in
+								&self.converter_in_play_hypotheses
+							{
+								if archetype == *converter_archetype {
+									can_be_adjacent_converted_to_by
+										.insert(archetype.clone(), hypothesis_reference);
+								} else {
+									can_have_conversion_stolen_by_adjacent
+										.insert(archetype.clone(), hypothesis_reference);
+								}
+							}
+						}
+					}
+				}
+			} else if let VillagerArchetype::GoodVillager(_) = &self.archetype {
+				for (converter_archetype, hypothesis_reference) in
+					&self.converter_in_play_hypotheses
+				{
+					can_be_converted_away_from_by_adjacent
+						.insert(converter_archetype.clone(), hypothesis_reference);
 				}
 			}
 		}
 
-		if !in_deck && !can_be_converted {
+		if !in_deck && can_be_adjacent_converted_to_by.is_empty() {
 			return repository.finalize(HypothesisResult::impossible());
 		}
 
-		repository.finalize(HypothesisResult::unimplemented())
+		// calculate the probability the archetype was in the initial draw
+		let deck_count = game_state
+			.deck()
+			.iter()
+			.filter(|archetype| **archetype == self.archetype)
+			.count();
+
+		let draw_count = match &self.archetype {
+			VillagerArchetype::GoodVillager(_) => game_state.draw_stats().villagers(),
+			VillagerArchetype::Outcast(_) => game_state.draw_stats().outcasts(),
+			VillagerArchetype::Minion(_) => game_state.draw_stats().minions(),
+			VillagerArchetype::Demon(_) => game_state.draw_stats().demons(),
+		};
+
+		let initial_draw_probability = draw_count as f64 / deck_count as f64;
+
+		let any_conversions_in_play = can_be_adjacent_converted_to_by.len() > 0
+			|| can_be_converted_away_from_by_adjacent.len() > 0
+			|| can_have_conversion_stolen_by_adjacent.len() > 0;
+		if !any_conversions_in_play {
+			return repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::new(
+				initial_draw_probability,
+				None,
+			)));
+		}
+
+		let mut evaluator = repository.require_sub_evaluation(initial_draw_probability);
+
+		evaluator.finalize(HypothesisResult::unimplemented())
 	}
 }

@@ -503,7 +503,7 @@ impl VillagerArchetype {
 		}
 	}
 
-	/// index is only used to calculate positions of the [`VillagerAffect`] if any
+	/// index is only used to calculate positions of the [`VillagerAffect`]s if any
 	pub fn affect(&self, total_villagers: usize, index: Option<VillagerIndex>) -> Option<Affect> {
 		let index = index.unwrap_or(VillagerIndex(0));
 		match self {
