@@ -46,9 +46,6 @@ pub fn simple_game_3() {
 		)))
 		.expect("Bad mutation?");
 
-	colog::init();
-	let log = log::logger();
-
 	// reveal hunter
 	println!("Prediction 2:");
 	prediction = predict(&log, &state).expect("prediction failed??");

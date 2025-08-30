@@ -18,7 +18,7 @@ pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
 	let game_state: GameState = serde_json::from_reader(file_reader)
 		.unwrap_or_else(|_| panic!("Could not deserialize game state file: {}", path.display()));
 
-	colog::init();
+	// colog::init();
 
 	let log = log::logger();
 	let action =
