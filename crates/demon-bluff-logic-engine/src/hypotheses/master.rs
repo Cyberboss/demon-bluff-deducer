@@ -1,5 +1,5 @@
 use demon_bluff_gameplay_engine::game_state::GameState;
-use log::Log;
+use log::{Log, info};
 
 use super::{HypothesisBuilderType, desires::DesireType};
 use crate::{
@@ -47,8 +47,8 @@ impl Hypothesis for MasterHypothesis {
 
 	fn evaluate<TLog, FDebugBreak>(
 		&mut self,
-		_: &TLog,
-		_: Depth,
+		log: &TLog,
+		depth: Depth,
 		_: &GameState,
 		repository: HypothesisRepository<TLog, FDebugBreak>,
 	) -> HypothesisEvaluation
@@ -57,8 +57,8 @@ impl Hypothesis for MasterHypothesis {
 		FDebugBreak: FnMut(Breakpoint) + Clone,
 	{
 		let mut evaluator = repository.require_sub_evaluation(0.0);
-		let mut result = evaluator.sub_evaluate(&self.execute_hypothesis);
-		match &result {
+		let kill_result = evaluator.sub_evaluate(&self.execute_hypothesis);
+		match &kill_result {
 			HypothesisResult::Pending(_) => {}
 			HypothesisResult::Conclusive(fitness_and_action) => {
 				if fitness_and_action.is_certain() {
@@ -67,7 +67,11 @@ impl Hypothesis for MasterHypothesis {
 				}
 			}
 		}
-		result = decide_result(evaluator.sub_evaluate(&self.info_hypothesis), result);
+
+		let info_result = evaluator.sub_evaluate(&self.info_hypothesis);
+		info!(logger: log, "{} Current Balance: Kill: {}. Info: {}", depth, kill_result, info_result);
+
+		let result = decide_result(info_result, kill_result);
 		evaluator.finalize(result)
 	}
 }
