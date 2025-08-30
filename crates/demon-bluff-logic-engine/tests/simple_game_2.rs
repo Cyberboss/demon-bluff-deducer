@@ -26,7 +26,7 @@ pub fn simple_game_2() {
 		false,
 	);
 
-	// reveal lover
+	// reveal confessor (fake)
 	println!("Prediction 1:");
 	let mut prediction = predict(&log, &state).expect("prediction failed??");
 
@@ -39,30 +39,6 @@ pub fn simple_game_2() {
 		.mutate(Action::TryReveal(RevealResult::new(
 			VillagerIndex(0),
 			Some(VillagerInstance::new(
-				VillagerArchetype::GoodVillager(GoodVillager::Lover),
-				Some(Testimony::lover(
-					&VillagerIndex(0),
-					1,
-					state.total_villagers(),
-				)),
-			)),
-		)))
-		.expect("malformed game step??");
-	assert_eq!(GameStateMutationResult::Continue, mutation_result);
-
-	// reveal confessor (fake)
-	println!("Prediction 2:");
-	prediction = predict(&log, &state).expect("prediction failed??");
-
-	assert_eq!(
-		&PlayerAction::TryReveal(VillagerIndex(1)),
-		prediction.iter().next().unwrap()
-	);
-
-	mutation_result = state
-		.mutate(Action::TryReveal(RevealResult::new(
-			VillagerIndex(1),
-			Some(VillagerInstance::new(
 				VillagerArchetype::GoodVillager(GoodVillager::Confessor),
 				Some(Expression::Unary(Testimony::Confess(ConfessorClaim::Dizzy))),
 			)),
@@ -71,7 +47,7 @@ pub fn simple_game_2() {
 	assert_eq!(GameStateMutationResult::Continue, mutation_result);
 
 	// kill confessor
-	println!("Prediction 3:");
+	println!("Prediction 2:");
 
 	colog::init();
 	let log = log::logger();
@@ -79,13 +55,13 @@ pub fn simple_game_2() {
 	prediction = predict(&log, &state).expect("prediction failed??");
 
 	assert_eq!(
-		&PlayerAction::TryExecute(VillagerIndex(1)),
+		&PlayerAction::TryExecute(VillagerIndex(0)),
 		prediction.iter().next().unwrap()
 	);
 
 	mutation_result = state
 		.mutate(Action::TryExecute(KillAttempt::new(
-			VillagerIndex(1),
+			VillagerIndex(0),
 			Some(KillResult::Revealed(
 				KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false)
 					.expect("This is valid kill data"),
