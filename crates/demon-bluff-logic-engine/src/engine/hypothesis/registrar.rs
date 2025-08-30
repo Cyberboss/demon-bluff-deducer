@@ -177,10 +177,12 @@ where
 					}),
 			);
 
-			info!(logger: self.log, "- {}: {}", DesireProducerReference::new(index), definition);
+			let reference = DesireProducerReference::new(index);
+			info!(logger: self.log, "- {}: {}", reference, definition);
 			if let Some(debugger) = &mut debugger {
 				let mut debugger_context = debugger.context();
-				let node = create_desire_node(definition.desire().clone(), definition.count());
+				let node =
+					create_desire_node(reference, definition.desire().clone(), definition.count());
 				desire_nodes_mut(&mut debugger_context).push(node);
 				drop(debugger_context);
 				debugger.breakpoint(Breakpoint::RegisterDesire(index))
