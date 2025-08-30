@@ -143,27 +143,6 @@ where
 
 					stability_iteration += 1;
 					if !graph_stable {
-						/*
-						let mut f1 =
-							File::create("test1.json").expect("Failed to create before file");
-						let mut f2 =
-							File::create("test2.json").expect("Failed to create before file");
-
-						write!(
-							f1,
-							"{}",
-							serde_json::to_string_pretty(previous_results)
-								.expect("Serialization 1 failed")
-						)
-						.expect("File write 1 failed");
-						write!(
-							f2,
-							"{}",
-							serde_json::to_string_pretty(&*data).expect("Serialization 2 failed")
-						)
-						.expect("File write 1 failed");
-						log.flush();
-						*/
 						if stability_iteration >= ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE {
 							info!(logger: log, "Graph not stable after {ITERATIONS_BEFORE_GRAPH_ASSUMED_STABLE} iterations, assuming stable enough for progression");
 							graph_stable = true;
