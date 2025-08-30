@@ -79,7 +79,6 @@ pub enum Testimony {
 	Architect(ArchitectClaim),
 	Baker(BakerClaim),
 	Role(RoleClaim),
-	Enlightened(Direction),
 	Invincible(VillagerIndex),
 	Knitter(EvilPairsClaim),
 	Affected(VillagerIndex),
@@ -324,6 +323,172 @@ impl Testimony {
 			)
 		}
 	}
+
+	pub fn englightened(
+		start_index: &VillagerIndex,
+		direction: Direction,
+		total_villagers: usize,
+	) -> Expression<Testimony> {
+		if total_villagers < 3 {
+			panic!("No thank you");
+		}
+
+		let odd_villagers = total_villagers % 2 != 0;
+		let half_villagers = total_villagers / 2;
+		let non_opposite_villagers_per_side = if odd_villagers {
+			half_villagers
+		} else {
+			half_villagers - 1
+		};
+
+		let eqidistant_1: [VillagerIndex; 1];
+		let eqidistant_2: [VillagerIndex; 2];
+
+		let equidistant_villagers: &[VillagerIndex] = if odd_villagers {
+			eqidistant_2 = [
+				index_offset(start_index, total_villagers, half_villagers, false),
+				index_offset(start_index, total_villagers, half_villagers, true),
+			];
+			eqidistant_2.as_slice()
+		} else {
+			eqidistant_1 = [index_offset(
+				start_index,
+				total_villagers,
+				half_villagers,
+				false,
+			)];
+			eqidistant_1.as_slice()
+		};
+
+		let mut expression = None;
+		if direction == Direction::Equidistant {
+			let check_range = if odd_villagers {
+				non_opposite_villagers_per_side - 1
+			} else {
+				non_opposite_villagers_per_side
+			};
+
+			for check_distance in 1..=check_range {
+				let additional_expression = Expression::And(
+					Box::new(Expression::Unary(Testimony::Good(index_offset(
+						start_index,
+						total_villagers,
+						check_distance,
+						true,
+					)))),
+					Box::new(Expression::Unary(Testimony::Good(index_offset(
+						start_index,
+						total_villagers,
+						check_distance,
+						false,
+					)))),
+				);
+				expression = Some(match expression {
+					Some(existing_expression) => Expression::And(
+						Box::new(existing_expression),
+						Box::new(additional_expression),
+					),
+					None => additional_expression,
+				});
+			}
+
+			let evil_expression = if odd_villagers {
+				Expression::And(
+					Box::new(Expression::Unary(Testimony::Evil(index_offset(
+						start_index,
+						total_villagers,
+						non_opposite_villagers_per_side,
+						true,
+					)))),
+					Box::new(Expression::Unary(Testimony::Evil(index_offset(
+						start_index,
+						total_villagers,
+						non_opposite_villagers_per_side,
+						false,
+					)))),
+				)
+			} else {
+				Expression::Unary(Testimony::Evil(index_offset(
+					start_index,
+					total_villagers,
+					half_villagers,
+					true,
+				)))
+			};
+
+			match expression {
+				Some(good_expression) => {
+					Expression::And(Box::new(good_expression), Box::new(evil_expression))
+				}
+				None => evil_expression,
+			}
+		} else {
+			let mut good_indicies = Vec::<VillagerIndex>::with_capacity(total_villagers - 1);
+
+			for check_distance in 1..=non_opposite_villagers_per_side {
+				let mut directional_expression = |evil_clockwise| {
+					let evil_index =
+						index_offset(start_index, total_villagers, check_distance, evil_clockwise);
+					let good_index = index_offset(
+						start_index,
+						total_villagers,
+						check_distance,
+						!evil_clockwise,
+					);
+
+					let mut expression = Expression::And(
+						Box::new(Expression::Unary(Testimony::Evil(evil_index.clone()))),
+						Box::new(Expression::Unary(Testimony::Good(good_index.clone()))),
+					);
+
+					for additional_good_index in &good_indicies {
+						expression = Expression::And(
+							Box::new(expression),
+							Box::new(Expression::Unary(Testimony::Good(
+								additional_good_index.clone(),
+							))),
+						)
+					}
+
+					good_indicies.push(good_index);
+					good_indicies.push(evil_index); // if its a further case, the evil index is now good
+					expression
+				};
+
+				let new_expression = match direction {
+					Direction::Clockwise => directional_expression(true),
+					Direction::CounterClockwise => directional_expression(false),
+					Direction::Equidistant => {
+						unreachable!("We should not be checking equidistance!")
+					}
+				};
+
+				expression = Some(match expression {
+					Some(existing_expression) => {
+						Expression::Or(Box::new(existing_expression), Box::new(new_expression))
+					}
+					None => new_expression,
+				})
+			}
+
+			let mut non_optional_expression = expression
+				.expect("Logic error in enlightened testimony builder directional route!");
+
+			if !odd_villagers {
+				// The equidistant villagers is also good
+				for equidistant_villager in equidistant_villagers {
+					non_optional_expression = Expression::And(
+						Box::new(non_optional_expression),
+						Box::new(Expression::Unary(Testimony::Good(
+							equidistant_villager.clone(),
+						))),
+					);
+				}
+			}
+
+			non_optional_expression
+		}
+	}
 }
 
 impl Display for Testimony {
@@ -343,7 +508,6 @@ impl Display for Testimony {
 			Self::Role(role_claim) => {
 				write!(f, "{} is a {}", role_claim.villager, role_claim.archetype)
 			}
-			Self::Enlightened(direction) => write!(f, "Closest evil is {direction}"),
 			Self::Invincible(villager_index) => write!(f, "{villager_index} is invincible"),
 			Self::Knitter(evil_pairs_claim) => write!(f, "{evil_pairs_claim} evil pairs present"),
 			Self::Affected(villager_index) => write!(f, "{villager_index} was affected"),
