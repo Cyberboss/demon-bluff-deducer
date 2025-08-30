@@ -7,6 +7,7 @@ pub mod get_prediction_result;
 pub mod handle_node_spawn;
 pub mod highlighting;
 pub mod init_evaluation;
+pub mod remove_help_text;
 pub mod unlock_dragged_nodes;
 pub mod update_graph;
 pub mod update_graph_from_breakpoint;

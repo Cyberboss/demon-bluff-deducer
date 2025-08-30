@@ -6,6 +6,7 @@ use demon_bluff_logic_engine::predict_with_debugger;
 
 use crate::plugins::evaluator::components::{
 	debugger_channels::DebuggerChannels, game_state::GameStateComponent,
+	help_text::HelpTextComponent,
 	highlighted_node_description::HighlightedNodeDescriptionComponent,
 	prediction::PredictionComponent,
 };
@@ -30,6 +31,16 @@ pub fn init_evaluation(mut commands: Commands, query: Single<&GameStateComponent
 		Node {
 			position_type: PositionType::Absolute,
 			top: Val::Px(12.0),
+			left: Val::Px(12.0),
+			..default()
+		},
+	));
+	commands.spawn((
+		HelpTextComponent,
+		Text::new("Camera: WASD. Zoom: Scroll wheel. Drag a node to move and lock it in place. MMB: Unlock all nodes. Esc: Hide Help. Highlight a node to view its description"),
+		Node {
+			position_type: PositionType::Absolute,
+			top: Val::Px(620.0),
 			left: Val::Px(12.0),
 			..default()
 		},

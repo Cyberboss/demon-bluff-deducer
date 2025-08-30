@@ -2,6 +2,7 @@ pub mod breakpoint;
 pub mod debugger_channels;
 pub mod debugger_context;
 pub mod game_state;
+pub mod help_text;
 pub mod highlighted_node_description;
 pub mod node;
 pub mod node_highlighted;
