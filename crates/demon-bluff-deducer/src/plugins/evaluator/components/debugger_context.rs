@@ -33,7 +33,6 @@ pub struct DebuggerContextComponent {
 	hypothesis_map: HashMap<usize, DefaultNodeIdx>,
 	desire_map: HashMap<usize, DefaultNodeIdx>,
 	current_hypothesis_path: Vec<usize>,
-	current_hypothesis_path_set: HashSet<usize>,
 }
 
 impl DebuggerContextComponent {
@@ -44,7 +43,6 @@ impl DebuggerContextComponent {
 			hypothesis_map: HashMap::new(),
 			desire_map: HashMap::new(),
 			current_hypothesis_path: Vec::new(),
-			current_hypothesis_path_set: HashSet::new(),
 		}
 	}
 
@@ -210,7 +208,7 @@ impl DebuggerContextComponent {
 				self.hypothesis_map
 					.get(index)
 					.expect("Requested update for node that wasn't registered!"),
-				self.current_hypothesis_path_set.contains(index),
+				self.current_hypothesis_path.contains(index),
 				*is_root_inner,
 			),
 			Node::Desire(index) => (
@@ -337,12 +335,8 @@ impl DebuggerContextComponent {
 				Edge::Hypothesis(dependency_hypothesis_index, dependent_hypothesis_index) => {
 					let dependency = &guard.hypotheses()[dependency_hypothesis_index];
 
-					let visiting = self
-						.current_hypothesis_path_set
-						.contains(&dependency_hypothesis_index)
-						&& self
-							.current_hypothesis_path_set
-							.contains(&dependent_hypothesis_index);
+					let visiting =
+						self.visiting(dependent_hypothesis_index, dependency_hypothesis_index);
 
 					if visiting {
 						COLOUR_VISITING
@@ -393,12 +387,25 @@ impl DebuggerContextComponent {
 
 	pub fn enter_hypothesis(&mut self, index: usize) {
 		self.current_hypothesis_path.push(index);
-		self.current_hypothesis_path_set.insert(index);
 	}
 
 	pub fn exit_hypothesis(&mut self) {
-		if let Some(removed_index) = self.current_hypothesis_path.pop() {
-			self.current_hypothesis_path_set.remove(&removed_index);
+		self.current_hypothesis_path.pop();
+	}
+
+	fn visiting(&self, dependent_index: usize, dependency_index: usize) -> bool {
+		for (path_index, hypothesis_index) in self.current_hypothesis_path.iter().enumerate() {
+			if dependent_index != *hypothesis_index {
+				continue;
+			}
+
+			if path_index == self.current_hypothesis_path.len() - 1 {
+				continue;
+			}
+
+			return self.current_hypothesis_path[path_index + 1] == dependency_index;
 		}
+
+		false
 	}
 }
