@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use demon_bluff_gameplay_engine::{
-	game_state::{self, GameState},
+	game_state::GameState,
 	testimony::Testimony,
 	villager::{Outcast, VillagerArchetype, VillagerIndex},
 };

@@ -1,10 +1,7 @@
 use std::fs::File;
 
 use bevy::prelude::*;
-use demon_bluff_gameplay_engine::{
-	game_state::{DrawStats, GameState, new_game},
-	villager::{Demon, GoodVillager, Minion, Outcast, VillagerArchetype},
-};
+use demon_bluff_gameplay_engine::game_state::GameState;
 
 #[derive(Component)]
 pub struct GameStateComponent {

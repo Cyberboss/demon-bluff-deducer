@@ -7,7 +7,7 @@ use crate::{
 	engine::{
 		Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
 		HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-		HypothesisRepository, HypothesisResult, and_result, or_result,
+		HypothesisRepository, and_result,
 	},
 	hypotheses::{
 		HypothesisType, need_testimony::NeedTestimonyHypothesisBuilder,

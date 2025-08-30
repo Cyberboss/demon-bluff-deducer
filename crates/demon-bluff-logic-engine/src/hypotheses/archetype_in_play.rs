@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use demon_bluff_gameplay_engine::{
-	affect::{self, Affect, NightEffect},
+	affect::Affect,
 	game_state::GameState,
-	villager::{Minion, VillagerArchetype, VillagerIndex},
+	villager::VillagerArchetype,
 };
 use log::Log;
 
@@ -203,9 +203,9 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 
 		let initial_draw_probability = draw_count as f64 / deck_count as f64;
 
-		let any_conversions_in_play = can_be_adjacent_converted_to_by.len() > 0
-			|| can_be_converted_away_from_by_adjacent.len() > 0
-			|| can_have_conversion_stolen_by_adjacent.len() > 0;
+		let any_conversions_in_play = !can_be_adjacent_converted_to_by.is_empty()
+			|| !can_be_converted_away_from_by_adjacent.is_empty()
+			|| !can_have_conversion_stolen_by_adjacent.is_empty();
 		if !any_conversions_in_play {
 			return repository.finalize(HypothesisResult::Conclusive(FitnessAndAction::new(
 				initial_draw_probability,
@@ -213,7 +213,7 @@ impl Hypothesis for ArchetypeInPlayHypothesis {
 			)));
 		}
 
-		let mut evaluator = repository.require_sub_evaluation(initial_draw_probability);
+		let evaluator = repository.require_sub_evaluation(initial_draw_probability);
 
 		evaluator.finalize(HypothesisResult::unimplemented())
 	}
