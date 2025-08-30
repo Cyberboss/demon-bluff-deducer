@@ -1,7 +1,7 @@
-use std::fmt::Display;
+use std::fmt::{Display, write};
 
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
 	Expression,
@@ -9,39 +9,39 @@ use crate::{
 };
 const ALCHEMIST_CURE_RANGE: usize = 2;
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum ConfessorClaim {
 	Good,
 	Dizzy,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Hash, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Hash, Serialize, Deserialize)]
 pub enum Direction {
 	Clockwise,
 	CounterClockwise,
 	Equidistant,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum ArchitectClaim {
 	Left,
 	Right,
 	Equal,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum BakerClaim {
 	Original,
 	Was(VillagerArchetype),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SlayResult {
 	index: VillagerIndex,
 	slayed: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RoleClaim {
 	villager: VillagerIndex,
 	archetype: VillagerArchetype,
@@ -53,13 +53,13 @@ impl Display for RoleClaim {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScoutClaim {
 	evil_role: VillagerArchetype,
 	distance: u8,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EvilPairsClaim(u8);
 
 impl Display for EvilPairsClaim {
@@ -68,7 +68,7 @@ impl Display for EvilPairsClaim {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Testimony {
 	Good(VillagerIndex),
 	Evil(VillagerIndex),
@@ -87,6 +87,7 @@ pub enum Testimony {
 	SelfDestruct(VillagerIndex),
 	Slayed(SlayResult),
 	Confess(ConfessorClaim),
+	Scout(ScoutClaim),
 }
 
 impl EvilPairsClaim {
@@ -358,6 +359,11 @@ impl Display for Testimony {
 				}
 			}
 			Self::Confess(confessor_claim) => write!(f, "I confess to being {confessor_claim}"),
+			Self::Scout(scout_claim) => write!(
+				f,
+				"{} is {} away from the nearest evil",
+				scout_claim.evil_role, scout_claim.distance
+			),
 		}
 	}
 }

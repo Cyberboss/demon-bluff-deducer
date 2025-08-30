@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{
@@ -9,10 +9,10 @@ use crate::{
 	testimony::{Direction, Testimony},
 };
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, Serialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct VillagerIndex(pub usize);
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
 pub enum GoodVillager {
 	Alchemist,
 	Architect,
@@ -40,7 +40,7 @@ pub enum GoodVillager {
 	Witness,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
 pub enum Outcast {
 	Drunk,
 	Wretch,
@@ -49,7 +49,7 @@ pub enum Outcast {
 	PlagueDoctor,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
 pub enum Minion {
 	Counsellor,
 	Witch,
@@ -61,14 +61,14 @@ pub enum Minion {
 	Puppet,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
 pub enum Demon {
 	Baa,
 	Pooka,
 	Lilis,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, Serialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, Serialize, Deserialize)]
 pub enum VillagerArchetype {
 	GoodVillager(GoodVillager),
 	Outcast(Outcast),
@@ -76,34 +76,34 @@ pub enum VillagerArchetype {
 	Demon(Demon),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActiveVillager {
 	instance: VillagerInstance,
 	cant_kill: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HiddenVillager {
 	dead: bool,
 	cant_reveal: bool,
 	cant_kill: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VillagerInstance {
 	archetype: VillagerArchetype,
 	testimony: Option<Expression<Testimony>>,
 	action_available: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfirmedVillager {
 	instance: VillagerInstance,
 	true_identity: Option<VillagerArchetype>,
 	corrupted: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Villager {
 	Active(ActiveVillager),
 	Hidden(HiddenVillager),

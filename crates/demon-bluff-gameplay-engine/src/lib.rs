@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[macro_use]
 extern crate enum_display_derive;
@@ -15,7 +15,7 @@ pub mod villager;
 pub const VILLAGERS_MIN: usize = 7;
 pub const VILLAGERS_MAX: usize = 9;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Expression<Type>
 where
 	Type: Display,

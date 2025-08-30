@@ -1,6 +1,6 @@
 use std::mem::replace;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -22,7 +22,7 @@ pub enum DayCycle {
 	Night,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DrawStats {
 	villagers: u8,
 	outcasts: u8,
@@ -30,7 +30,7 @@ pub struct DrawStats {
 	demons: u8,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
 	// TODO: Alignment of cards may affect Architect claim, double check
 	next_day: Option<u8>,
