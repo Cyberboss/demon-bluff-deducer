@@ -6,3 +6,4 @@ pub mod highlighted_node_description;
 pub mod node;
 pub mod node_highlighted;
 pub mod prediction;
+pub mod root_node;

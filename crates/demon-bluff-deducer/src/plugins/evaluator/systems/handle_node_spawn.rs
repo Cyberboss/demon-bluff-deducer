@@ -12,7 +12,9 @@ use bevy::{
 
 use super::highlighting::{start_highlight_node, stop_highlight_node};
 use crate::plugins::evaluator::{
-	colours::COLOUR_NEUTRAL, components::node::NodeComponent, events::node_spawn::NodeSpawnEvent,
+	colours::COLOUR_NEUTRAL,
+	components::{node::NodeComponent, root_node::RootNodeComponent},
+	events::node_spawn::NodeSpawnEvent,
 	node_radius::NodeRadius,
 };
 
@@ -24,14 +26,23 @@ pub fn handle_node_spawn(
 ) {
 	for event in event_reader.read() {
 		let node = event.data();
-		commands
-			.spawn((
+		if event.is_root() {
+			commands.spawn((
+				NodeComponent::new(node.user_data.clone()),
+				RootNodeComponent,
+				Mesh2d(meshes.add(Circle::new(node.radius(event.is_root())))),
+				MeshMaterial2d(materials.add(COLOUR_NEUTRAL)),
+				Transform::from_xyz(node.x, node.y, 0.0),
+			))
+		} else {
+			commands.spawn((
 				NodeComponent::new(node.user_data.clone()),
 				Mesh2d(meshes.add(Circle::new(node.radius(event.is_root())))),
 				MeshMaterial2d(materials.add(COLOUR_NEUTRAL)),
 				Transform::from_xyz(node.x, node.y, 0.0),
 			))
-			.observe(start_highlight_node)
-			.observe(stop_highlight_node);
+		}
+		.observe(start_highlight_node)
+		.observe(stop_highlight_node);
 	}
 }
