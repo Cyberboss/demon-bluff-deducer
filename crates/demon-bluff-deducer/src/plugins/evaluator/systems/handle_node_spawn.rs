@@ -10,7 +10,10 @@ use bevy::{
 	transform::components::Transform,
 };
 
-use super::highlighting::{start_highlight_node, stop_highlight_node};
+use super::{
+	drag_node::drag_node,
+	highlighting::{start_highlight_node, stop_highlight_node},
+};
 use crate::plugins::evaluator::{
 	colours::COLOUR_NEUTRAL,
 	components::{node::NodeComponent, root_node::RootNodeComponent},
@@ -43,6 +46,7 @@ pub fn handle_node_spawn(
 			))
 		}
 		.observe(start_highlight_node)
-		.observe(stop_highlight_node);
+		.observe(stop_highlight_node)
+		.observe(drag_node);
 	}
 }

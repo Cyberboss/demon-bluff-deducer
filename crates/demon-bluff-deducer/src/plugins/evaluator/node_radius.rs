@@ -1,12 +1,12 @@
 use force_graph::NodeData;
 
-use super::node::Node;
+use super::node_data::NodeAndLocked;
 
 pub trait NodeRadius {
 	fn radius(&self, is_root: bool) -> f32;
 }
 
-impl NodeRadius for NodeData<Node> {
+impl NodeRadius for NodeData<NodeAndLocked> {
 	fn radius(&self, is_root: bool) -> f32 {
 		5.0 * if is_root {
 			1.0

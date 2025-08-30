@@ -8,7 +8,8 @@ use super::{
 		check_for_resume::check_for_resume, draw_graph_edges::draw_graph_edges,
 		get_prediction_result::get_prediction_result, handle_node_spawn::handle_node_spawn,
 		highlighting::draw_highlights, init_evaluation::init_evaluation,
-		update_graph::update_graph, update_graph_from_breakpoint::update_graph_from_breakpoint,
+		unlock_dragged_nodes::unlock_dragged_nodes, update_graph::update_graph,
+		update_graph_from_breakpoint::update_graph_from_breakpoint,
 		update_highlighted_node_description::update_highlighted_node_description,
 		update_node_entities::update_node_entities,
 	},
@@ -32,6 +33,7 @@ impl Plugin for EvaluatorPlugin {
 				(
 					camera_controls,
 					handle_node_spawn,
+					unlock_dragged_nodes,
 					update_highlighted_node_description,
 					update_graph.after(update_graph_from_breakpoint),
 					(draw_graph_edges, update_node_entities, draw_highlights).after(update_graph),

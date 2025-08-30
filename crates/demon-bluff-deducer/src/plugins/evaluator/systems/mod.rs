@@ -1,11 +1,13 @@
 pub mod camera_controls;
 pub mod check_for_break;
 pub mod check_for_resume;
+pub mod drag_node;
 pub mod draw_graph_edges;
 pub mod get_prediction_result;
 pub mod handle_node_spawn;
 pub mod highlighting;
 pub mod init_evaluation;
+pub mod unlock_dragged_nodes;
 pub mod update_graph;
 pub mod update_graph_from_breakpoint;
 pub mod update_highlighted_node_description;

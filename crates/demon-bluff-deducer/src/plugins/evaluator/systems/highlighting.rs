@@ -32,6 +32,6 @@ pub fn draw_highlights(
 ) {
 	let context = context.into_inner();
 	for node in pointed_nodes {
-		context.draw_highlight(node.node(), &mut gizmos);
+		context.draw_highlight(&node.node().node, &mut gizmos);
 	}
 }

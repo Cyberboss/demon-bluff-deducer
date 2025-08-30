@@ -25,7 +25,7 @@ pub fn update_node_entities(
 	let inner_context = context.with_context();
 	for (node_component, mut transform, mut material) in node_entities {
 		let (colour, coordinates, highlight_radius) =
-			context.update_node_entity(&*inner_context, node_component.node());
+			context.update_node_entity(&*inner_context, &node_component.node().node);
 		let mesh_material_handle = materials.add(ColorMaterial::from_color(colour));
 		material.0 = mesh_material_handle;
 		transform.translation.x = coordinates.x;

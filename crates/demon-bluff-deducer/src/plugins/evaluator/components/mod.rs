@@ -5,5 +5,6 @@ pub mod game_state;
 pub mod highlighted_node_description;
 pub mod node;
 pub mod node_highlighted;
+pub mod node_locked;
 pub mod prediction;
 pub mod root_node;

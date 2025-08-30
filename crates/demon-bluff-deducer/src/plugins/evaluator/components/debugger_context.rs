@@ -22,13 +22,14 @@ use crate::plugins::evaluator::{
 	},
 	edge::Edge,
 	node::Node,
+	node_data::NodeAndLocked,
 	node_radius::NodeRadius,
 };
 
 #[derive(Component)]
 pub struct DebuggerContextComponent {
 	debug_context: Arc<RwLock<DebuggerContext>>,
-	graph: ForceGraph<Node, Edge>,
+	graph: ForceGraph<NodeAndLocked, Edge>,
 	hypothesis_map: HashMap<usize, DefaultNodeIdx>,
 	desire_map: HashMap<usize, DefaultNodeIdx>,
 	current_hypothesis_path: Vec<usize>,
@@ -47,7 +48,7 @@ impl DebuggerContextComponent {
 		}
 	}
 
-	pub fn register_hypothesis(&mut self, index: usize, is_root: bool) -> &NodeData<Node> {
+	pub fn register_hypothesis(&mut self, index: usize, is_root: bool) -> &NodeData<NodeAndLocked> {
 		let guard = self
 			.debug_context
 			.read()
@@ -62,7 +63,10 @@ impl DebuggerContextComponent {
 				1.0 + dependent_hypotheses as f32
 			},
 			is_anchor: is_root,
-			user_data: Node::Hypothesis(index, is_root),
+			user_data: NodeAndLocked {
+				node: Node::Hypothesis(index, is_root),
+				locked_coordinate: None,
+			},
 		});
 
 		self.hypothesis_map.insert(index, graph_index);
@@ -70,7 +74,7 @@ impl DebuggerContextComponent {
 		&self.graph.get_graph()[graph_index].data
 	}
 
-	pub fn register_desire(&mut self, index: usize) -> &NodeData<Node> {
+	pub fn register_desire(&mut self, index: usize) -> &NodeData<NodeAndLocked> {
 		let guard = self
 			.debug_context
 			.read()
@@ -91,7 +95,10 @@ impl DebuggerContextComponent {
 			y: 1.0 * index as f32,
 			mass: 1.0 + dependent_hypotheses as f32,
 			is_anchor: false,
-			user_data: Node::Desire(index),
+			user_data: NodeAndLocked {
+				node: Node::Desire(index),
+				locked_coordinate: None,
+			},
 		});
 		self.desire_map.insert(index, graph_index);
 		&self.graph.get_graph()[graph_index].data
@@ -178,6 +185,13 @@ impl DebuggerContextComponent {
 
 	pub fn update_graph(&mut self, time: &Time) {
 		self.graph.update(time.delta_secs());
+
+		self.graph.visit_nodes_mut(|node| {
+			if let Some(locked_coordinate) = node.data.user_data.locked_coordinate {
+				node.data.x = locked_coordinate.x;
+				node.data.y = locked_coordinate.y;
+			}
+		});
 	}
 
 	pub fn with_context<'a>(&'a self) -> RwLockReadGuard<'a, DebuggerContext> {
@@ -210,7 +224,7 @@ impl DebuggerContextComponent {
 
 		let node = &self.graph.get_graph()[*graph_index];
 
-		let (negative_colour, positive_colour, fitness) = match node.data.user_data {
+		let (negative_colour, positive_colour, fitness) = match node.data.user_data.node {
 			Node::Hypothesis(index, _) => (
 				COLOUR_HYPOTHESIS_NEGATIVE,
 				COLOUR_HYPOTHESIS_POSITIVE,
@@ -245,6 +259,30 @@ impl DebuggerContextComponent {
 		};
 
 		(color, vec, highlight_radius)
+	}
+
+	pub fn apply_node_delta(&mut self, node: &Node, delta: Vec2, lock: bool) {
+		match node {
+			Node::Hypothesis(_, is_root) => {
+				if *is_root {
+					return;
+				}
+			}
+			Node::Desire(_) => {}
+		}
+
+		self.graph.visit_nodes_mut(|visited_node| {
+			let visited_node_data = &mut visited_node.data;
+			if visited_node_data.user_data.node == *node {
+				visited_node_data.x += delta.x;
+				visited_node_data.y -= delta.y; // why -? no fucking clue
+				visited_node_data.user_data.locked_coordinate = if lock {
+					Some(Vec2::new(visited_node_data.x, visited_node_data.y))
+				} else {
+					None
+				}
+			}
+		});
 	}
 
 	pub fn draw_highlight(&self, node: &Node, gizmos: &mut Gizmos) {
@@ -283,11 +321,12 @@ impl DebuggerContextComponent {
 			let dependency_vec = Vec2::new(dependency.x(), dependency.y());
 			let dependent_vec = Vec2::new(dependent.x(), dependent.y());
 
-			let dependent_is_root = if let Node::Hypothesis(_, is_root) = dependent.data.user_data {
-				is_root
-			} else {
-				false
-			};
+			let dependent_is_root =
+				if let Node::Hypothesis(_, is_root) = dependent.data.user_data.node {
+					is_root
+				} else {
+					false
+				};
 
 			let dependent_vec = dependent_vec
 				.move_towards(dependency_vec, dependent.data.radius(dependent_is_root));

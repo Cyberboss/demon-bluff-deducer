@@ -24,7 +24,7 @@ pub fn update_highlighted_node_description(
 	for highlighted_node in highlighted_nodes_query {
 		let context = context.into_inner();
 		let context = context.with_context();
-		match highlighted_node.node() {
+		match &highlighted_node.node().node {
 			Node::Hypothesis(index, _) => {
 				description.0 = format!("{}", context.hypotheses()[*index]);
 			}

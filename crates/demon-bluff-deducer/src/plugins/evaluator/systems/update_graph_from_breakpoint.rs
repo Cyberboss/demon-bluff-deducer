@@ -10,7 +10,7 @@ use force_graph::NodeData;
 use crate::plugins::evaluator::{
 	components::{breakpoint::BreakpointComponent, debugger_context::DebuggerContextComponent},
 	events::node_spawn::NodeSpawnEvent,
-	node::Node,
+	node_data::NodeAndLocked,
 };
 
 pub fn update_graph_from_breakpoint(
@@ -48,7 +48,7 @@ pub fn update_graph_from_breakpoint(
 	}
 }
 
-fn clone_node_data(this: &NodeData<Node>) -> NodeData<Node> {
+fn clone_node_data(this: &NodeData<NodeAndLocked>) -> NodeData<NodeAndLocked> {
 	NodeData {
 		x: this.x.clone(),
 		y: this.y.clone(),
