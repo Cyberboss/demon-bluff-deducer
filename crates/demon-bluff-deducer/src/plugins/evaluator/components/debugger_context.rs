@@ -190,16 +190,22 @@ impl DebuggerContextComponent {
 		&'a self,
 		context: &DebuggerContext,
 		node: &Node,
-	) -> (Color, Vec2) {
-		let graph_index = match node {
-			Node::Hypothesis(index, _) => self
-				.hypothesis_map
-				.get(index)
-				.expect("Requested update for node that wasn't registered!"),
-			Node::Desire(index) => self
-				.desire_map
-				.get(index)
-				.expect("Requested update for node that wasn't registered!"),
+	) -> (Color, Vec2, Option<f32>) {
+		let (graph_index, visiting, is_root) = match node {
+			Node::Hypothesis(index, is_root_inner) => (
+				self.hypothesis_map
+					.get(index)
+					.expect("Requested update for node that wasn't registered!"),
+				self.current_hypothesis_path_set.contains(index),
+				*is_root_inner,
+			),
+			Node::Desire(index) => (
+				self.desire_map
+					.get(index)
+					.expect("Requested update for node that wasn't registered!"),
+				false,
+				false,
+			),
 		};
 
 		let node = &self.graph.get_graph()[*graph_index];
@@ -232,7 +238,13 @@ impl DebuggerContextComponent {
 
 		let vec = Vec2::new(node.x(), node.y());
 
-		(color, vec)
+		let highlight_radius = if visiting {
+			Some(node.data.radius(is_root))
+		} else {
+			None
+		};
+
+		(color, vec, highlight_radius)
 	}
 
 	pub fn draw_highlight(&self, node: &Node, gizmos: &mut Gizmos) {
