@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use bevy::{
 	ecs::{event::EventWriter, system::Single},
 	log::warn,
@@ -35,6 +37,8 @@ pub fn update_graph_from_breakpoint(
 		Breakpoint::DesireUpdate(producer_hypothesis_index, desire_index, desired) => {
 			context.update_desire_producer(*producer_hypothesis_index, *desire_index, *desired)
 		}
+		Breakpoint::EnterHypothesis(index) => context.enter_hypothesis(*index),
+		Breakpoint::ExitHypothesis(_) => context.exit_hypothesis(),
 		_ => {
 			warn!(
 				"Unhandled graph update from breakpoint: {}",

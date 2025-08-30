@@ -10,3 +10,4 @@ pub const COLOUR_DESIRE_NEGATIVE: Color = Color::srgb(126.0 / 255.0, 24.0 / 255.
 pub const COLOUR_NEUTRAL: Color = Color::srgb(90.0 / 255.0, 102.0 / 255.0, 110.0 / 255.0);
 pub const COLOUR_HIGHLIGHT: Color = Color::srgb(1.0, 1.0, 1.0);
 pub const COLOUR_UNIMPLEMENTED: Color = Color::srgb(255.0 / 255.0, 98.0 / 255.0, 0.0 / 255.0);
+pub const COLOUR_VISITING: Color = Color::srgb(0.0, 0.0, 1.0);

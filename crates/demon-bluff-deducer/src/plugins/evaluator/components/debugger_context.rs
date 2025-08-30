@@ -1,6 +1,5 @@
 use std::{
 	collections::HashMap,
-	fmt::Display,
 	sync::{Arc, RwLock, RwLockReadGuard},
 };
 
@@ -9,6 +8,7 @@ use bevy::{
 	ecs::component::Component,
 	gizmos::gizmos::Gizmos,
 	math::{Isometry2d, Rot2, Vec2},
+	platform::collections::HashSet,
 	time::Time,
 };
 use demon_bluff_logic_engine::{DebuggerContext, FITNESS_UNIMPLEMENTED};
@@ -18,7 +18,7 @@ use crate::plugins::evaluator::{
 	colours::{
 		COLOUR_DESIRE_NEGATIVE, COLOUR_DESIRE_POSITIVE, COLOUR_HIGHLIGHT,
 		COLOUR_HYPOTHESIS_NEGATIVE, COLOUR_HYPOTHESIS_POSITIVE, COLOUR_NEUTRAL,
-		COLOUR_UNIMPLEMENTED,
+		COLOUR_UNIMPLEMENTED, COLOUR_VISITING,
 	},
 	edge::Edge,
 	node::Node,
@@ -31,6 +31,8 @@ pub struct DebuggerContextComponent {
 	graph: ForceGraph<Node, Edge>,
 	hypothesis_map: HashMap<usize, DefaultNodeIdx>,
 	desire_map: HashMap<usize, DefaultNodeIdx>,
+	current_hypothesis_path: Vec<usize>,
+	current_hypothesis_path_set: HashSet<usize>,
 }
 
 impl DebuggerContextComponent {
@@ -40,6 +42,8 @@ impl DebuggerContextComponent {
 			graph: ForceGraph::new(Default::default()),
 			hypothesis_map: HashMap::new(),
 			desire_map: HashMap::new(),
+			current_hypothesis_path: Vec::new(),
+			current_hypothesis_path_set: HashSet::new(),
 		}
 	}
 
@@ -114,7 +118,7 @@ impl DebuggerContextComponent {
 					*dependency_hypothesis_node_index,
 					*hypothesis_node_index,
 					EdgeData {
-						user_data: Edge::Hypothesis(*dep),
+						user_data: Edge::Hypothesis(*dep, index),
 					},
 				);
 			}
@@ -279,15 +283,26 @@ impl DebuggerContextComponent {
 				dependency_vec.move_towards(dependent_vec, dependency.data.radius(false));
 
 			let colour = match edge.user_data {
-				Edge::Hypothesis(dependency_hypothesis_index) => {
+				Edge::Hypothesis(dependency_hypothesis_index, dependent_hypothesis_index) => {
 					let dependency = &guard.hypotheses()[dependency_hypothesis_index];
 
-					match dependency.current_fitness() {
-						Some(fitness_and_action) => COLOUR_HYPOTHESIS_NEGATIVE.mix(
-							&COLOUR_HYPOTHESIS_POSITIVE,
-							fitness_and_action.fitness() as f32,
-						),
-						None => COLOUR_NEUTRAL,
+					let visiting = self
+						.current_hypothesis_path_set
+						.contains(&dependency_hypothesis_index)
+						&& self
+							.current_hypothesis_path_set
+							.contains(&dependent_hypothesis_index);
+
+					if visiting {
+						COLOUR_VISITING
+					} else {
+						match dependency.current_fitness() {
+							Some(fitness_and_action) => COLOUR_HYPOTHESIS_NEGATIVE.mix(
+								&COLOUR_HYPOTHESIS_POSITIVE,
+								fitness_and_action.fitness() as f32,
+							),
+							None => COLOUR_NEUTRAL,
+						}
 					}
 				}
 				Edge::DesireProducer(_, desired) => match desired {
@@ -300,6 +315,7 @@ impl DebuggerContextComponent {
 					}
 					None => COLOUR_NEUTRAL,
 				},
+
 				Edge::DesireConsumer(desire_index) => {
 					let desire = &guard.desires()[desire_index];
 					COLOUR_DESIRE_NEGATIVE
@@ -322,5 +338,16 @@ impl DebuggerContextComponent {
 			gizmos.line_2d(arrow_dash_clockwise, midpoint_vec, colour);
 			gizmos.line_2d(arrow_dash_counterclockwise, midpoint_vec, colour);
 		});
+	}
+
+	pub fn enter_hypothesis(&mut self, index: usize) {
+		self.current_hypothesis_path.push(index);
+		self.current_hypothesis_path_set.insert(index);
+	}
+
+	pub fn exit_hypothesis(&mut self) {
+		if let Some(removed_index) = self.current_hypothesis_path.pop() {
+			self.current_hypothesis_path_set.remove(&removed_index);
+		}
 	}
 }
