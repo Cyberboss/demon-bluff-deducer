@@ -1,4 +1,3 @@
-
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
 use demon_bluff_logic_engine::PlayerAction;
 use test_helpers::test_game_state;

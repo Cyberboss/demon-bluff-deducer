@@ -1,4 +1,3 @@
-
 use bevy::ecs::component::Component;
 use demon_bluff_logic_engine::Breakpoint;
 

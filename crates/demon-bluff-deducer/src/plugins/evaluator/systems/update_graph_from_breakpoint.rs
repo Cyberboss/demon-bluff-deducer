@@ -1,4 +1,3 @@
-
 use bevy::{
 	ecs::{event::EventWriter, system::Single},
 	log::warn,

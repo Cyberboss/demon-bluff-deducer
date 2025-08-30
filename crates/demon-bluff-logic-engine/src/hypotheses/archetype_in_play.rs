@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use demon_bluff_gameplay_engine::{
-	affect::Affect,
-	game_state::GameState,
-	villager::VillagerArchetype,
+	affect::Affect, game_state::GameState, villager::VillagerArchetype,
 };
 use log::Log;
 

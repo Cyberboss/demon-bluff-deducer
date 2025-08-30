@@ -10,9 +10,7 @@ use bevy::{
 };
 
 use crate::plugins::evaluator::{
-	components::{
-		breakpoint::BreakpointComponent, debugger_channels::DebuggerChannels,
-	},
+	components::{breakpoint::BreakpointComponent, debugger_channels::DebuggerChannels},
 	state::EvaluatorState,
 };
 

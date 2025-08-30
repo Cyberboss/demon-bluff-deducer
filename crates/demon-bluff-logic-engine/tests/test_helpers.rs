@@ -21,8 +21,8 @@ pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
 	colog::init();
 
 	let log = log::logger();
-	let action = predict(&log, &game_state)
-		.unwrap_or_else(|err| panic!("Prediction error occured: {err}"));
+	let action =
+		predict(&log, &game_state).unwrap_or_else(|err| panic!("Prediction error occured: {err}"));
 
 	assert_eq!(
 		expected_outcome,
