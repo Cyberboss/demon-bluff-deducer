@@ -45,7 +45,7 @@ impl HypothesisBuilder for AppearsEvilHypothesisBuilder {
 			registrar.register(IsEvilHypothesisBuilder::new(self.index.clone()));
 		let mut character_appears_evil_hypotheses = Vec::new();
 		for archetype in VillagerArchetype::iter() {
-			if archetype.appears_evil() {
+			if archetype.appears_evil() && !archetype.is_evil() {
 				character_appears_evil_hypotheses.push(registrar.register(
 					IsTrulyArchetypeHypothesisBuilder::new(archetype, self.index.clone()),
 				));
