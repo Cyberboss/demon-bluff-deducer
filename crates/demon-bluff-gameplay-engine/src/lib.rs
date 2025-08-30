@@ -34,8 +34,8 @@ where
 		match self {
 			Expression::Unary(item) => write!(f, "{item}"),
 			Expression::Not(expression) => write!(f, "!({expression})"),
-			Expression::And(lhs, rhs) => write!(f, "({lhs} && {rhs})"),
-			Expression::Or(lhs, rhs) => write!(f, "({lhs} || {rhs})"),
+			Expression::And(lhs, rhs) => write!(f, "({lhs}) && ({rhs})"),
+			Expression::Or(lhs, rhs) => write!(f, "({lhs}) || ({rhs})"),
 		}
 	}
 }
