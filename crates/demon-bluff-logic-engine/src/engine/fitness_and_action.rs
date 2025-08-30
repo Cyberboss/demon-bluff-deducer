@@ -114,10 +114,19 @@ impl Display for FitnessAndAction {
 }
 
 pub fn decide_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
-	if lhs.fitness_and_action().fitness > rhs.fitness_and_action().fitness {
+	let must_be_pending =
+		matches!(lhs, HypothesisResult::Pending(_)) || matches!(rhs, HypothesisResult::Pending(_));
+
+	let decided_result = if lhs.fitness_and_action().fitness > rhs.fitness_and_action().fitness {
 		lhs
 	} else {
 		rhs
+	};
+
+	if must_be_pending {
+		HypothesisResult::Pending(decided_result.fitness_and_action().clone())
+	} else {
+		decided_result
 	}
 }
 
