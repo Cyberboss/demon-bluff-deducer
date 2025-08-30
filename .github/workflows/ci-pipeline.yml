@@ -19,6 +19,9 @@ jobs:
           - windows-latest
           - ubuntu-latest
     steps:
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
       - name: Install Native Depedencies
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
@@ -50,6 +53,9 @@ jobs:
           - windows-latest
           - ubuntu-latest
     steps:
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
       - name: Install Native Depedencies
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
@@ -80,6 +86,11 @@ jobs:
         os:
           - ubuntu-latest
     steps:
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+
       - name: Checkout
         uses: actions/checkout@v5
 
@@ -104,6 +115,11 @@ jobs:
         os:
           - ubuntu-latest
     steps:
+      - name: Setup Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
       - name: Checkout
         uses: actions/checkout@v5
 
