@@ -120,6 +120,7 @@ where
 			if let Some(debugger) = &mut debugger {
 				let mut debugger_context = debugger.context();
 				let node = create_hypothesis_node(
+					index_reference.clone(),
 					format!("{hypothesis}"),
 					dependencies.hypotheses[index]
 						.iter()

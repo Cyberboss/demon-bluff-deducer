@@ -8,4 +8,5 @@ pub mod highlighting;
 pub mod init_evaluation;
 pub mod update_graph;
 pub mod update_graph_from_breakpoint;
+pub mod update_highlighted_node_description;
 pub mod update_node_entities;

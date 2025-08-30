@@ -1,7 +1,10 @@
-use crate::engine::{FitnessAndAction, HypothesisResult};
+use std::fmt::Display;
+
+use crate::engine::{FitnessAndAction, HypothesisReference, HypothesisResult};
 
 #[derive(Debug)]
 pub struct HypothesisNode {
+	reference: HypothesisReference,
 	description: String,
 	hypothesis_dependencies: Vec<usize>,
 	desire_producer_dependencies: Vec<usize>,
@@ -12,12 +15,14 @@ pub struct HypothesisNode {
 
 impl HypothesisNode {
 	fn new(
+		reference: HypothesisReference,
 		description: String,
 		hypothesis_dependencies: Vec<usize>,
 		desire_producer_dependencies: Vec<usize>,
 		desire_consumer_dependencies: Vec<usize>,
 	) -> Self {
 		Self {
+			reference,
 			description,
 			hypothesis_dependencies,
 			desire_producer_dependencies,
@@ -52,13 +57,21 @@ impl HypothesisNode {
 	}
 }
 
+impl Display for HypothesisNode {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}: {}", self.reference, self.description)
+	}
+}
+
 pub fn create_hypothesis_node(
+	reference: HypothesisReference,
 	description: String,
 	hypothesis_dependencies: Vec<usize>,
 	desire_producer_dependencies: Vec<usize>,
 	desire_consumer_dependencies: Vec<usize>,
 ) -> HypothesisNode {
 	HypothesisNode::new(
+		reference,
 		description,
 		hypothesis_dependencies,
 		desire_producer_dependencies,

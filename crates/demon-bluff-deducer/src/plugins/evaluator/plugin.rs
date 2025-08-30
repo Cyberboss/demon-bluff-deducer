@@ -9,6 +9,7 @@ use super::{
 		get_prediction_result::get_prediction_result, handle_node_spawn::handle_node_spawn,
 		highlighting::draw_highlights, init_evaluation::init_evaluation,
 		update_graph::update_graph, update_graph_from_breakpoint::update_graph_from_breakpoint,
+		update_highlighted_node_description::update_highlighted_node_description,
 		update_node_entities::update_node_entities,
 	},
 };
@@ -31,6 +32,7 @@ impl Plugin for EvaluatorPlugin {
 				(
 					camera_controls,
 					handle_node_spawn,
+					update_highlighted_node_description,
 					update_graph.after(update_graph_from_breakpoint),
 					(draw_graph_edges, update_node_entities, draw_highlights).after(update_graph),
 					(check_for_break, get_prediction_result)

@@ -6,6 +6,7 @@ use demon_bluff_logic_engine::predict_with_debugger;
 
 use crate::plugins::evaluator::components::{
 	debugger_channels::DebuggerChannels, game_state::GameStateComponent,
+	highlighted_node_description::HighlightedNodeDescriptionComponent,
 	prediction::PredictionComponent,
 };
 
@@ -23,5 +24,15 @@ pub fn init_evaluation(mut commands: Commands, query: Single<&GameStateComponent
 		})
 	});
 
+	commands.spawn((
+		HighlightedNodeDescriptionComponent,
+		Text::new(""),
+		Node {
+			position_type: PositionType::Absolute,
+			top: Val::Px(12.0),
+			left: Val::Px(12.0),
+			..default()
+		},
+	));
 	commands.spawn((channels, PredictionComponent::new(prediction_task)));
 }
