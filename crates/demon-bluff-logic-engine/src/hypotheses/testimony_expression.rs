@@ -26,6 +26,7 @@ enum HypothesisExpression {
 pub struct TestimonyExpressionHypothesisBuilder {
 	index: VillagerIndex,
 	testimony_expression: Expression<Testimony>,
+	is_root_testimony: bool,
 }
 
 #[derive(Debug)]
@@ -33,6 +34,7 @@ pub struct TestimonyExpressionHypothesis {
 	index: VillagerIndex,
 	hypothesis_expression: HypothesisExpression,
 	expression_friendly: String,
+	is_root_testimony: bool,
 }
 
 impl TestimonyExpressionHypothesisBuilder {
@@ -40,6 +42,15 @@ impl TestimonyExpressionHypothesisBuilder {
 		Self {
 			index,
 			testimony_expression,
+			is_root_testimony: true,
+		}
+	}
+
+	fn sub_new(index: VillagerIndex, testimony_expression: Expression<Testimony>) -> Self {
+		Self {
+			index,
+			testimony_expression,
+			is_root_testimony: false,
 		}
 	}
 }
@@ -56,24 +67,27 @@ impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
 				TestimonyHypothesisBuilder::new(self.index.clone(), testimony.clone()),
 			)),
 			Expression::Not(expression) => HypothesisExpression::Not(registrar.register(
-				TestimonyExpressionHypothesisBuilder::new(self.index.clone(), *expression.clone()),
+				TestimonyExpressionHypothesisBuilder::sub_new(
+					self.index.clone(),
+					*expression.clone(),
+				),
 			)),
 			Expression::And(lhs, rhs) => HypothesisExpression::And((
-				registrar.register(TestimonyExpressionHypothesisBuilder::new(
+				registrar.register(TestimonyExpressionHypothesisBuilder::sub_new(
 					self.index.clone(),
 					*lhs.clone(),
 				)),
-				registrar.register(TestimonyExpressionHypothesisBuilder::new(
+				registrar.register(TestimonyExpressionHypothesisBuilder::sub_new(
 					self.index.clone(),
 					*rhs.clone(),
 				)),
 			)),
 			Expression::Or(lhs, rhs) => HypothesisExpression::Or((
-				registrar.register(TestimonyExpressionHypothesisBuilder::new(
+				registrar.register(TestimonyExpressionHypothesisBuilder::sub_new(
 					self.index.clone(),
 					*lhs.clone(),
 				)),
-				registrar.register(TestimonyExpressionHypothesisBuilder::new(
+				registrar.register(TestimonyExpressionHypothesisBuilder::sub_new(
 					self.index.clone(),
 					*rhs.clone(),
 				)),
@@ -84,6 +98,7 @@ impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
 			index: self.index,
 			expression_friendly,
 			hypothesis_expression,
+			is_root_testimony: self.is_root_testimony,
 		}
 		.into()
 	}
@@ -91,9 +106,15 @@ impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
 
 impl Hypothesis for TestimonyExpressionHypothesis {
 	fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+		if self.is_root_testimony {
+			write!(f, "Root t")?
+		} else {
+			write!(f, "Sub-t")?
+		}
+
 		write!(
 			f,
-			"Testimony from {}: {}",
+			"estimony from {}: {}",
 			self.index, self.expression_friendly
 		)
 	}
