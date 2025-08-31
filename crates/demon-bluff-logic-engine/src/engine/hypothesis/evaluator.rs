@@ -1,4 +1,6 @@
-use log::{Log, info};
+use std::hint::cold_path;
+
+use log::{Log, info, warn};
 
 use super::{HypothesisFunctions, reference::HypothesisReference, result::HypothesisResult};
 use crate::{
@@ -31,6 +33,7 @@ where
 
 		let mut current_data = self.current_data.borrow_mut();
 		let mut force_conclusive = false;
+		let mut try_enter_hypothesis = false;
 		if let Some(break_at) = self.break_at
 			&& break_at == current_reference
 		{
@@ -62,29 +65,53 @@ where
 		{
 			info!(logger: self.log, "{} Skipping previously already evaluated this iteration: {}", self.depth(), hypothesis_reference);
 
-			for full_cycle in &current_data.full_cycles[hypothesis_reference.index()] {
+			let full_cycles = &current_data.full_cycles[hypothesis_reference.index()];
+			let mut new_cycles = Vec::with_capacity(full_cycles.len());
+			let mut submit_cycles = true;
+			for full_cycle in full_cycles {
 				let cycle = derive_from_full_cycle(
 					full_cycle,
 					self.reference_stack(),
 					hypothesis_reference,
 				);
 
-				info!(
-					logger: self.log,
-					"{} Cycle detected when retracing paths under reference {}: {}",
-					self.depth(),
-					hypothesis_reference,
-					cycle
-				);
-
-				if let Some(debugger) = &mut self.debugger {
-					debugger.breakpoint(Breakpoint::DetectCycle(clone_cycle(&cycle)));
+				if let Some(break_at) = self.break_at.as_ref() {
+					if cycle.references().contains(break_at) {
+						// This codepath really should never fire
+						// I can't imagine a scenario where it would
+						// just in case though
+						cold_path();
+						submit_cycles = false;
+						try_enter_hypothesis = true;
+						warn!(logger: self.log, "Re-evaluating hypothesis {} which was evaluated this iteration because we somehow did not previously reach the hypothesis we are meant to break a cycle at!", hypothesis_reference);
+					}
 				}
 
+				new_cycles.push(cycle);
+			}
+
+			if submit_cycles {
 				let mut cycles = self.cycles.borrow_mut();
-				cycles.insert(cycle);
+				for cycle in new_cycles {
+					info!(
+						logger: self.log,
+						"{} Cycle detected when retracing paths under reference {}: {}",
+						self.depth(),
+						hypothesis_reference,
+						cycle
+					);
+					if let Some(debugger) = &mut self.debugger {
+						debugger.breakpoint(Breakpoint::DetectCycle(clone_cycle(&cycle)));
+					}
+
+					cycles.insert(cycle);
+				}
 			}
 		} else {
+			try_enter_hypothesis = true
+		}
+
+		if try_enter_hypothesis {
 			match self.hypotheses[hypothesis_reference.index()].try_borrow_mut() {
 				Ok(next_reference) => {
 					// Important or entering the invocation will BorrowError

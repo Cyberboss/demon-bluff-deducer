@@ -1,4 +1,5 @@
 #![feature(breakpoint)]
+#![feature(cold_path)]
 
 mod engine;
 mod hypotheses;
