@@ -1,8 +1,7 @@
 use demon_bluff_gameplay_engine::{
-	Expression,
 	game_state::GameState,
 	testimony::{ConfessorClaim, Testimony},
-	villager::{Villager, VillagerIndex},
+	villager::VillagerIndex,
 };
 use log::Log;
 
@@ -16,7 +15,14 @@ use crate::{
 		HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
 		HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_result,
 	},
+	hypotheses::is_corrupt::IsCorruptHypothesisBuilder,
 };
+
+enum Condemns {
+	Yes,
+	No,
+	IfDefendantNotCorrupt,
+}
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TestimonyCondemnsHypothesisBuilder {
@@ -41,7 +47,9 @@ pub struct TestimonyCondemnsHypothesis {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
 	testimony_true_hypothesis: HypothesisReference,
+	defendant_corrupt_hypothesis: Option<HypothesisReference>,
 	expression_friendly: String,
+	testimony: Testimony,
 }
 
 impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
@@ -55,11 +63,22 @@ impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
 			self.testifier.clone(),
 			self.testimony.clone(),
 		));
+
+		let defendant_corrupt_hypothesis =
+			match condemns(&self.testimony, &self.defendant, &self.testifier) {
+				Condemns::Yes | Condemns::No => None,
+				Condemns::IfDefendantNotCorrupt => Some(
+					registrar.register(IsCorruptHypothesisBuilder::new(self.defendant.clone())),
+				),
+			};
+
 		TestimonyCondemnsHypothesis {
 			testifier: self.testifier,
 			defendant: self.defendant,
 			testimony_true_hypothesis,
 			expression_friendly,
+			testimony: self.testimony,
+			defendant_corrupt_hypothesis,
 		}
 		.into()
 	}
@@ -74,24 +93,31 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
 		)
 	}
 
-	fn wip(&self) -> bool {
-		true
-	}
-
 	fn evaluate<TLog, FDebugBreak>(
 		&mut self,
 		_: &TLog,
 		_: Depth,
-		game_state: &GameState,
+		_: &GameState,
 		repository: HypothesisRepository<TLog, FDebugBreak>,
 	) -> HypothesisEvaluation
 	where
 		TLog: Log,
 		FDebugBreak: FnMut(Breakpoint) + Clone,
 	{
-		let testimony_condemns_result = self.testimony_condemns(game_state);
+		let testimony_condemns = condemns(&self.testimony, &self.defendant, &self.testifier);
 
 		let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
+
+		let testimony_condemns_result = match testimony_condemns {
+			Condemns::Yes => HypothesisResult::Conclusive(FitnessAndAction::certainty(None)),
+			Condemns::No => HypothesisResult::Conclusive(FitnessAndAction::impossible()),
+			Condemns::IfDefendantNotCorrupt => evaluator.sub_evaluate(
+				&self
+					.defendant_corrupt_hypothesis
+					.as_ref()
+					.expect("Defendant corrupt hypothesis should have been registered!"),
+			),
+		};
 
 		let testimony_true_result = evaluator.sub_evaluate(&self.testimony_true_hypothesis);
 
@@ -101,35 +127,55 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
 	}
 }
 
-impl TestimonyCondemnsHypothesis {
-	fn testimony_condemns(&self, game_state: &GameState) -> HypothesisResult {
-		let testimony = match game_state.villager(&self.testifier) {
-			Villager::Active(active_villager) => active_villager.instance().testimony(),
-			Villager::Hidden(_) => {
-				return HypothesisResult::Conclusive(FitnessAndAction::impossible());
-			}
-			Villager::Confirmed(confirmed_villager) => confirmed_villager.instance().testimony(),
-		};
-
-		let expression = match testimony {
-			Some(testimony) => testimony,
-			None => {
-				return HypothesisResult::Conclusive(FitnessAndAction::impossible());
-			}
-		};
-
-		match expression {
-			Expression::Unary(Testimony::Confess(confession)) => {
-				if self.defendant == self.testifier {
-					HypothesisResult::Conclusive(match confession {
-						ConfessorClaim::Good => FitnessAndAction::impossible(),
-						ConfessorClaim::Dizzy => FitnessAndAction::certainty(None),
-					})
-				} else {
-					HypothesisResult::Conclusive(FitnessAndAction::impossible())
+fn condemns(
+	testimony: &Testimony,
+	defendant: &VillagerIndex,
+	testifier: &VillagerIndex,
+) -> Condemns {
+	match testimony {
+		Testimony::Confess(confession) => {
+			if defendant == testifier {
+				match confession {
+					ConfessorClaim::Good => Condemns::No,
+					ConfessorClaim::Dizzy => Condemns::IfDefendantNotCorrupt,
 				}
+			} else {
+				panic!("Why does a confession not have the same testifier and defendant?");
 			}
-			_ => HypothesisResult::Conclusive(FitnessAndAction::unimplemented()),
 		}
+		Testimony::Evil(villager_index) => {
+			if defendant == villager_index {
+				Condemns::Yes
+			} else {
+				Condemns::No
+			}
+		}
+		Testimony::Lying(villager_index) => {
+			if defendant == villager_index {
+				Condemns::IfDefendantNotCorrupt
+			} else {
+				Condemns::No
+			}
+		}
+		Testimony::Role(role_claim) => {
+			if role_claim.role().is_evil() && role_claim.index() == defendant {
+				Condemns::Yes
+			} else {
+				Condemns::No
+			}
+		}
+		Testimony::Good(_)
+		| Testimony::Corrupt(_)
+		| Testimony::NotCorrupt(_)
+		| Testimony::Cured(_)
+		| Testimony::Architect(_)
+		| Testimony::Baker(_)
+		| Testimony::Invincible(_)
+		| Testimony::Knitter(_)
+		| Testimony::Affected(_)
+		| Testimony::FakeEvil(_)
+		| Testimony::SelfDestruct(_)
+		| Testimony::Slayed(_)
+		| Testimony::Scout(_) => Condemns::No,
 	}
 }
