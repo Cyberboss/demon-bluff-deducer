@@ -15,7 +15,7 @@ use crate::{
 		HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
 		HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_result,
 	},
-	hypotheses::is_corrupt::IsCorruptHypothesisBuilder,
+	hypotheses::{is_corrupt::IsCorruptHypothesisBuilder, negate::NegateHypothesisBuilder},
 };
 
 enum Condemns {
@@ -47,7 +47,7 @@ pub struct TestimonyCondemnsHypothesis {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
 	testimony_true_hypothesis: HypothesisReference,
-	defendant_corrupt_hypothesis: Option<HypothesisReference>,
+	defendant_not_corrupt_hypothesis: Option<HypothesisReference>,
 	expression_friendly: String,
 	testimony: Testimony,
 }
@@ -64,12 +64,14 @@ impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
 			self.testimony.clone(),
 		));
 
-		let defendant_corrupt_hypothesis =
+		let defendant_not_corrupt_hypothesis =
 			match condemns(&self.testimony, &self.defendant, &self.testifier) {
 				Condemns::Yes | Condemns::No => None,
-				Condemns::IfDefendantNotCorrupt => Some(
-					registrar.register(IsCorruptHypothesisBuilder::new(self.defendant.clone())),
-				),
+				Condemns::IfDefendantNotCorrupt => {
+					Some(registrar.register(NegateHypothesisBuilder::new(
+						IsCorruptHypothesisBuilder::new(self.defendant.clone()),
+					)))
+				}
 			};
 
 		TestimonyCondemnsHypothesis {
@@ -78,7 +80,7 @@ impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
 			testimony_true_hypothesis,
 			expression_friendly,
 			testimony: self.testimony,
-			defendant_corrupt_hypothesis,
+			defendant_not_corrupt_hypothesis,
 		}
 		.into()
 	}
@@ -113,7 +115,7 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
 			Condemns::No => HypothesisResult::Conclusive(FitnessAndAction::impossible()),
 			Condemns::IfDefendantNotCorrupt => evaluator.sub_evaluate(
 				&self
-					.defendant_corrupt_hypothesis
+					.defendant_not_corrupt_hypothesis
 					.as_ref()
 					.expect("Defendant corrupt hypothesis should have been registered!"),
 			),
@@ -140,7 +142,7 @@ fn condemns(
 					ConfessorClaim::Dizzy => Condemns::IfDefendantNotCorrupt,
 				}
 			} else {
-				panic!("Why does a confession not have the same testifier and defendant?");
+				Condemns::No
 			}
 		}
 		Testimony::Evil(villager_index) => {
