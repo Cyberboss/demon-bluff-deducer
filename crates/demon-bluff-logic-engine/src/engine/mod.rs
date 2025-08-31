@@ -1,7 +1,8 @@
-use std::{cell::RefCell, collections::HashSet};
+use std::{cell::RefCell, collections::HashSet, vec};
 
 use debugger::Debugger;
 use demon_bluff_gameplay_engine::game_state::GameState;
+use iteration_data::{CurrentIterationData, VisitState};
 use log::{Log, error, info};
 
 use self::{
@@ -109,10 +110,13 @@ where
 
 		let mut data = Vec::with_capacity(hypotheses.len());
 		for _ in 0..hypotheses.len() {
-			data.push(None);
+			data.push(VisitState::Unvisited);
 		}
 
-		let data = RefCell::new(IterationData { results: data });
+		let data = RefCell::new(CurrentIterationData {
+			inner: IterationData { results: data },
+			full_cycles: vec![Vec::new(); hypotheses.len()],
+		});
 		let cycles = RefCell::new(HashSet::new());
 		let mut stack_data = StackData::new(
 			game_state,
@@ -139,7 +143,7 @@ where
 
 				let data = data.borrow();
 				if let Some(previous_results) = &previous_results {
-					let mut graph_stable = *previous_results == *data;
+					let mut graph_stable = *previous_results == data.inner;
 
 					stability_iteration += 1;
 					if !graph_stable {
@@ -211,11 +215,15 @@ where
 
 							for cycle in cycles.iter() {
 								for reference in cycle.references() {
-									let fitness = data.results[reference.index()]
-										.as_ref()
-										.expect("A hypothesis in a cycle should have SOME result")
-										.fitness_and_action()
-										.fitness();
+									let fitness = match &data.inner.results[reference.index()] {
+										VisitState::Unvisited => panic!(
+											"A hypothesis in a cycle should have SOME result"
+										),
+										VisitState::Visiting(hypothesis_result)
+										| VisitState::Visited(hypothesis_result) => {
+											hypothesis_result.fitness_and_action().fitness()
+										}
+									};
 
 									best_break_candidate = Some(match best_break_candidate {
 										Some((
@@ -260,7 +268,7 @@ where
 					}
 				}
 
-				previous_results = Some(data.clone());
+				previous_results = Some(data.inner.clone());
 			}
 			HypothesisResult::Conclusive(fitness_and_action) => {
 				if fitness_and_action.action().is_empty() {

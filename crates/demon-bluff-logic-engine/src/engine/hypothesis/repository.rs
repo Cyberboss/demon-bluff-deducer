@@ -5,7 +5,7 @@ use crate::{
 	Breakpoint,
 	engine::{
 		fitness_and_action::FitnessAndAction, index_reference::IndexReference,
-		stack_data::StackData,
+		iteration_data::VisitState, stack_data::StackData,
 	},
 	hypotheses::{DesireType, HypothesisType},
 };
@@ -36,18 +36,24 @@ where
 		initial_fitness: f64,
 	) -> impl HypothesisEvaluator<'a, TLog, HypothesisType, DesireType, FDebugBreak> {
 		let mut data = self.stack_data.current_data.borrow_mut();
-		match &data.results[self.stack_data.current_reference().index()] {
-			Some(_) => {}
-			None => {
+		match &data.inner.results[self.stack_data.current_reference().index()] {
+			VisitState::Visited(_) | VisitState::Visiting(_) => {
+				panic!("We shouldn't be revisiting hypotheses!")
+			}
+			VisitState::Unvisited => {
 				if let Some(previous) = self.stack_data.previous_data
-					&& let Some(_) = &previous.results[self.stack_data.current_reference().index()]
+					&& let VisitState::Visited(_) =
+						&previous.results[self.stack_data.current_reference().index()]
 				{
 				} else {
 					info!(logger: self.stack_data.log, "{} Set initial fitness: {}",self.stack_data.depth(), initial_fitness);
 				}
-				data.results[self.stack_data.current_reference().index()] = Some(
-					HypothesisResult::Pending(FitnessAndAction::new(initial_fitness, None)),
-				);
+
+				data.inner.results[self.stack_data.current_reference().index()] =
+					VisitState::Visiting(HypothesisResult::Pending(FitnessAndAction::new(
+						initial_fitness,
+						None,
+					)));
 			}
 		}
 

@@ -4,8 +4,11 @@ use super::{HypothesisFunctions, reference::HypothesisReference, result::Hypothe
 use crate::{
 	Breakpoint,
 	engine::{
-		cycle::clone_cycle, hypothesis::invocation::HypothesisInvocation,
-		index_reference::IndexReference, stack_data::StackData,
+		cycle::{clone_cycle, derive_from_full_cycle},
+		hypothesis::invocation::HypothesisInvocation,
+		index_reference::IndexReference,
+		iteration_data::VisitState,
+		stack_data::StackData,
 	},
 	hypotheses::{DesireType, HypothesisType},
 };
@@ -38,7 +41,8 @@ where
 				hypothesis_reference
 			);
 
-			let cycle = self.create_cycle(hypothesis_reference);
+			let cycle: crate::engine::cycle::Cycle =
+				self.create_cycle(hypothesis_reference, &mut current_data, false);
 			let current_reference = current_reference.clone();
 			if let Some(debugger) = &mut self.debugger {
 				debugger.breakpoint(Breakpoint::BreakCycle(cycle, current_reference.index()));
@@ -46,13 +50,40 @@ where
 
 			force_conclusive = true;
 		} else if let Some(previous_data) = self.previous_data
-			&& let Some(HypothesisResult::Conclusive(previously_conclusive_result)) =
+			&& let VisitState::Visited(HypothesisResult::Conclusive(previously_conclusive_result)) =
 				&previous_data.results[hypothesis_reference.index()]
 		{
 			info!(logger: self.log, "{} Skipping previously concluded hypothesis: {}", self.depth(), hypothesis_reference);
-			current_data.results[hypothesis_reference.index()] = Some(
+			current_data.inner.results[hypothesis_reference.index()] = VisitState::Visited(
 				HypothesisResult::Conclusive(previously_conclusive_result.clone()),
 			);
+		} else if let VisitState::Visited(_) =
+			&current_data.inner.results[hypothesis_reference.index()]
+		{
+			info!(logger: self.log, "{} Skipping previously already evaluated this iteration: {}", self.depth(), hypothesis_reference);
+
+			for full_cycle in &current_data.full_cycles[hypothesis_reference.index()] {
+				let cycle = derive_from_full_cycle(
+					full_cycle,
+					self.reference_stack(),
+					hypothesis_reference,
+				);
+
+				info!(
+					logger: self.log,
+					"{} Cycle detected when retracing paths under reference {}: {}",
+					self.depth(),
+					hypothesis_reference,
+					cycle
+				);
+
+				if let Some(debugger) = &mut self.debugger {
+					debugger.breakpoint(Breakpoint::DetectCycle(clone_cycle(&cycle)));
+				}
+
+				let mut cycles = self.cycles.borrow_mut();
+				cycles.insert(cycle);
+			}
 		} else {
 			match self.hypotheses[hypothesis_reference.index()].try_borrow_mut() {
 				Ok(next_reference) => {
@@ -65,14 +96,15 @@ where
 					return invocation.invoke();
 				}
 				Err(_) => {
+					let cycle = self.create_cycle(hypothesis_reference, &mut current_data, true);
 					info!(
 						logger: self.log,
-						"{} Cycle detected when trying to evaluate reference {}",
+						"{} Cycle detected when trying to evaluate reference {}: {}",
 						self.depth(),
-						hypothesis_reference
+						hypothesis_reference,
+						cycle
 					);
 
-					let cycle = self.create_cycle(hypothesis_reference);
 					if let Some(debugger) = &mut self.debugger {
 						debugger.breakpoint(Breakpoint::DetectCycle(clone_cycle(&cycle)));
 					}
@@ -83,15 +115,20 @@ where
 			}
 		}
 
-		let relevant_iteration_data = current_data.results[hypothesis_reference.index()]
-			.as_ref()
-			.unwrap_or_else(|| {
-				self.previous_data
-					.expect("We shouldn't be using cached fitness data if none exists")
-					.results[hypothesis_reference.index()]
-				.as_ref()
-				.expect("Fitness for cycle break didn't previously exist")
-			});
+		let current_results = &current_data.inner.results[hypothesis_reference.index()];
+		let relevant_iteration_data = if let VisitState::Visited(rid) = current_results {
+			rid
+		} else if let VisitState::Visiting(rid) = current_results {
+			rid
+		} else if let VisitState::Visited(rid) = &self
+			.previous_data
+			.expect("We shouldn't be using cached fitness data if none exists")
+			.results[hypothesis_reference.index()]
+		{
+			rid
+		} else {
+			panic!("Fitness for cycle break didn't previously exist")
+		};
 
 		let mut last_evaluate = relevant_iteration_data.clone();
 

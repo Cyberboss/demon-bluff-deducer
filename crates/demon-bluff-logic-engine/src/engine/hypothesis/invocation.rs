@@ -7,6 +7,7 @@ use crate::{
 		HypothesisRepository,
 		debugger::{hypothesis_nodes_mut, update_hypothesis_node},
 		index_reference::IndexReference,
+		iteration_data::VisitState,
 		stack_data::StackData,
 	},
 	hypotheses::{DesireType, HypothesisType},
@@ -69,7 +70,8 @@ where
 		}
 
 		let mut current_data = self.current_data.borrow_mut();
-		current_data.results[self.current_reference().index()] = Some(result.clone());
+		current_data.inner.results[self.current_reference().index()] =
+			VisitState::Visited(result.clone());
 
 		result
 	}

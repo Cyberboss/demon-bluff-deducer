@@ -11,7 +11,7 @@ use super::{
 	depth::Depth,
 	desire::{Desire, DesireData, DesireDefinition},
 	hypothesis::Hypothesis,
-	iteration_data::IterationData,
+	iteration_data::{CurrentIterationData, IterationData},
 };
 
 #[derive(Debug)]
@@ -28,7 +28,7 @@ where
 	pub cycles: &'a RefCell<HashSet<Cycle>>,
 	pub hypotheses: &'a Vec<RefCell<THypothesis>>,
 	pub previous_data: Option<&'a IterationData>,
-	pub current_data: &'a RefCell<IterationData>,
+	pub current_data: &'a RefCell<CurrentIterationData>,
 	pub debugger: Option<Debugger<FDebugBreak>>,
 	pub break_at: &'a Option<HypothesisReference>,
 	pub desire_definitions: &'a Vec<DesireDefinition<TDesire>>,
@@ -50,7 +50,7 @@ where
 		hypotheses: &'a Vec<RefCell<THypothesis>>,
 		cycles: &'a RefCell<HashSet<Cycle>>,
 		previous_data: Option<&'a IterationData>,
-		current_data: &'a RefCell<IterationData>,
+		current_data: &'a RefCell<CurrentIterationData>,
 		break_at: &'a Option<HypothesisReference>,
 		root_reference: &HypothesisReference,
 		debugger: Option<Debugger<FDebugBreak>>,
@@ -74,16 +74,52 @@ where
 		}
 	}
 
-	pub fn create_cycle(&self, locked_reference: &HypothesisReference) -> Cycle {
+	pub fn create_cycle(
+		&self,
+		locked_reference: &HypothesisReference,
+		current_data: &mut CurrentIterationData,
+		register_cycle: bool,
+	) -> Cycle {
 		let mut order_from_root = Vec::new();
 		order_from_root.push(locked_reference.clone());
 		let mut adding = false;
+
+		let mut full_cycle = if register_cycle {
+			Some(Vec::with_capacity(self.reference_stack.len()))
+		} else {
+			None
+		};
+
 		for trace_reference in &self.reference_stack {
+			if let Some(full_cycle) = full_cycle.as_mut() {
+				full_cycle.push(trace_reference.clone());
+			}
+
 			if adding {
 				order_from_root.push(trace_reference.clone());
 			} else if trace_reference == locked_reference {
 				adding = true;
 			}
+		}
+
+		if let Some(mut full_cycle) = full_cycle {
+			full_cycle.push(locked_reference.clone());
+
+			for trace_reference in self
+				.reference_stack
+				.iter()
+				.take(self.reference_stack.len() - 1)
+			{
+				let mut copy = Vec::with_capacity(full_cycle.len());
+				for trace_reference in &full_cycle {
+					copy.push(trace_reference.clone());
+				}
+
+				current_data.full_cycles[trace_reference.index()].push(new_cycle(copy));
+			}
+
+			current_data.full_cycles[self.reference_stack[self.reference_stack.len() - 2].index()]
+				.push(new_cycle(full_cycle));
 		}
 
 		new_cycle(order_from_root)
@@ -151,5 +187,9 @@ where
 	pub fn depth(&self) -> Depth {
 		let reference = self.current_reference().clone();
 		Depth::new(self.reference_stack.len() - 1, Some(reference))
+	}
+
+	pub fn reference_stack(&self) -> &Vec<HypothesisReference> {
+		&self.reference_stack
 	}
 }
