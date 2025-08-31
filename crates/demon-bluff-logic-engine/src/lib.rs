@@ -1,5 +1,4 @@
-#![feature(breakpoint)]
-#![feature(cold_path)]
+#![feature(breakpoint, cold_path, rust_cold_cc)]
 
 mod engine;
 mod hypotheses;
