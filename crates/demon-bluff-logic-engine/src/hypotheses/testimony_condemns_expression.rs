@@ -9,7 +9,7 @@ use crate::{
 	engine::{
 		Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
 		HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-		HypothesisRepository, and_result, or_result,
+		HypothesisRepository, HypothesisResult, and_result, or_result,
 	},
 	hypotheses::{
 		HypothesisType, hypothesis_expression::HypothesisExpression,
@@ -166,9 +166,14 @@ impl Hypothesis for TestimonyCondemnsExpressionHypothesis {
 			HypothesisExpression::Not(hypothesis_reference) => evaluator
 				.sub_evaluate(hypothesis_reference)
 				.map(|fitness_and_action| fitness_and_action.invert()),
-			HypothesisExpression::And((lhs, rhs)) | HypothesisExpression::Or((lhs, rhs)) => {
+			HypothesisExpression::And((lhs, rhs)) => {
 				// remember, we're not testing for truthfulness, just if the expression condemns the target in any way
 				or_result(evaluator.sub_evaluate(lhs), evaluator.sub_evaluate(rhs))
+			}
+			HypothesisExpression::Or((lhs, rhs)) => {
+				// I'm not a statistics person, but after a long chat with LLMs they're insistent that this is the correct operation
+				// It makes sense, being the opposite of the above
+				and_result(evaluator.sub_evaluate(lhs), evaluator.sub_evaluate(rhs))
 			}
 		};
 
