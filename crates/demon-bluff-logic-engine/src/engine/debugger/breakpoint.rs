@@ -6,7 +6,8 @@ use std::{
 
 use super::context::DebuggerContext;
 use crate::engine::{
-	Cycle, DesireConsumerReference, DesireProducerReference, HypothesisReference, IndexReference,
+	Cycle, DesireConsumerReference, DesireProducerReference, HypothesisReference, HypothesisResult,
+	IndexReference,
 };
 
 pub enum Breakpoint {

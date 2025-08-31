@@ -8,7 +8,6 @@ use super::{
 	DesireType, HypothesisBuilderType,
 	all_evils_accounted_for::AllEvilsAccountedForHypothesisBuilder,
 	is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
-	testimony_condemns::TestimonyCondemnsHypothesisBuilder,
 	testimony_condemns_expression::TestimonyCondemnsExpressionHypothesisBuilder,
 };
 use crate::{
