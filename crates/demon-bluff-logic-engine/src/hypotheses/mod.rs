@@ -7,6 +7,10 @@ use appears_evil::{AppearsEvilHypothesis, AppearsEvilHypothesisBuilder};
 use testimony_condemns_expression::{
 	TestimonyCondemnsExpressionHypothesis, TestimonyCondemnsExpressionHypothesisBuilder,
 };
+use testimony_exonerates::{TestimonyExoneratesHypothesis, TestimonyExoneratesHypothesisBuilder};
+use testimony_exonerates_expression::{
+	TestimonyExoneratesExpressionHypothesis, TestimonyExoneratesExpressionHypothesisBuilder,
+};
 
 use self::{
 	ability_index::{AbilityIndexHypothesis, AbilityIndexHypothesisBuilder},
@@ -64,6 +68,8 @@ mod revealing_is_safe;
 mod testimony;
 mod testimony_condemns;
 mod testimony_condemns_expression;
+mod testimony_exonerates;
+mod testimony_exonerates_expression;
 mod testimony_expression;
 mod true_identity;
 
@@ -94,6 +100,8 @@ pub enum HypothesisBuilderType {
 	AllEvilsAccountedFor(AllEvilsAccountedForHypothesisBuilder),
 	AppearsEvil(AppearsEvilHypothesisBuilder),
 	TestimonyCondemnsExpression(TestimonyCondemnsExpressionHypothesisBuilder),
+	TestimonyExoneratesExpression(TestimonyExoneratesExpressionHypothesisBuilder),
+	TestimonyExonerates(TestimonyExoneratesHypothesisBuilder),
 }
 
 #[enum_delegate::implement(Hypothesis)]
@@ -123,6 +131,8 @@ pub enum HypothesisType {
 	AllEvilsAccountedFor(AllEvilsAccountedForHypothesis),
 	AppearsEvil(AppearsEvilHypothesis),
 	TestimonyCondemnsExpression(TestimonyCondemnsExpressionHypothesis),
+	TestimonyExoneratesExpression(TestimonyExoneratesExpressionHypothesis),
+	TestimonyExonerates(TestimonyExoneratesHypothesis),
 }
 
 impl Display for HypothesisType {

@@ -13,31 +13,31 @@ use crate::{
 	},
 	hypotheses::{
 		HypothesisType, hypothesis_expression::HypothesisExpression,
-		testimony_condemns::TestimonyCondemnsHypothesisBuilder,
+		testimony_exonerates::TestimonyExoneratesHypothesisBuilder,
 		testimony_expression::TestimonyExpressionHypothesisBuilder,
 	},
 };
 
 #[derive(Eq, PartialEq, Debug, Clone)]
-pub struct TestimonyCondemnsExpressionHypothesisBuilder {
+pub struct TestimonyExoneratesExpressionHypothesisBuilder {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
 	testimony_expression: Expression<Testimony>,
 	is_root_testimony: bool,
 }
 
-/// If a given [`Testimony`] [`Expression`] is true AND condemns a give defendant
+/// If a given [`Testimony`] [`Expression`] is true AND exonerates a given defendant
 #[derive(Debug)]
-pub struct TestimonyCondemnsExpressionHypothesis {
+pub struct TestimonyExoneratesExpressionHypothesis {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
-	condemns_expression: HypothesisExpression,
+	exonerates_expression: HypothesisExpression,
 	truthfulness_hypothesis: HypothesisReference,
 	expression_friendly: String,
 	is_root_testimony: bool,
 }
 
-impl TestimonyCondemnsExpressionHypothesisBuilder {
+impl TestimonyExoneratesExpressionHypothesisBuilder {
 	pub fn new(
 		testifier: VillagerIndex,
 		defendant: VillagerIndex,
@@ -65,47 +65,47 @@ impl TestimonyCondemnsExpressionHypothesisBuilder {
 	}
 }
 
-impl HypothesisBuilder for TestimonyCondemnsExpressionHypothesisBuilder {
+impl HypothesisBuilder for TestimonyExoneratesExpressionHypothesisBuilder {
 	fn build(
 		self,
 		_: &GameState,
 		registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
 	) -> HypothesisType {
 		let expression_friendly = format!("{}", self.testimony_expression);
-		let condemns_expression = match &self.testimony_expression {
+		let exonerates_expression = match &self.testimony_expression {
 			Expression::Unary(testimony) => HypothesisExpression::Unary(registrar.register(
-				TestimonyCondemnsHypothesisBuilder::new(
+				TestimonyExoneratesHypothesisBuilder::new(
 					self.testifier.clone(),
 					self.defendant.clone(),
 					testimony.clone(),
 				),
 			)),
 			Expression::Not(expression) => HypothesisExpression::Not(registrar.register(
-				TestimonyCondemnsExpressionHypothesisBuilder::sub_new(
+				TestimonyExoneratesExpressionHypothesisBuilder::sub_new(
 					self.testifier.clone(),
 					self.defendant.clone(),
 					*expression.clone(),
 				),
 			)),
 			Expression::And(lhs, rhs) => HypothesisExpression::And((
-				registrar.register(TestimonyCondemnsExpressionHypothesisBuilder::sub_new(
+				registrar.register(TestimonyExoneratesExpressionHypothesisBuilder::sub_new(
 					self.testifier.clone(),
 					self.defendant.clone(),
 					*lhs.clone(),
 				)),
-				registrar.register(TestimonyCondemnsExpressionHypothesisBuilder::sub_new(
+				registrar.register(TestimonyExoneratesExpressionHypothesisBuilder::sub_new(
 					self.testifier.clone(),
 					self.defendant.clone(),
 					*rhs.clone(),
 				)),
 			)),
 			Expression::Or(lhs, rhs) => HypothesisExpression::Or((
-				registrar.register(TestimonyCondemnsExpressionHypothesisBuilder::sub_new(
+				registrar.register(TestimonyExoneratesExpressionHypothesisBuilder::sub_new(
 					self.testifier.clone(),
 					self.defendant.clone(),
 					*lhs.clone(),
 				)),
-				registrar.register(TestimonyCondemnsExpressionHypothesisBuilder::sub_new(
+				registrar.register(TestimonyExoneratesExpressionHypothesisBuilder::sub_new(
 					self.testifier.clone(),
 					self.defendant.clone(),
 					*rhs.clone(),
@@ -120,11 +120,11 @@ impl HypothesisBuilder for TestimonyCondemnsExpressionHypothesisBuilder {
 				self.is_root_testimony,
 			));
 
-		TestimonyCondemnsExpressionHypothesis {
+		TestimonyExoneratesExpressionHypothesis {
 			testifier: self.testifier.clone(),
 			defendant: self.defendant.clone(),
 			expression_friendly,
-			condemns_expression,
+			exonerates_expression,
 			truthfulness_hypothesis,
 			is_root_testimony: self.is_root_testimony,
 		}
@@ -132,7 +132,7 @@ impl HypothesisBuilder for TestimonyCondemnsExpressionHypothesisBuilder {
 	}
 }
 
-impl Hypothesis for TestimonyCondemnsExpressionHypothesis {
+impl Hypothesis for TestimonyExoneratesExpressionHypothesis {
 	fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		if self.is_root_testimony {
 			write!(f, "Root t")?
@@ -142,7 +142,7 @@ impl Hypothesis for TestimonyCondemnsExpressionHypothesis {
 
 		write!(
 			f,
-			"estimony expression from {} condemns {}: {}",
+			"estimony expression from {} exonerates {}: {}",
 			self.testifier, self.defendant, self.expression_friendly
 		)
 	}
@@ -159,7 +159,7 @@ impl Hypothesis for TestimonyCondemnsExpressionHypothesis {
 		FDebugBreak: FnMut(Breakpoint) + Clone,
 	{
 		let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
-		let testimony_condemns_result = match &self.condemns_expression {
+		let testimony_condemns_result = match &self.exonerates_expression {
 			HypothesisExpression::Unary(hypothesis_reference) => {
 				evaluator.sub_evaluate(hypothesis_reference)
 			}

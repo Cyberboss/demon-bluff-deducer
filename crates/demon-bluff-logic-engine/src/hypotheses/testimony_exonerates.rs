@@ -15,23 +15,21 @@ use crate::{
 		HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
 		HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_result,
 	},
-	hypotheses::{is_corrupt::IsCorruptHypothesisBuilder, negate::NegateHypothesisBuilder},
 };
 
-enum Condemns {
+enum Exonerates {
 	Yes,
 	No,
-	IfDefendantNotCorrupt,
 }
 
 #[derive(Eq, PartialEq, Debug, Clone)]
-pub struct TestimonyCondemnsHypothesisBuilder {
+pub struct TestimonyExoneratesHypothesisBuilder {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
 	testimony: Testimony,
 }
 
-impl TestimonyCondemnsHypothesisBuilder {
+impl TestimonyExoneratesHypothesisBuilder {
 	pub fn new(testifier: VillagerIndex, defendant: VillagerIndex, testimony: Testimony) -> Self {
 		Self {
 			testifier,
@@ -41,17 +39,16 @@ impl TestimonyCondemnsHypothesisBuilder {
 	}
 }
 
-/// If a testimony is true and condemns a given defendent
+/// If a testimony is true and exonerates a given defendent
 #[derive(Debug)]
-pub struct TestimonyCondemnsHypothesis {
+pub struct TestimonyExoneratesHypothesis {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
 	testimony_true_hypothesis: HypothesisReference,
-	defendant_not_corrupt_hypothesis: Option<HypothesisReference>,
 	testimony: Testimony,
 }
 
-impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
+impl HypothesisBuilder for TestimonyExoneratesHypothesisBuilder {
 	fn build(
 		self,
 		_: &GameState,
@@ -62,32 +59,21 @@ impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
 			self.testimony.clone(),
 		));
 
-		let defendant_not_corrupt_hypothesis =
-			match condemns(&self.testimony, &self.defendant, &self.testifier) {
-				Condemns::Yes | Condemns::No => None,
-				Condemns::IfDefendantNotCorrupt => {
-					Some(registrar.register(NegateHypothesisBuilder::new(
-						IsCorruptHypothesisBuilder::new(self.defendant.clone()),
-					)))
-				}
-			};
-
-		TestimonyCondemnsHypothesis {
+		TestimonyExoneratesHypothesis {
 			testifier: self.testifier,
 			defendant: self.defendant,
 			testimony_true_hypothesis,
 			testimony: self.testimony,
-			defendant_not_corrupt_hypothesis,
 		}
 		.into()
 	}
 }
 
-impl Hypothesis for TestimonyCondemnsHypothesis {
+impl Hypothesis for TestimonyExoneratesHypothesis {
 	fn describe(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
 		write!(
 			f,
-			"{}'s unary testimony condemns {}: {}",
+			"{}'s unary testimony exonerates {}: {}",
 			self.testifier, self.defendant, self.testimony,
 		)
 	}
@@ -103,78 +89,51 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
 		TLog: Log,
 		FDebugBreak: FnMut(Breakpoint) + Clone,
 	{
-		let testimony_condemns = condemns(&self.testimony, &self.defendant, &self.testifier);
+		let testimony_exonerates = exonerates(&self.testimony, &self.defendant, &self.testifier);
 
 		let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
-		let testimony_condemns_result = match testimony_condemns {
-			Condemns::Yes => HypothesisResult::Conclusive(FitnessAndAction::certainty(None)),
-			Condemns::No => HypothesisResult::Conclusive(FitnessAndAction::impossible()),
-			Condemns::IfDefendantNotCorrupt => evaluator.sub_evaluate(
-				&self
-					.defendant_not_corrupt_hypothesis
-					.as_ref()
-					.expect("Defendant corrupt hypothesis should have been registered!"),
-			),
-		};
+		let testimony_exonerates_result = HypothesisResult::Conclusive(if testimony_exonerates {
+			FitnessAndAction::certainty(None)
+		} else {
+			FitnessAndAction::impossible()
+		});
 
 		let testimony_true_result = evaluator.sub_evaluate(&self.testimony_true_hypothesis);
 
-		let final_result = and_result(testimony_true_result, testimony_condemns_result);
+		let final_result = and_result(testimony_true_result, testimony_exonerates_result);
 
 		evaluator.finalize(final_result)
 	}
 }
 
-fn condemns(
-	testimony: &Testimony,
-	defendant: &VillagerIndex,
-	testifier: &VillagerIndex,
-) -> Condemns {
+fn exonerates(testimony: &Testimony, defendant: &VillagerIndex, testifier: &VillagerIndex) -> bool {
 	match testimony {
 		Testimony::Confess(confession) => {
 			if defendant == testifier {
 				match confession {
-					ConfessorClaim::Good => Condemns::No,
-					ConfessorClaim::Dizzy => Condemns::IfDefendantNotCorrupt,
+					ConfessorClaim::Good => true,
+					ConfessorClaim::Dizzy => false,
 				}
 			} else {
-				Condemns::No
-			}
-		}
-		Testimony::Evil(villager_index) => {
-			if defendant == villager_index {
-				Condemns::Yes
-			} else {
-				Condemns::No
-			}
-		}
-		Testimony::Lying(villager_index) => {
-			if defendant == villager_index {
-				Condemns::IfDefendantNotCorrupt
-			} else {
-				Condemns::No
+				false
 			}
 		}
 		Testimony::Role(role_claim) => {
-			if role_claim.role().is_evil() && role_claim.index() == defendant {
-				Condemns::Yes
-			} else {
-				Condemns::No
-			}
+			!role_claim.role().is_evil() && role_claim.index() == defendant
 		}
-		Testimony::Good(_)
-		| Testimony::Corrupt(_)
+		Testimony::Invincible(_) | Testimony::Good(_) | Testimony::Corrupt(_) => true,
+		Testimony::Evil(_)
+		| Testimony::Lying(_)
 		| Testimony::NotCorrupt(_)
 		| Testimony::Cured(_)
 		| Testimony::Architect(_)
 		| Testimony::Baker(_)
-		| Testimony::Invincible(_)
 		| Testimony::Knitter(_)
 		| Testimony::Affected(_)
 		| Testimony::FakeEvil(_)
 		| Testimony::SelfDestruct(_)
 		| Testimony::Slayed(_)
-		| Testimony::Scout(_) => Condemns::No,
+		| Testimony::Scout(_) => false,
 	}
 }
