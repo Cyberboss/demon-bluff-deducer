@@ -122,6 +122,12 @@ impl Display for VillagerIndex {
 	}
 }
 
+impl VillagerIndex {
+	pub fn number(villager_number: usize) -> Self {
+		Self(villager_number - 1)
+	}
+}
+
 impl VillagerArchetype {
 	pub fn iter() -> impl Iterator<Item = VillagerArchetype> {
 		GoodVillager::iter()
