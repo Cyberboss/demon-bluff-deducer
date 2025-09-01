@@ -126,13 +126,6 @@ impl TestimonyCondemnsExpressionHypothesisBuilder {
 					)),
 				);
 			}
-			Expression::Not(not_expression) => {
-				self.build_component_condemns_hypotheses(
-					component_condemns_hypotheses,
-					registrar,
-					not_expression,
-				);
-			}
 			Expression::And(lhs, rhs) | Expression::Or(lhs, rhs) => {
 				self.build_component_condemns_hypotheses(
 					component_condemns_hypotheses,

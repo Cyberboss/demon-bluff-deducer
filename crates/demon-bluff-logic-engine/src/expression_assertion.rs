@@ -66,9 +66,6 @@ fn collect_variables_helper(expression: &Expression<Testimony>, vars: &mut HashS
 		Expression::Leaf(testimony) => {
 			vars.insert(testimony.clone());
 		}
-		Expression::Not(expr) => {
-			collect_variables_helper(expr, vars);
-		}
 		Expression::And(left, right) | Expression::Or(left, right) => {
 			collect_variables_helper(left, vars);
 			collect_variables_helper(right, vars);
@@ -85,7 +82,6 @@ fn evaluate_with_assignment(
 		Expression::Leaf(testimony) => *assignment
 			.get(testimony)
 			.unwrap_or_else(|| panic!("Missing assignment for testiomony: {}", testimony)),
-		Expression::Not(expr) => !evaluate_with_assignment(expr, assignment),
 		Expression::And(lhs, rhs) => {
 			evaluate_with_assignment(lhs, assignment) && evaluate_with_assignment(rhs, assignment)
 		}
@@ -115,11 +111,6 @@ fn assignment_asserts_x(
 			} else {
 				HypothesisResult::impossible() // TODO: Is this right??? False statements don't assert X
 			}
-		}
-		Expression::Not(expr) => {
-			// If NOT A is true (A is false), then it asserts X with probability 1 - P(A asserts X)
-			let inner_result = assignment_asserts_x(expr, assignment, leaf_probabilities);
-			inner_result.map(|fitness_and_action| fitness_and_action.invert())
 		}
 		Expression::And(left, right) => {
 			// If A AND B is true, it asserts X if at least one operand asserts X

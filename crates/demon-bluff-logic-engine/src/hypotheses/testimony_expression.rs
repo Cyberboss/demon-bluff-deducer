@@ -70,12 +70,6 @@ impl HypothesisBuilder for TestimonyExpressionHypothesisBuilder {
 			Expression::Leaf(testimony) => HypothesisExpression::Unary(registrar.register(
 				TestimonyHypothesisBuilder::new(self.index.clone(), testimony.clone()),
 			)),
-			Expression::Not(expression) => HypothesisExpression::Not(registrar.register(
-				TestimonyExpressionHypothesisBuilder::sub_new(
-					self.index.clone(),
-					*expression.clone(),
-				),
-			)),
 			Expression::And(lhs, rhs) => HypothesisExpression::And((
 				registrar.register(TestimonyExpressionHypothesisBuilder::sub_new(
 					self.index.clone(),

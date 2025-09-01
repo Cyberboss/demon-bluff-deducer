@@ -21,7 +21,6 @@ where
 	Type: Display,
 {
 	Leaf(Type),
-	Not(Box<Expression<Type>>),
 	And(Box<Expression<Type>>, Box<Expression<Type>>),
 	Or(Box<Expression<Type>>, Box<Expression<Type>>),
 }
@@ -33,7 +32,6 @@ where
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Expression::Leaf(item) => write!(f, "{item}"),
-			Expression::Not(expression) => write!(f, "!({expression})"),
 			Expression::And(lhs, rhs) => write!(f, "({lhs}) && ({rhs})"),
 			Expression::Or(lhs, rhs) => write!(f, "({lhs}) || ({rhs})"),
 		}

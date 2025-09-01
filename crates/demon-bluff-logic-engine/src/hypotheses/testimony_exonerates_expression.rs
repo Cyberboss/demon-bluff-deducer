@@ -128,13 +128,6 @@ impl TestimonyExoneratesExpressionHypothesisBuilder {
 					)),
 				);
 			}
-			Expression::Not(not_expression) => {
-				self.build_component_exonerates_hypotheses(
-					component_exonerates_hypotheses,
-					registrar,
-					not_expression,
-				);
-			}
 			Expression::And(lhs, rhs) | Expression::Or(lhs, rhs) => {
 				self.build_component_exonerates_hypotheses(
 					component_exonerates_hypotheses,
