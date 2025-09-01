@@ -46,7 +46,7 @@ pub fn simple_game_3() {
 		)))
 		.expect("Bad mutation?");
 
-	// reveal hunter
+	// reveal hunter(fake)
 	println!("Prediction 2:");
 	prediction = predict(&log, &state).expect("prediction failed??");
 
@@ -68,4 +68,17 @@ pub fn simple_game_3() {
 			)),
 		)))
 		.expect("Bad mutation?");
+
+	colog::init();
+	let log = log::logger();
+
+	// kill fake hunter
+	println!("Prediction 3:");
+	prediction = predict(&log, &state).expect("prediction failed??");
+
+	// From Naksu: these are essentially their respective claims (visualization of evil claims showing enlightened isn't claimed evil), they are incompatible meaning one of them is lying. there is only one liar. #2's claim does not allow for #1 to be a liar, therefore #2 is the only option. #3 doesn't matter
+	assert_eq!(
+		&PlayerAction::TryExecute(VillagerIndex(1)),
+		prediction.iter().next().unwrap()
+	);
 }
