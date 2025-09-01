@@ -117,7 +117,9 @@ fn exonerates(testimony: &Testimony, defendant: &VillagerIndex, testifier: &Vill
 		Testimony::Role(role_claim) => {
 			!role_claim.role().is_evil() && role_claim.index() == defendant
 		}
-		Testimony::Invincible(_) | Testimony::Good(_) | Testimony::Corrupt(_) => true,
+		Testimony::Invincible(index) | Testimony::Good(index) | Testimony::Corrupt(index) => {
+			index == defendant
+		}
 		Testimony::Evil(_)
 		| Testimony::Lying(_)
 		| Testimony::NotCorrupt(_)
