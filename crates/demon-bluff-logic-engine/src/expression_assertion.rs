@@ -9,7 +9,8 @@ pub fn probability_expression_asserts_x_given_true(
 	leaf_x_assertion_probabilities: &HashMap<Testimony, HypothesisResult>,
 ) -> HypothesisResult {
 	// First, collect all the "satisfying assignments" (ways the expression can be true)
-	let assignments = collect_satisfying_assignments(expression);
+	let assignments =
+		collect_satisfying_assignments(expression, None::<fn(&HashMap<Testimony, bool>) -> bool>);
 
 	if assignments.is_empty() {
 		return HypothesisResult::impossible();
@@ -31,9 +32,13 @@ pub fn probability_expression_asserts_x_given_true(
 	})
 }
 
-fn collect_satisfying_assignments(
+fn collect_satisfying_assignments<FValidateAssignment>(
 	expression: &Expression<Testimony>,
-) -> Vec<HashMap<Testimony, bool>> {
+	mut validate_assignment: Option<FValidateAssignment>,
+) -> Vec<HashMap<Testimony, bool>>
+where
+	FValidateAssignment: FnMut(&HashMap<Testimony, bool>) -> bool,
+{
 	let variables = collect_variables(expression);
 	let mut assignments = Vec::new();
 
@@ -44,6 +49,12 @@ fn collect_satisfying_assignments(
 
 		for (j, var) in variables.iter().enumerate() {
 			assignment.insert(var.clone(), (i & (1 << j)) != 0);
+		}
+
+		if let Some(validate_assignment) = validate_assignment.as_mut()
+			&& !validate_assignment(&assignment)
+		{
+			continue;
 		}
 
 		// Check if this assignment satisfies the expression
