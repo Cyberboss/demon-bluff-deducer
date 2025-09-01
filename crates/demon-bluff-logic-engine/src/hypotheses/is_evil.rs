@@ -1,3 +1,5 @@
+use std::arch::breakpoint;
+
 use demon_bluff_gameplay_engine::{
 	game_state::GameState,
 	villager::{Villager, VillagerArchetype, VillagerIndex},
@@ -5,17 +7,16 @@ use demon_bluff_gameplay_engine::{
 use log::Log;
 
 use super::{
-	DesireType, HypothesisBuilderType,
-	all_evils_accounted_for::AllEvilsAccountedForHypothesisBuilder,
-	is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
+	DesireType, HypothesisBuilderType, is_truly_archetype::IsTrulyArchetypeHypothesisBuilder,
 	testimony_condemns_expression::TestimonyCondemnsExpressionHypothesisBuilder,
+	testimony_exonerates_expression::TestimonyExoneratesExpressionHypothesisBuilder,
 };
 use crate::{
 	Breakpoint,
 	engine::{
 		Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
 		HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-		and_result, or_result,
+		HypothesisResult, and_result, or_result,
 	},
 	hypotheses::{
 		HypothesisType, is_corrupt::IsCorruptHypothesisBuilder,
@@ -33,10 +34,9 @@ pub struct IsEvilHypothesis {
 	index: VillagerIndex,
 	is_non_liar_hypotheses: Vec<HypothesisReference>,
 	testimonies_condemming: Vec<HypothesisReference>,
-	testimonies_exonerating: Vec<HypothesisReference>,
+	testimonies_not_exonerating: Vec<HypothesisReference>,
 	is_lying_hypothesis: HypothesisReference,
 	not_corrupt_hypothesis: HypothesisReference,
-	any_evil_slots_left_hypothesis: HypothesisReference,
 }
 
 impl IsEvilHypothesisBuilder {
@@ -61,8 +61,10 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 		}
 
 		let mut testimonies_condemming = Vec::new();
+		let mut testimonies_not_exonerating = Vec::new();
+
 		game_state.iter_villagers(|index, villager| {
-			let potentially_condemning_testimony = match villager {
+			let testimony_to_consider = match villager {
 				Villager::Active(active_villager) => active_villager.instance().testimony(),
 				Villager::Hidden(_) => &None,
 				Villager::Confirmed(confirmed_villager) => {
@@ -74,28 +76,28 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 				}
 			};
 
-			if let Some(testimony) = potentially_condemning_testimony {
+			if let Some(testimony) = testimony_to_consider {
 				testimonies_condemming.push(registrar.register(
 					TestimonyCondemnsExpressionHypothesisBuilder::new(
-						index,
+						index.clone(),
 						self.index.clone(),
 						testimony.clone(),
 					),
 				));
+				testimonies_not_exonerating.push(registrar.register(NegateHypothesisBuilder::new(
+					TestimonyExoneratesExpressionHypothesisBuilder::new(
+						index,
+						self.index.clone(),
+						testimony.clone(),
+					),
+				)));
 			}
 		});
-
-		let testimonies_exonerating = Vec::new(); // TODO
-
 		let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
 			IsTruthfulHypothesisBuilder::new(self.index.clone()),
 		));
 		let not_corrupt_hypothesis = registrar.register(NegateHypothesisBuilder::new(
 			IsCorruptHypothesisBuilder::new(self.index.clone()),
-		));
-
-		let any_evil_slots_left_hypothesis = registrar.register(NegateHypothesisBuilder::new(
-			AllEvilsAccountedForHypothesisBuilder::default(),
 		));
 
 		IsEvilHypothesis {
@@ -104,8 +106,7 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 			not_corrupt_hypothesis,
 			is_lying_hypothesis,
 			testimonies_condemming,
-			testimonies_exonerating,
-			any_evil_slots_left_hypothesis,
+			testimonies_not_exonerating,
 		}
 		.into()
 	}
@@ -169,28 +170,28 @@ impl Hypothesis for IsEvilHypothesis {
 			});
 		}
 
-		let mut testimonies_exonerating_result = None;
-		for sub_hypothesis in &self.testimonies_exonerating {
+		let mut testimonies_not_exonerating_result: Option<HypothesisResult> = None;
+		for sub_hypothesis in &self.testimonies_not_exonerating {
 			let testimony_exonerates = evaluator.sub_evaluate(sub_hypothesis);
 
-			testimonies_exonerating_result = Some(match testimonies_exonerating_result {
+			testimonies_not_exonerating_result = Some(match testimonies_not_exonerating_result {
 				Some(other_result) => or_result(other_result, testimony_exonerates),
 				None => testimony_exonerates,
 			});
 		}
 
 		let penultimate_result = match testimonies_condemning_result {
-			Some(condeming_result) => match testimonies_exonerating_result {
-				Some(exonerating_result) => or_result(
+			Some(condeming_result) => match testimonies_not_exonerating_result {
+				Some(not_exonerating_result) => or_result(
 					evil_2_result,
 					and_result(
 						condeming_result,
-						exonerating_result.map(|fitness| fitness.invert()),
+						not_exonerating_result.map(|fitness| fitness.invert()),
 					),
 				),
 				None => or_result(evil_2_result, condeming_result),
 			},
-			None => match testimonies_exonerating_result {
+			None => match testimonies_not_exonerating_result {
 				Some(exonerating_result) => and_result(
 					evil_2_result,
 					exonerating_result.map(|fitness| fitness.invert()),
@@ -199,16 +200,6 @@ impl Hypothesis for IsEvilHypothesis {
 			},
 		};
 
-		// need this check because any_evil_slots_left_hypothesis is actually dependent on our results which can screw up perfect probabilities
-		if penultimate_result.fitness_and_action().is_certain() {
-			return evaluator.finalize(penultimate_result);
-		}
-
-		let any_evil_slots_left_result =
-			evaluator.sub_evaluate(&self.any_evil_slots_left_hypothesis);
-
-		let result = and_result(any_evil_slots_left_result, penultimate_result);
-
-		evaluator.finalize(result)
+		evaluator.finalize(penultimate_result)
 	}
 }

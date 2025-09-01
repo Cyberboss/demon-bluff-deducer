@@ -1,8 +1,5 @@
 use std::fmt::Display;
 
-use all_evils_accounted_for::{
-	AllEvilsAccountedForHypothesis, AllEvilsAccountedForHypothesisBuilder,
-};
 use appears_evil::{AppearsEvilHypothesis, AppearsEvilHypothesisBuilder};
 use testimony_condemns_expression::{
 	TestimonyCondemnsExpressionHypothesis, TestimonyCondemnsExpressionHypothesisBuilder,
@@ -46,7 +43,6 @@ use crate::{
 
 mod ability;
 mod ability_index;
-mod all_evils_accounted_for;
 mod appears_evil;
 mod archetype_in_play;
 mod corruption_in_play;
@@ -97,7 +93,6 @@ pub enum HypothesisBuilderType {
 	AbilityIndex(AbilityIndexHypothesisBuilder),
 	IsTrulyArchetype(IsTrulyArchetypeHypothesisBuilder),
 	TestimonyCondemns(TestimonyCondemnsHypothesisBuilder),
-	AllEvilsAccountedFor(AllEvilsAccountedForHypothesisBuilder),
 	AppearsEvil(AppearsEvilHypothesisBuilder),
 	TestimonyCondemnsExpression(TestimonyCondemnsExpressionHypothesisBuilder),
 	TestimonyExoneratesExpression(TestimonyExoneratesExpressionHypothesisBuilder),
@@ -128,7 +123,6 @@ pub enum HypothesisType {
 	AbilityIndex(AbilityIndexHypothesis),
 	IsTrulyArchetype(IsTrulyArchetypeHypothesis),
 	TestimonyCondemns(TestimonyCondemnsHypothesis),
-	AllEvilsAccountedFor(AllEvilsAccountedForHypothesis),
 	AppearsEvil(AppearsEvilHypothesis),
 	TestimonyCondemnsExpression(TestimonyCondemnsExpressionHypothesis),
 	TestimonyExoneratesExpression(TestimonyExoneratesExpressionHypothesis),
