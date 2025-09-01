@@ -14,15 +14,21 @@ use super::{
 use crate::{
 	Breakpoint,
 	engine::{
-		Depth, Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,
-		HypothesisFunctions, HypothesisReference, HypothesisRegistrar, HypothesisRepository,
-		HypothesisResult, and_result, or_result,
+		Depth, FitnessAndAction, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
+		HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
+		HypothesisRepository, HypothesisResult, and_result, or_result, sum_result,
 	},
 	hypotheses::{
 		HypothesisType, is_corrupt::IsCorruptHypothesisBuilder,
 		is_truthful::IsTruthfulHypothesisBuilder, negate::NegateHypothesisBuilder,
 	},
 };
+
+#[derive(Debug)]
+struct TestimonyHypothesisPair {
+	assertion: HypothesisReference,
+	truthfulness: HypothesisReference,
+}
 
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct IsEvilHypothesisBuilder {
@@ -33,7 +39,8 @@ pub struct IsEvilHypothesisBuilder {
 pub struct IsEvilHypothesis {
 	index: VillagerIndex,
 	is_non_liar_hypotheses: Vec<HypothesisReference>,
-	testimonies_condemming: Vec<HypothesisReference>,
+	testimonies_condemning: Vec<TestimonyHypothesisPair>,
+	testimonies_not_exonerating: Vec<TestimonyHypothesisPair>,
 	is_lying_hypothesis: HypothesisReference,
 	not_lying_hypothesis: HypothesisReference,
 	not_corrupt_hypothesis: HypothesisReference,
@@ -60,7 +67,8 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 			}
 		}
 
-		let mut testimonies_condemming = Vec::new();
+		let mut testimonies_condemning = Vec::new();
+		let mut testimonies_not_exonerating = Vec::new();
 
 		game_state.iter_villagers(|index, villager| {
 			let testimony_to_consider = match villager {
@@ -70,19 +78,34 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 					if !confirmed_villager.lies() {
 						confirmed_villager.instance().testimony()
 					} else {
-						&None
+						&None // TODO: Maybe consider inverse of testimony as truthful? Or is that too risky?
 					}
 				}
 			};
 
 			if let Some(testimony) = testimony_to_consider {
-				testimonies_condemming.push(registrar.register(
-					TestimonyCondemnsExpressionHypothesisBuilder::new(
-						index.clone(),
-						self.index.clone(),
-						testimony.clone(),
+				testimonies_condemning.push(TestimonyHypothesisPair {
+					assertion: registrar.register(
+						TestimonyCondemnsExpressionHypothesisBuilder::new(
+							index.clone(),
+							self.index.clone(),
+							testimony.clone(),
+						),
 					),
-				));
+					truthfulness: registrar
+						.register(IsTruthfulHypothesisBuilder::new(index.clone())),
+				});
+				testimonies_not_exonerating.push(TestimonyHypothesisPair {
+					assertion: registrar.register(NegateHypothesisBuilder::new(
+						TestimonyExoneratesExpressionHypothesisBuilder::new(
+							index.clone(),
+							self.index.clone(),
+							testimony.clone(),
+						),
+					)),
+					truthfulness: registrar
+						.register(IsTruthfulHypothesisBuilder::new(index.clone())),
+				});
 			}
 		});
 		let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
@@ -99,8 +122,9 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 			is_non_liar_hypotheses,
 			not_corrupt_hypothesis,
 			is_lying_hypothesis,
-			testimonies_condemming,
+			testimonies_condemning,
 			not_lying_hypothesis,
+			testimonies_not_exonerating,
 		}
 		.into()
 	}
@@ -136,7 +160,20 @@ impl Hypothesis for IsEvilHypothesis {
 
 		let regular_evil_result = and_result(not_corrupt_result, lying_result.clone());
 
-		let mut is_a_truthful_evil_result = None;
+		let mut is_a_truthful_evil_result = (match game_state.villager(&self.index) {
+			Villager::Active(active_villager) => Some(active_villager.instance()),
+			Villager::Hidden(_) => None,
+			Villager::Confirmed(confirmed_villager) => Some(confirmed_villager.instance()),
+		})
+		.and_then(|instance| {
+			if instance.archetype().cannot_lie() {
+				Some(HypothesisResult::Conclusive(FitnessAndAction::certainty(
+					None,
+				)))
+			} else {
+				None
+			}
+		});
 		for sub_hypothesis in &self.is_non_liar_hypotheses {
 			let is_archetype_result = evaluator.sub_evaluate(sub_hypothesis);
 
@@ -157,22 +194,57 @@ impl Hypothesis for IsEvilHypothesis {
 			None => regular_evil_result,
 		};
 
+		// kinda iffy, but assume we weight all testimonies condemning equally with the base probability if they condemn or exonerate at all
 		// balance the scales
-		let mut testimonies_condemning_result = None;
-		for sub_hypothesis in &self.testimonies_condemming {
-			let testimony_condemns = evaluator.sub_evaluate(sub_hypothesis);
+		let mut penultimate_evil_result = base_evil_result;
+		let mut total_components = 1;
+		for sub_hypothesis in &self.testimonies_condemning {
+			let testimony_condemns = evaluator.sub_evaluate(&sub_hypothesis.assertion);
+			if testimony_condemns.fitness_and_action().is_impossible() {
+				continue;
+			}
 
-			testimonies_condemning_result = Some(match testimonies_condemning_result {
-				Some(other_result) => or_result(other_result, testimony_condemns),
-				None => testimony_condemns,
-			});
+			let testimony_is_true = evaluator.sub_evaluate(&sub_hypothesis.truthfulness);
+
+			let testimony_condemns_and_is_true = and_result(testimony_condemns, testimony_is_true);
+
+			penultimate_evil_result =
+				sum_result(testimony_condemns_and_is_true, penultimate_evil_result);
+			total_components += 1;
 		}
 
-		let result = match testimonies_condemning_result {
-			Some(condeming_result) => or_result(condeming_result, base_evil_result),
-			None => base_evil_result,
-		};
+		penultimate_evil_result = penultimate_evil_result.map(|fitness_and_action| {
+			fitness_and_action.map_action(|fitness| fitness / total_components as f64)
+		});
 
-		evaluator.finalize(result)
+		// exonerations are trickier because they all have to be false to go against an evil
+		let mut final_evil_result = penultimate_evil_result;
+		for sub_hypothesis in &self.testimonies_not_exonerating {
+			// chance we are NOT good/exonerated
+			let chance_testimony_doesnt_say_were_good =
+				evaluator.sub_evaluate(&sub_hypothesis.assertion);
+			if chance_testimony_doesnt_say_were_good
+				.fitness_and_action()
+				.is_certain()
+			{
+				// it's just saying that the testimony didn't have anything good to say about us
+				// therefore ignore it
+				continue;
+			}
+
+			// the testimony has SOMETHING good to say about us
+			let testimony_is_true = evaluator.sub_evaluate(&sub_hypothesis.truthfulness);
+
+			// the probability that the testimony doesn't assert we're good and truthful
+			let chance_testimony_true_and_doesnt_say_were_good =
+				and_result(chance_testimony_doesnt_say_were_good, testimony_is_true);
+
+			final_evil_result = and_result(
+				chance_testimony_true_and_doesnt_say_were_good,
+				final_evil_result,
+			);
+		}
+
+		evaluator.finalize(final_evil_result)
 	}
 }

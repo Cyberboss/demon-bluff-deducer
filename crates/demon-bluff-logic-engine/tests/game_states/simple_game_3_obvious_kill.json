@@ -38,12 +38,12 @@
               {
                 "And": [
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Evil": 1
                     }
                   },
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Good": 4
                     }
                   }
@@ -56,26 +56,26 @@
                       {
                         "And": [
                           {
-                            "Unary": {
+                            "Leaf": {
                               "Evil": 2
                             }
                           },
                           {
-                            "Unary": {
+                            "Leaf": {
                               "Good": 3
                             }
                           }
                         ]
                       },
                       {
-                        "Unary": {
+                        "Leaf": {
                           "Good": 4
                         }
                       }
                     ]
                   },
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Good": 1
                     }
                   }
@@ -99,12 +99,12 @@
               {
                 "And": [
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Good": 2
                     }
                   },
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Good": 0
                     }
                   }
@@ -113,12 +113,12 @@
               {
                 "Or": [
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Evil": 3
                     }
                   },
                   {
-                    "Unary": {
+                    "Leaf": {
                       "Evil": 4
                     }
                   }
@@ -138,7 +138,7 @@
             "GoodVillager": "Gemcrafter"
           },
           "testimony": {
-            "Unary": {
+            "Leaf": {
               "Good": 0
             }
           },

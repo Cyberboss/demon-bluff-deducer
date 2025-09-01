@@ -200,6 +200,58 @@ impl VillagerArchetype {
 		VillagerArchetype::Outcast(Outcast::Wretch) == *self || self.is_evil()
 	}
 
+	/// This overrides lies for disguised archetypes
+	pub fn cannot_lie(&self) -> bool {
+		match self {
+			VillagerArchetype::GoodVillager(good_villager) => match good_villager {
+				GoodVillager::Confessor => true,
+				GoodVillager::Alchemist
+				| GoodVillager::Architect
+				| GoodVillager::Baker
+				| GoodVillager::Bishop
+				| GoodVillager::Empress
+				| GoodVillager::Enlightened
+				| GoodVillager::Gemcrafter
+				| GoodVillager::Hunter
+				| GoodVillager::Knight
+				| GoodVillager::Knitter
+				| GoodVillager::Lover
+				| GoodVillager::Medium
+				| GoodVillager::Oracle
+				| GoodVillager::Poet
+				| GoodVillager::Scout
+				| GoodVillager::Witness
+				| GoodVillager::Bard
+				| GoodVillager::Dreamer
+				| GoodVillager::Druid
+				| GoodVillager::FortuneTeller
+				| GoodVillager::Jester
+				| GoodVillager::Judge
+				| GoodVillager::Slayer => false,
+			},
+			VillagerArchetype::Outcast(outcast) => match outcast {
+				Outcast::Drunk
+				| Outcast::Wretch
+				| Outcast::Doppelganger
+				| Outcast::PlagueDoctor
+				| Outcast::Bombardier => false,
+			},
+			VillagerArchetype::Minion(minion) => match minion {
+				Minion::Counsellor
+				| Minion::Witch
+				| Minion::Minion
+				| Minion::Poisoner
+				| Minion::Twinion
+				| Minion::Shaman
+				| Minion::Puppeteer
+				| Minion::Puppet => false,
+			},
+			VillagerArchetype::Demon(demon) => match demon {
+				Demon::Baa | Demon::Pooka | Demon::Lilis => false,
+			},
+		}
+	}
+
 	pub fn lies(&self) -> bool {
 		match self {
 			Self::GoodVillager(good_villager) => match good_villager {

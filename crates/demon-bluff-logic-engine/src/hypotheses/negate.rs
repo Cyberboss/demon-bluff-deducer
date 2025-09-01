@@ -17,6 +17,7 @@ pub struct NegateHypothesisBuilder {
 	target_hypothesis_builder: Box<HypothesisBuilderType>,
 }
 
+/// Use this hypothesis with care, as it has significant implications for cycle breaking
 #[derive(Debug)]
 pub struct NegateHypothesis {
 	target_hypothesis: HypothesisReference,

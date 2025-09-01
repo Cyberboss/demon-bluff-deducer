@@ -73,6 +73,10 @@ impl FitnessAndAction {
 		self.fitness == 1.0
 	}
 
+	pub fn is_impossible(&self) -> bool {
+		self.fitness == 0.0
+	}
+
 	pub fn fitness(&self) -> f64 {
 		self.fitness
 	}
