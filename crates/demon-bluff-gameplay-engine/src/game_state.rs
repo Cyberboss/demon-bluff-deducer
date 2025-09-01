@@ -593,7 +593,7 @@ impl GameState {
 							return Err(GameStateMutationError::CannotReplaceTestimony);
 						}
 
-						if let Expression::<Testimony>::Unary(unary_testimony) = &testimony
+						if let Expression::<Testimony>::Leaf(unary_testimony) = &testimony
 							&& let Testimony::Slayed(slay_testimony) = unary_testimony
 						{
 							match result.slayer_kill {

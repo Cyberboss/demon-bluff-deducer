@@ -20,7 +20,7 @@ pub enum Expression<Type>
 where
 	Type: Display,
 {
-	Unary(Type),
+	Leaf(Type),
 	Not(Box<Expression<Type>>),
 	And(Box<Expression<Type>>, Box<Expression<Type>>),
 	Or(Box<Expression<Type>>, Box<Expression<Type>>),
@@ -32,7 +32,7 @@ where
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Expression::Unary(item) => write!(f, "{item}"),
+			Expression::Leaf(item) => write!(f, "{item}"),
 			Expression::Not(expression) => write!(f, "!({expression})"),
 			Expression::And(lhs, rhs) => write!(f, "({lhs}) && ({rhs})"),
 			Expression::Or(lhs, rhs) => write!(f, "({lhs}) || ({rhs})"),
@@ -47,7 +47,7 @@ where
 	pub fn or_from_iterator(iterator: impl Iterator<Item = Type>) -> Option<Self> {
 		let mut expr = None;
 		for item in iterator {
-			let unary_expression = Expression::Unary(item);
+			let unary_expression = Expression::Leaf(item);
 			expr = Some(match expr {
 				Some(expr) => Expression::Or(Box::new(expr), Box::new(unary_expression)),
 				None => unary_expression,
@@ -60,7 +60,7 @@ where
 	pub fn and_from_iterator(iterator: impl Iterator<Item = Type>) -> Option<Self> {
 		let mut expr = None;
 		for item in iterator {
-			let unary_expression = Expression::Unary(item);
+			let unary_expression = Expression::Leaf(item);
 			expr = Some(match expr {
 				Some(expr) => Expression::And(Box::new(expr), Box::new(unary_expression)),
 				None => unary_expression,

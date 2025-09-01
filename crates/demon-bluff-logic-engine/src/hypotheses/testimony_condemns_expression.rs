@@ -73,7 +73,7 @@ impl HypothesisBuilder for TestimonyCondemnsExpressionHypothesisBuilder {
 	) -> HypothesisType {
 		let expression_friendly = format!("{}", self.testimony_expression);
 		let condemns_expression = match &self.testimony_expression {
-			Expression::Unary(testimony) => HypothesisExpression::Unary(registrar.register(
+			Expression::Leaf(testimony) => HypothesisExpression::Unary(registrar.register(
 				TestimonyCondemnsHypothesisBuilder::new(
 					self.testifier.clone(),
 					self.defendant.clone(),

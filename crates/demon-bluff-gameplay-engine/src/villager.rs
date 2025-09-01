@@ -553,21 +553,21 @@ impl VillagerArchetype {
 			},
 			VillagerArchetype::Minion(minion) => match minion {
 				Minion::Counsellor => Some(Affect::Corrupt(Expression::Or(
-					Box::new(Expression::Unary(VillagerAffect::new(
+					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::Clockwise,
 						1,
 					))),
-					Box::new(Expression::Unary(VillagerAffect::new(
+					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::CounterClockwise,
 						1,
 					))),
 				))),
 				Minion::Puppeteer => Some(Affect::Puppet(Expression::Or(
-					Box::new(Expression::Unary(VillagerAffect::new(
+					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::Clockwise,
 						1,
 					))),
-					Box::new(Expression::Unary(VillagerAffect::new(
+					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::CounterClockwise,
 						1,
 					))),
@@ -579,11 +579,11 @@ impl VillagerArchetype {
 			VillagerArchetype::Demon(demon) => Some(match demon {
 				Demon::Baa => Affect::FakeOutcast,
 				Demon::Pooka => Affect::Corrupt(Expression::And(
-					Box::new(Expression::Unary(VillagerAffect::new(
+					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::Clockwise,
 						1,
 					))),
-					Box::new(Expression::Unary(VillagerAffect::new(
+					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::CounterClockwise,
 						1,
 					))),

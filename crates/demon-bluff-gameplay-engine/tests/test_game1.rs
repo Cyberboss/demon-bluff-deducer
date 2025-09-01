@@ -44,7 +44,7 @@ pub fn test_game_1() {
 			VillagerIndex(1),
 			Some(VillagerInstance::new(
 				VillagerArchetype::GoodVillager(GoodVillager::Medium),
-				Some(Expression::Unary(Testimony::Role(RoleClaim::new(
+				Some(Expression::Leaf(Testimony::Role(RoleClaim::new(
 					VillagerIndex(1),
 					VillagerArchetype::GoodVillager(GoodVillager::Architect),
 				)))),
@@ -57,7 +57,7 @@ pub fn test_game_1() {
 		VillagerIndex(1),
 		Some(VillagerInstance::new(
 			VillagerArchetype::GoodVillager(GoodVillager::Medium),
-			Some(Expression::Unary(Testimony::Role(RoleClaim::new(
+			Some(Expression::Leaf(Testimony::Role(RoleClaim::new(
 				VillagerIndex(2),
 				VillagerArchetype::GoodVillager(GoodVillager::Architect),
 			)))),
@@ -108,7 +108,7 @@ pub fn test_game_1() {
 			VillagerIndex(3),
 			Some(VillagerInstance::new(
 				VillagerArchetype::GoodVillager(GoodVillager::Architect),
-				Some(Expression::Unary(Testimony::Architect(
+				Some(Expression::Leaf(Testimony::Architect(
 					ArchitectClaim::Right,
 				))),
 			)),
@@ -120,7 +120,7 @@ pub fn test_game_1() {
 		VillagerIndex(4),
 		Some(VillagerInstance::new(
 			VillagerArchetype::GoodVillager(GoodVillager::Druid),
-			Some(Expression::Unary(Testimony::Baker(BakerClaim::Original))),
+			Some(Expression::Leaf(Testimony::Baker(BakerClaim::Original))),
 		)),
 	)));
 
@@ -164,7 +164,7 @@ pub fn test_game_1() {
 			VillagerIndex(5),
 			Some(VillagerInstance::new(
 				VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
-				Some(Expression::Unary(Testimony::Good(VillagerIndex(0)))),
+				Some(Expression::Leaf(Testimony::Good(VillagerIndex(0)))),
 			)),
 		)))
 		.expect("malformed game step??");
@@ -188,7 +188,7 @@ pub fn test_game_1() {
 	mutation_result = state
 		.mutate(Action::Ability(AbilityResult::new(
 			VillagerIndex(0),
-			Some(Expression::Unary(Testimony::Slayed(SlayResult::new(
+			Some(Expression::Leaf(Testimony::Slayed(SlayResult::new(
 				VillagerIndex(1),
 				true,
 			)))),
@@ -208,7 +208,7 @@ pub fn test_game_1() {
 			VillagerIndex(6),
 			Some(VillagerInstance::new(
 				VillagerArchetype::Outcast(Outcast::Bombardier),
-				Some(Expression::Unary(Testimony::SelfDestruct(VillagerIndex(6)))),
+				Some(Expression::Leaf(Testimony::SelfDestruct(VillagerIndex(6)))),
 			)),
 		)))
 		.expect("malformed game step??");

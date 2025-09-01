@@ -64,7 +64,7 @@ pub fn simple_game_1() {
 			VillagerIndex(1),
 			Some(VillagerInstance::new(
 				VillagerArchetype::GoodVillager(GoodVillager::Confessor),
-				Some(Expression::Unary(Testimony::Confess(ConfessorClaim::Dizzy))),
+				Some(Expression::Leaf(Testimony::Confess(ConfessorClaim::Dizzy))),
 			)),
 		)))
 		.expect("malformed game step??");

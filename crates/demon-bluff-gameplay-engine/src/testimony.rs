@@ -201,13 +201,13 @@ impl Testimony {
 	) -> Expression<Testimony> {
 		// hunter = (+N is evil || -N is evil) && (+(<N) good && -(<N) good)
 
-		let clockwise_evil_unary = Expression::Unary(Testimony::Evil(index_offset(
+		let clockwise_evil_unary = Expression::Leaf(Testimony::Evil(index_offset(
 			start_index,
 			total_villagers,
 			distance,
 			true,
 		)));
-		let counter_clockwise_evil_unary = Expression::Unary(Testimony::Evil(index_offset(
+		let counter_clockwise_evil_unary = Expression::Leaf(Testimony::Evil(index_offset(
 			start_index,
 			total_villagers,
 			distance,
@@ -221,13 +221,13 @@ impl Testimony {
 
 		let mut good_expression = None;
 		for i in 1..distance {
-			let clockwise_good_unary = Expression::Unary(Testimony::Good(index_offset(
+			let clockwise_good_unary = Expression::Leaf(Testimony::Good(index_offset(
 				start_index,
 				total_villagers,
 				i,
 				true,
 			)));
-			let counter_clockwise_good_unary = Expression::Unary(Testimony::Good(index_offset(
+			let counter_clockwise_good_unary = Expression::Leaf(Testimony::Good(index_offset(
 				start_index,
 				total_villagers,
 				i,
@@ -262,13 +262,13 @@ impl Testimony {
 
 		if amount == 2 {
 			Expression::And(
-				Box::new(Expression::Unary(Testimony::Evil(index_offset(
+				Box::new(Expression::Leaf(Testimony::Evil(index_offset(
 					start_index,
 					total_villagers,
 					1,
 					true,
 				)))),
-				Box::new(Expression::Unary(Testimony::Evil(index_offset(
+				Box::new(Expression::Leaf(Testimony::Evil(index_offset(
 					start_index,
 					total_villagers,
 					1,
@@ -277,13 +277,13 @@ impl Testimony {
 			)
 		} else if amount == 0 {
 			Expression::And(
-				Box::new(Expression::Unary(Testimony::Good(index_offset(
+				Box::new(Expression::Leaf(Testimony::Good(index_offset(
 					start_index,
 					total_villagers,
 					1,
 					true,
 				)))),
-				Box::new(Expression::Unary(Testimony::Good(index_offset(
+				Box::new(Expression::Leaf(Testimony::Good(index_offset(
 					start_index,
 					total_villagers,
 					1,
@@ -293,13 +293,13 @@ impl Testimony {
 		} else {
 			Expression::Or(
 				Box::new(Expression::And(
-					Box::new(Expression::Unary(Testimony::Good(index_offset(
+					Box::new(Expression::Leaf(Testimony::Good(index_offset(
 						start_index,
 						total_villagers,
 						1,
 						true,
 					)))),
-					Box::new(Expression::Unary(Testimony::Evil(index_offset(
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
 						start_index,
 						total_villagers,
 						1,
@@ -307,13 +307,13 @@ impl Testimony {
 					)))),
 				)),
 				Box::new(Expression::And(
-					Box::new(Expression::Unary(Testimony::Evil(index_offset(
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
 						start_index,
 						total_villagers,
 						1,
 						true,
 					)))),
-					Box::new(Expression::Unary(Testimony::Good(index_offset(
+					Box::new(Expression::Leaf(Testimony::Good(index_offset(
 						start_index,
 						total_villagers,
 						1,
@@ -370,13 +370,13 @@ impl Testimony {
 
 			for check_distance in 1..=check_range {
 				let additional_expression = Expression::And(
-					Box::new(Expression::Unary(Testimony::Good(index_offset(
+					Box::new(Expression::Leaf(Testimony::Good(index_offset(
 						start_index,
 						total_villagers,
 						check_distance,
 						true,
 					)))),
-					Box::new(Expression::Unary(Testimony::Good(index_offset(
+					Box::new(Expression::Leaf(Testimony::Good(index_offset(
 						start_index,
 						total_villagers,
 						check_distance,
@@ -394,13 +394,13 @@ impl Testimony {
 
 			let evil_expression = if odd_villagers {
 				Expression::And(
-					Box::new(Expression::Unary(Testimony::Evil(index_offset(
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
 						start_index,
 						total_villagers,
 						non_opposite_villagers_per_side,
 						true,
 					)))),
-					Box::new(Expression::Unary(Testimony::Evil(index_offset(
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
 						start_index,
 						total_villagers,
 						non_opposite_villagers_per_side,
@@ -408,7 +408,7 @@ impl Testimony {
 					)))),
 				)
 			} else {
-				Expression::Unary(Testimony::Evil(index_offset(
+				Expression::Leaf(Testimony::Evil(index_offset(
 					start_index,
 					total_villagers,
 					half_villagers,
@@ -437,14 +437,14 @@ impl Testimony {
 					);
 
 					let mut expression = Expression::And(
-						Box::new(Expression::Unary(Testimony::Evil(evil_index.clone()))),
-						Box::new(Expression::Unary(Testimony::Good(good_index.clone()))),
+						Box::new(Expression::Leaf(Testimony::Evil(evil_index.clone()))),
+						Box::new(Expression::Leaf(Testimony::Good(good_index.clone()))),
 					);
 
 					for additional_good_index in &good_indicies {
 						expression = Expression::And(
 							Box::new(expression),
-							Box::new(Expression::Unary(Testimony::Good(
+							Box::new(Expression::Leaf(Testimony::Good(
 								additional_good_index.clone(),
 							))),
 						)
@@ -479,7 +479,7 @@ impl Testimony {
 				for equidistant_villager in equidistant_villagers {
 					non_optional_expression = Expression::And(
 						Box::new(non_optional_expression),
-						Box::new(Expression::Unary(Testimony::Good(
+						Box::new(Expression::Leaf(Testimony::Good(
 							equidistant_villager.clone(),
 						))),
 					);
@@ -560,12 +560,12 @@ fn test_hunter() {
 	assert_eq!(
 		Expression::And(
 			Box::new(Expression::And(
-				Box::new(Expression::Unary(Testimony::Good(VillagerIndex(2)))), // #3
-				Box::new(Expression::Unary(Testimony::Good(VillagerIndex(0))))  // #1
+				Box::new(Expression::Leaf(Testimony::Good(VillagerIndex(2)))), // #3
+				Box::new(Expression::Leaf(Testimony::Good(VillagerIndex(0))))  // #1
 			)),
 			Box::new(Expression::Or(
-				Box::new(Expression::Unary(Testimony::Evil(VillagerIndex(3)))), // #4
-				Box::new(Expression::Unary(Testimony::Evil(VillagerIndex(4))))  // #5
+				Box::new(Expression::Leaf(Testimony::Evil(VillagerIndex(3)))), // #4
+				Box::new(Expression::Leaf(Testimony::Evil(VillagerIndex(4))))  // #5
 			))
 		),
 		Testimony::hunter(&VillagerIndex(1), 2, 5)
