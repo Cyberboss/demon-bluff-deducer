@@ -1,4 +1,4 @@
-use std::hint::cold_path;
+use std::{collections::hash_set::Entry, hint::cold_path};
 
 use log::{Log, info, warn};
 
@@ -93,18 +93,23 @@ where
 			if submit_cycles {
 				let mut cycles = self.cycles.borrow_mut();
 				for cycle in new_cycles {
-					info!(
-						logger: self.log,
-						"{} Cycle detected when retracing paths under reference {}: {}",
-						self.depth(),
-						hypothesis_reference,
-						cycle
-					);
-					if let Some(debugger) = &mut self.debugger {
-						debugger.breakpoint(Breakpoint::DetectCycle(clone_cycle(&cycle)));
-					}
+					let entry = cycles.entry(cycle);
+					if let Entry::Vacant(vacant_entry) = entry {
+						info!(
+							logger: self.log,
+							"{} Cycle detected when retracing paths under reference {}: {}",
+							self.depth(),
+							hypothesis_reference,
+							vacant_entry.get(),
+						);
 
-					cycles.insert(cycle);
+						if let Some(debugger) = &mut self.debugger {
+							let cloned_cycle = clone_cycle(vacant_entry.get());
+							debugger.breakpoint(Breakpoint::DetectCycle(cloned_cycle));
+						}
+
+						vacant_entry.insert();
+					}
 				}
 			}
 		} else {
