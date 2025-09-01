@@ -19,7 +19,7 @@ pub use self::{
 	desire::{Desire, DesireConsumerReference, DesireProducerReference},
 	fitness_and_action::{
 		FITNESS_UNIMPLEMENTED, FITNESS_UNKNOWN, FitnessAndAction, and_fitness, and_result,
-		decide_result, or_result,
+		decide_result, not_result, or_result, sum_result,
 	},
 	hypothesis::{
 		Hypothesis, HypothesisBuilder, HypothesisEvaluation, HypothesisEvaluator,

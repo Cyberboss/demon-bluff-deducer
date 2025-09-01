@@ -7,7 +7,7 @@ use crate::{
 	engine::{
 		Depth, FITNESS_UNKNOWN, Hypothesis, HypothesisBuilder, HypothesisEvaluation,
 		HypothesisEvaluator, HypothesisFunctions, HypothesisReference, HypothesisRegistrar,
-		HypothesisRepository,
+		HypothesisRepository, not_result,
 	},
 	hypotheses::{HypothesisBuilderType, HypothesisType},
 };
@@ -63,9 +63,7 @@ impl Hypothesis for NegateHypothesis {
 	{
 		let mut evaluator = repository.require_sub_evaluation(FITNESS_UNKNOWN);
 
-		let result = evaluator
-			.sub_evaluate(&self.target_hypothesis)
-			.map(|fitness_and_action| fitness_and_action.invert());
+		let result = not_result(evaluator.sub_evaluate(&self.target_hypothesis));
 
 		evaluator.finalize(result)
 	}

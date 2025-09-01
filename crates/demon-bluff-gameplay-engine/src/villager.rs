@@ -12,7 +12,9 @@ use crate::{
 #[derive(Clone, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct VillagerIndex(pub usize);
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
+#[derive(
+	Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize, PartialOrd, Ord,
+)]
 pub enum GoodVillager {
 	Alchemist,
 	Architect,
@@ -40,7 +42,9 @@ pub enum GoodVillager {
 	Witness,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
+#[derive(
+	Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize, PartialOrd, Ord,
+)]
 pub enum Outcast {
 	Drunk,
 	Wretch,
@@ -49,7 +53,9 @@ pub enum Outcast {
 	PlagueDoctor,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
+#[derive(
+	Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize, PartialOrd, Ord,
+)]
 pub enum Minion {
 	Counsellor,
 	Witch,
@@ -61,14 +67,16 @@ pub enum Minion {
 	Puppet,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize)]
+#[derive(
+	Clone, Eq, PartialEq, Debug, Hash, Display, EnumIter, Serialize, Deserialize, PartialOrd, Ord,
+)]
 pub enum Demon {
 	Baa,
 	Pooka,
 	Lilis,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Display, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum VillagerArchetype {
 	GoodVillager(GoodVillager),
 	Outcast(Outcast),

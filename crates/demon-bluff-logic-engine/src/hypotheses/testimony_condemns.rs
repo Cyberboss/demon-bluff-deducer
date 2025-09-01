@@ -5,15 +5,13 @@ use demon_bluff_gameplay_engine::{
 };
 use log::Log;
 
-use super::{
-	DesireType, HypothesisBuilderType, HypothesisType, testimony::TestimonyHypothesisBuilder,
-};
+use super::{DesireType, HypothesisBuilderType, HypothesisType};
 use crate::{
 	Breakpoint,
 	engine::{
 		Depth, FITNESS_UNKNOWN, FitnessAndAction, Hypothesis, HypothesisBuilder,
 		HypothesisEvaluation, HypothesisEvaluator, HypothesisFunctions, HypothesisReference,
-		HypothesisRegistrar, HypothesisRepository, HypothesisResult, and_result,
+		HypothesisRegistrar, HypothesisRepository, HypothesisResult,
 	},
 	hypotheses::{is_corrupt::IsCorruptHypothesisBuilder, negate::NegateHypothesisBuilder},
 };
@@ -41,12 +39,11 @@ impl TestimonyCondemnsHypothesisBuilder {
 	}
 }
 
-/// If a testimony is true and condemns a given defendent
+/// If a given [`Testimony`] [`Expression`] condemns a give defendant ASSUMING it is true
 #[derive(Debug)]
 pub struct TestimonyCondemnsHypothesis {
 	testifier: VillagerIndex,
 	defendant: VillagerIndex,
-	testimony_true_hypothesis: HypothesisReference,
 	defendant_not_corrupt_hypothesis: Option<HypothesisReference>,
 	testimony: Testimony,
 }
@@ -57,11 +54,6 @@ impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
 		_: &GameState,
 		registrar: &mut impl HypothesisRegistrar<HypothesisBuilderType, DesireType>,
 	) -> HypothesisType {
-		let testimony_true_hypothesis = registrar.register(TestimonyHypothesisBuilder::new(
-			self.testifier.clone(),
-			self.testimony.clone(),
-		));
-
 		let defendant_not_corrupt_hypothesis =
 			match condemns(&self.testimony, &self.defendant, &self.testifier) {
 				Condemns::Yes | Condemns::No => None,
@@ -75,7 +67,6 @@ impl HypothesisBuilder for TestimonyCondemnsHypothesisBuilder {
 		TestimonyCondemnsHypothesis {
 			testifier: self.testifier,
 			defendant: self.defendant,
-			testimony_true_hypothesis,
 			testimony: self.testimony,
 			defendant_not_corrupt_hypothesis,
 		}
@@ -118,11 +109,7 @@ impl Hypothesis for TestimonyCondemnsHypothesis {
 			),
 		};
 
-		let testimony_true_result = evaluator.sub_evaluate(&self.testimony_true_hypothesis);
-
-		let final_result = and_result(testimony_true_result, testimony_condemns_result);
-
-		evaluator.finalize(final_result)
+		evaluator.finalize(testimony_condemns_result)
 	}
 }
 

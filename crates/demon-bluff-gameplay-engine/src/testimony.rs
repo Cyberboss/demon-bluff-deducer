@@ -9,39 +9,39 @@ use crate::{
 };
 const ALCHEMIST_CURE_RANGE: usize = 2;
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum ConfessorClaim {
 	Good,
 	Dizzy,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum Direction {
 	Clockwise,
 	CounterClockwise,
 	Equidistant,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum ArchitectClaim {
 	Left,
 	Right,
 	Equal,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum BakerClaim {
 	Original,
 	Was(VillagerArchetype),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct SlayResult {
 	index: VillagerIndex,
 	slayed: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct RoleClaim {
 	villager: VillagerIndex,
 	archetype: VillagerArchetype,
@@ -53,13 +53,13 @@ impl Display for RoleClaim {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct ScoutClaim {
 	evil_role: VillagerArchetype,
 	distance: u8,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct EvilPairsClaim(u8);
 
 impl Display for EvilPairsClaim {
@@ -68,7 +68,7 @@ impl Display for EvilPairsClaim {
 	}
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum Testimony {
 	Good(VillagerIndex),
 	Evil(VillagerIndex),

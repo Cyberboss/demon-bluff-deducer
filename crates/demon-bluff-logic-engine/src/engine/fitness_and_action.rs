@@ -159,6 +159,40 @@ pub fn and_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisRes
 	}
 }
 
+/// DANGER ONLY USE IF YOU KNOW WHAT YOU"RE DOING
+pub fn sum_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
+	let new_fitness_and_action;
+	let must_be_pending;
+	match lhs {
+		HypothesisResult::Pending(fitness_and_action) => {
+			must_be_pending = true;
+			new_fitness_and_action = fitness_and_action
+		}
+		HypothesisResult::Conclusive(fitness_and_action) => {
+			must_be_pending = false;
+			new_fitness_and_action = fitness_and_action
+		}
+	}
+	match rhs {
+		HypothesisResult::Pending(current_fitness_and_action) => HypothesisResult::Pending(
+			sum_fitness(current_fitness_and_action, new_fitness_and_action),
+		),
+		HypothesisResult::Conclusive(current_fitness_and_action) => {
+			let merged = sum_fitness(current_fitness_and_action, new_fitness_and_action);
+
+			if must_be_pending {
+				HypothesisResult::Pending(merged)
+			} else {
+				HypothesisResult::Conclusive(merged)
+			}
+		}
+	}
+}
+
+pub fn not_result(result: HypothesisResult) -> HypothesisResult {
+	result.map(|fitness_and_action| fitness_and_action.invert())
+}
+
 pub fn or_result(lhs: HypothesisResult, rhs: HypothesisResult) -> HypothesisResult {
 	let new_fitness_and_action;
 	let must_be_pending;
@@ -253,6 +287,17 @@ pub fn fittest_result(lhs: HypothesisResult, rhs: HypothesisResult) -> Hypothesi
 			}
 		}
 	}
+}
+
+/// DANGER ONLY USE IF YOU KNOW WHAT YOU"RE DOING
+pub fn sum_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {
+	for rh_action in rhs.action {
+		lhs.action.insert(rh_action);
+	}
+
+	// P(A and B) = P(A) * P(B)
+	lhs.fitness += rhs.fitness;
+	lhs
 }
 
 pub fn and_fitness(mut lhs: FitnessAndAction, rhs: FitnessAndAction) -> FitnessAndAction {

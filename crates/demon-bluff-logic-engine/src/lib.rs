@@ -1,6 +1,7 @@
 #![feature(breakpoint, cold_path, rust_cold_cc, hash_set_entry)]
 
 mod engine;
+mod expression_assertion;
 mod hypotheses;
 mod player_action;
 mod prediction_error;
