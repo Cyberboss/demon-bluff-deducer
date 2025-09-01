@@ -34,8 +34,8 @@ pub struct IsEvilHypothesis {
 	index: VillagerIndex,
 	is_non_liar_hypotheses: Vec<HypothesisReference>,
 	testimonies_condemming: Vec<HypothesisReference>,
-	testimonies_not_exonerating: Vec<HypothesisReference>,
 	is_lying_hypothesis: HypothesisReference,
+	not_lying_hypothesis: HypothesisReference,
 	not_corrupt_hypothesis: HypothesisReference,
 }
 
@@ -61,7 +61,6 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 		}
 
 		let mut testimonies_condemming = Vec::new();
-		let mut testimonies_not_exonerating = Vec::new();
 
 		game_state.iter_villagers(|index, villager| {
 			let testimony_to_consider = match villager {
@@ -84,18 +83,13 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 						testimony.clone(),
 					),
 				));
-				testimonies_not_exonerating.push(registrar.register(NegateHypothesisBuilder::new(
-					TestimonyExoneratesExpressionHypothesisBuilder::new(
-						index,
-						self.index.clone(),
-						testimony.clone(),
-					),
-				)));
 			}
 		});
 		let is_lying_hypothesis = registrar.register(NegateHypothesisBuilder::new(
 			IsTruthfulHypothesisBuilder::new(self.index.clone()),
 		));
+		let not_lying_hypothesis =
+			registrar.register(IsTruthfulHypothesisBuilder::new(self.index.clone()));
 		let not_corrupt_hypothesis = registrar.register(NegateHypothesisBuilder::new(
 			IsCorruptHypothesisBuilder::new(self.index.clone()),
 		));
@@ -106,7 +100,7 @@ impl HypothesisBuilder for IsEvilHypothesisBuilder {
 			not_corrupt_hypothesis,
 			is_lying_hypothesis,
 			testimonies_condemming,
-			testimonies_not_exonerating,
+			not_lying_hypothesis,
 		}
 		.into()
 	}
@@ -152,9 +146,13 @@ impl Hypothesis for IsEvilHypothesis {
 			})
 		}
 
-		let evil_2_result = match is_a_truthful_evil_result {
+		let base_evil_result = match is_a_truthful_evil_result {
 			Some(is_a_truthful_evil_result) => {
-				or_result(regular_evil_result, is_a_truthful_evil_result)
+				let not_lying_result = evaluator.sub_evaluate(&self.not_lying_hypothesis);
+				or_result(
+					regular_evil_result,
+					and_result(is_a_truthful_evil_result, not_lying_result),
+				)
 			}
 			None => regular_evil_result,
 		};
@@ -170,36 +168,11 @@ impl Hypothesis for IsEvilHypothesis {
 			});
 		}
 
-		let mut testimonies_not_exonerating_result: Option<HypothesisResult> = None;
-		for sub_hypothesis in &self.testimonies_not_exonerating {
-			let testimony_exonerates = evaluator.sub_evaluate(sub_hypothesis);
-
-			testimonies_not_exonerating_result = Some(match testimonies_not_exonerating_result {
-				Some(other_result) => or_result(other_result, testimony_exonerates),
-				None => testimony_exonerates,
-			});
-		}
-
-		let penultimate_result = match testimonies_condemning_result {
-			Some(condeming_result) => match testimonies_not_exonerating_result {
-				Some(not_exonerating_result) => or_result(
-					evil_2_result,
-					and_result(
-						condeming_result,
-						not_exonerating_result.map(|fitness| fitness.invert()),
-					),
-				),
-				None => or_result(evil_2_result, condeming_result),
-			},
-			None => match testimonies_not_exonerating_result {
-				Some(exonerating_result) => and_result(
-					evil_2_result,
-					exonerating_result.map(|fitness| fitness.invert()),
-				),
-				None => evil_2_result,
-			},
+		let result = match testimonies_condemning_result {
+			Some(condeming_result) => or_result(condeming_result, base_evil_result),
+			None => base_evil_result,
 		};
 
-		evaluator.finalize(penultimate_result)
+		evaluator.finalize(result)
 	}
 }
