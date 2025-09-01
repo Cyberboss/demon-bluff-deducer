@@ -17,11 +17,6 @@ use crate::{
 	},
 };
 
-enum Exonerates {
-	Yes,
-	No,
-}
-
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct TestimonyExoneratesHypothesisBuilder {
 	testifier: VillagerIndex,
