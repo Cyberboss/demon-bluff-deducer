@@ -221,17 +221,17 @@ impl Testimony {
 
 		let mut good_expression = None;
 		for i in 1..distance {
-			let clockwise_good_unary = Expression::Unary(Testimony::Evil(index_offset(
+			let clockwise_good_unary = Expression::Unary(Testimony::Good(index_offset(
 				start_index,
 				total_villagers,
 				i,
 				true,
 			)));
-			let counter_clockwise_good_unary = Expression::Unary(Testimony::Evil(index_offset(
+			let counter_clockwise_good_unary = Expression::Unary(Testimony::Good(index_offset(
 				start_index,
 				total_villagers,
 				i,
-				true,
+				false,
 			)));
 
 			let good_and = Expression::And(
@@ -553,4 +553,21 @@ fn index_offset(
 	}
 
 	VillagerIndex(current_index)
+}
+
+#[test]
+fn test_hunter() {
+	assert_eq!(
+		Expression::And(
+			Box::new(Expression::And(
+				Box::new(Expression::Unary(Testimony::Good(VillagerIndex(2)))), // #3
+				Box::new(Expression::Unary(Testimony::Good(VillagerIndex(0))))  // #1
+			)),
+			Box::new(Expression::Or(
+				Box::new(Expression::Unary(Testimony::Evil(VillagerIndex(3)))), // #4
+				Box::new(Expression::Unary(Testimony::Evil(VillagerIndex(4))))  // #5
+			))
+		),
+		Testimony::hunter(&VillagerIndex(1), 2, 5)
+	);
 }
