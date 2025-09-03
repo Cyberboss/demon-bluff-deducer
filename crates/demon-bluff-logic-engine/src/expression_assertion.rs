@@ -9,8 +9,7 @@ pub fn probability_expression_asserts_x_given_true(
 	leaf_x_assertion_probabilities: &HashMap<Testimony, HypothesisResult>,
 ) -> HypothesisResult {
 	// First, collect all the "satisfying assignments" (ways the expression can be true)
-	let assignments =
-		collect_satisfying_assignments(expression, None::<fn(&HashMap<Testimony, bool>) -> bool>);
+	let assignments = collect_satisfying_assignments(expression);
 
 	if assignments.is_empty() {
 		return HypothesisResult::impossible();
@@ -32,13 +31,9 @@ pub fn probability_expression_asserts_x_given_true(
 	})
 }
 
-fn collect_satisfying_assignments<FValidateAssignment>(
+pub fn collect_satisfying_assignments(
 	expression: &Expression<Testimony>,
-	mut validate_assignment: Option<FValidateAssignment>,
-) -> Vec<HashMap<Testimony, bool>>
-where
-	FValidateAssignment: FnMut(&HashMap<Testimony, bool>) -> bool,
-{
+) -> Vec<HashMap<Testimony, bool>> {
 	let variables = collect_variables(expression);
 	let mut assignments = Vec::new();
 
@@ -49,12 +44,6 @@ where
 
 		for (j, var) in variables.iter().enumerate() {
 			assignment.insert(var.clone(), (i & (1 << j)) != 0);
-		}
-
-		if let Some(validate_assignment) = validate_assignment.as_mut()
-			&& !validate_assignment(&assignment)
-		{
-			continue;
 		}
 
 		// Check if this assignment satisfies the expression
@@ -77,6 +66,9 @@ fn collect_variables_helper(expression: &Expression<Testimony>, vars: &mut HashS
 		Expression::Leaf(testimony) => {
 			vars.insert(testimony.clone());
 		}
+		Expression::Not(inner) => {
+			collect_variables_helper(inner, vars);
+		}
 		Expression::And(left, right) | Expression::Or(left, right) => {
 			collect_variables_helper(left, vars);
 			collect_variables_helper(right, vars);
@@ -85,7 +77,7 @@ fn collect_variables_helper(expression: &Expression<Testimony>, vars: &mut HashS
 }
 
 /// Evaluate the expression with a given variable assignment
-fn evaluate_with_assignment(
+pub fn evaluate_with_assignment(
 	expression: &Expression<Testimony>,
 	assignment: &HashMap<Testimony, bool>,
 ) -> bool {
@@ -93,6 +85,7 @@ fn evaluate_with_assignment(
 		Expression::Leaf(testimony) => *assignment
 			.get(testimony)
 			.unwrap_or_else(|| panic!("Missing assignment for testiomony: {}", testimony)),
+		Expression::Not(inner) => !evaluate_with_assignment(&inner, assignment),
 		Expression::And(lhs, rhs) => {
 			evaluate_with_assignment(lhs, assignment) && evaluate_with_assignment(rhs, assignment)
 		}
@@ -122,6 +115,9 @@ fn assignment_asserts_x(
 			} else {
 				HypothesisResult::impossible() // TODO: Is this right??? False statements don't assert X
 			}
+		}
+		Expression::Not(inner) => {
+			not_result(assignment_asserts_x(inner, assignment, leaf_probabilities))
 		}
 		Expression::And(left, right) => {
 			// If A AND B is true, it asserts X if at least one operand asserts X

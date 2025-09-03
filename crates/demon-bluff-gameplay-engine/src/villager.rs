@@ -97,14 +97,14 @@ pub struct HiddenVillager {
 	cant_kill: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct VillagerInstance {
 	archetype: VillagerArchetype,
 	testimony: Option<Expression<Testimony>>,
 	action_available: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct ConfirmedVillager {
 	instance: VillagerInstance,
 	true_identity: Option<VillagerArchetype>,
@@ -403,6 +403,57 @@ impl VillagerArchetype {
 		}
 	}
 
+	pub fn can_be_converted(&self) -> bool {
+		match self {
+			Self::GoodVillager(good_villager) => match good_villager {
+				GoodVillager::Alchemist
+				| GoodVillager::Architect
+				| GoodVillager::Baker
+				| GoodVillager::Bishop
+				| GoodVillager::Confessor
+				| GoodVillager::Empress
+				| GoodVillager::Enlightened
+				| GoodVillager::Gemcrafter
+				| GoodVillager::Hunter
+				| GoodVillager::Knight
+				| GoodVillager::Knitter
+				| GoodVillager::Lover
+				| GoodVillager::Medium
+				| GoodVillager::Oracle
+				| GoodVillager::Poet
+				| GoodVillager::Scout
+				| GoodVillager::Witness
+				| GoodVillager::Bard
+				| GoodVillager::Dreamer
+				| GoodVillager::Druid
+				| GoodVillager::FortuneTeller
+				| GoodVillager::Jester
+				| GoodVillager::Judge
+				| GoodVillager::Slayer => true,
+			},
+			Self::Outcast(outcast) => match outcast {
+				Outcast::Drunk
+				| Outcast::Wretch
+				| Outcast::Bombardier
+				| Outcast::Doppelganger
+				| Outcast::PlagueDoctor => false,
+			},
+			Self::Demon(demon) => match demon {
+				Demon::Lilis | Demon::Baa | Demon::Pooka => false,
+			},
+			Self::Minion(minion) => match minion {
+				Minion::Counsellor
+				| Minion::Witch
+				| Minion::Minion
+				| Minion::Poisoner
+				| Minion::Twinion
+				| Minion::Shaman
+				| Minion::Puppeteer
+				| Minion::Puppet => false,
+			},
+		}
+	}
+
 	pub fn can_be_corrupted(&self) -> bool {
 		match self {
 			Self::GoodVillager(good_villager) => match good_villager {
@@ -432,9 +483,7 @@ impl VillagerArchetype {
 				| GoodVillager::Slayer => true,
 			},
 			Self::Outcast(outcast) => match outcast {
-				Outcast::Drunk => true,
-				Outcast::Wretch => false,
-				Outcast::Bombardier => false,
+				Outcast::Drunk | Outcast::Wretch | Outcast::Bombardier => false,
 				Outcast::Doppelganger => todo!("Can a Doppleganger be corrupted?"),
 				Outcast::PlagueDoctor => todo!("Can a PlagueDoctor be corrupted?"),
 			},
@@ -761,6 +810,10 @@ impl ConfirmedVillager {
 		self.true_identity
 			.as_ref()
 			.unwrap_or(&self.instance.archetype)
+	}
+
+	pub fn hidden_identity(&self) -> &Option<VillagerArchetype> {
+		&self.true_identity
 	}
 
 	pub fn corrupted(&self) -> bool {

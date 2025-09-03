@@ -532,7 +532,7 @@ impl Display for Testimony {
 	}
 }
 
-fn index_offset(
+pub fn index_offset(
 	start_index: &VillagerIndex,
 	total_villagers: usize,
 	offset: usize,
