@@ -97,14 +97,14 @@ pub struct HiddenVillager {
 	cant_kill: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct VillagerInstance {
 	archetype: VillagerArchetype,
 	testimony: Option<Expression<Testimony>>,
 	action_available: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct ConfirmedVillager {
 	instance: VillagerInstance,
 	true_identity: Option<VillagerArchetype>,

@@ -15,7 +15,7 @@ use demon_bluff_gameplay_engine::{
 };
 use itertools::Itertools;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub struct TheoreticalVillager {
 	pub inner: ConfirmedVillager,
 	pub was_corrupt: bool,
@@ -35,7 +35,7 @@ impl From<ConfirmedVillager> for TheoreticalVillager {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BoardLayout {
 	pub villagers: Vec<TheoreticalVillager>,
 	pub evil_locations: BTreeSet<VillagerIndex>,

@@ -15,7 +15,7 @@ pub mod villager;
 pub const VILLAGERS_MIN: usize = 7;
 pub const VILLAGERS_MAX: usize = 9;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
 pub enum Expression<Type>
 where
 	Type: Display,

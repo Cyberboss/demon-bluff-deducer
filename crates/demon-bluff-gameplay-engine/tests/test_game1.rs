@@ -121,10 +121,7 @@ pub fn test_game_1() {
 		VillagerIndex(4),
 		Some(VillagerInstance::new(
 			VillagerArchetype::GoodVillager(GoodVillager::Druid),
-			Some(Expression::Leaf(Testimony::Baker(BakerClaim::new(
-				VillagerIndex(4),
-				None,
-			)))),
+			Some(Expression::Leaf(Testimony::Baker(BakerClaim::new(None)))),
 		)),
 	)));
 
