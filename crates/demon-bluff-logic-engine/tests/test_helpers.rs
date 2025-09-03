@@ -3,7 +3,7 @@ use std::{
 	path::PathBuf,
 };
 
-use demon_bluff_gameplay_engine::game_state::GameState;
+use demon_bluff_gameplay_engine::game_state::{Action, GameState, GameStateMutationResult};
 use demon_bluff_logic_engine::{PlayerAction, predict};
 
 pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
@@ -32,6 +32,48 @@ pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
 			.expect("There should have been at least one action!")
 	);
 	assert_eq!(1, action.len());
+}
+
+pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after: Option<usize>) {
+	let mut game_state = game_state.clone();
+	let total_actions = expected_actions.len();
+	for (index, action) in expected_actions.into_iter().enumerate() {
+		if let Some(log_after) = log_after
+			&& log_after == index
+		{
+			colog::init();
+		}
+
+		let log = log::logger();
+		let player_actions = predict(&log, &game_state).expect("Failed prediction!");
+
+		let mut found_match = false;
+		for player_action in player_actions {
+			if player_action.matches_action(&action) {
+				found_match = true;
+				break;
+			}
+		}
+
+		assert!(
+			found_match,
+			"Unexpected player action predicted on turn #{}!",
+			index + 1
+		);
+
+		match game_state
+			.mutate(action)
+			.expect("Game state mutation failed")
+		{
+			GameStateMutationResult::Win => {
+				assert_eq!(total_actions - 1, index, "Game was won too soon")
+			}
+			GameStateMutationResult::Loss => panic!("Game was lost!"),
+			GameStateMutationResult::Continue => {
+				assert_ne!(total_actions - 1, index, "Game should be over by now")
+			}
+		}
+	}
 }
 
 pub fn generate_state_file(state_name: &str, game_state: &GameState) {

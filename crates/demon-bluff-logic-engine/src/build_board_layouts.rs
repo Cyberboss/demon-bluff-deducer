@@ -99,11 +99,13 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			for good_archetype_combo in remaining_initial_draw
 				.iter()
 				.filter(|archetype| !archetype.is_evil())
-				.combinations(unrevealed_villagers - remaining_evils)
+				.combinations(unrevealed_villagers)
 			{
 				for disguise_index in &disguise_index_combo {
 					for evil_archetype in &evil_archetype_combo {
-						for good_archetype in &good_archetype_combo {
+						let mut build_with_good_archetype = |good_archetype_option: Option<
+							&VillagerArchetype,
+						>| {
 							let mut first_desc = true;
 							let mut desc = String::new();
 
@@ -182,12 +184,11 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 											}
 										} else {
 											unknown_hidden = true;
+											let good_archetype = good_archetype_option
+												.expect("No good archetype available to populate!");
 											let corrupt = good_archetype.starts_corrupted();
 											ConfirmedVillager::new(
-												VillagerInstance::new(
-													(*good_archetype).clone(),
-													None,
-												),
+												VillagerInstance::new(good_archetype.clone(), None),
 												None,
 												corrupt,
 											)
@@ -233,6 +234,14 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 							// TODO: Baker pass
 
 							layouts.extend(adjacency_affected_theoreticals);
+						};
+
+						if good_archetype_combo.is_empty() {
+							build_with_good_archetype(None);
+						} else {
+							for good_archetype in &good_archetype_combo {
+								build_with_good_archetype(Some(*good_archetype));
+							}
 						}
 					}
 				}

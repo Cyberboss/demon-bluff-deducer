@@ -157,6 +157,10 @@ impl KillAttempt {
 	pub fn new(target: VillagerIndex, result: Option<KillResult>) -> Self {
 		Self { target, result }
 	}
+
+	pub fn target(&self) -> &VillagerIndex {
+		&self.target
+	}
 }
 
 impl KillData {
@@ -200,6 +204,10 @@ impl AbilityResult {
 impl RevealResult {
 	pub fn new(index: VillagerIndex, instance: Option<VillagerInstance>) -> Self {
 		Self { index, instance }
+	}
+
+	pub fn index(&self) -> &VillagerIndex {
+		&self.index
 	}
 }
 

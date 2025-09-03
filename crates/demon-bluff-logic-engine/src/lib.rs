@@ -181,10 +181,10 @@ pub fn predict(
 
 			state.iter_villagers(|_, villager| {
 				// is there a villager without a testimony or hidden?
-				can_get_more_information = match villager {
+				can_get_more_information |= match villager {
 					Villager::Active(active_villager) => active_villager.instance().testimony(),
-					Villager::Hidden(_) => {
-						can_get_more_information = true;
+					Villager::Hidden(hidden_villager) => {
+						can_get_more_information |= !hidden_villager.cant_reveal();
 						return;
 					}
 					Villager::Confirmed(confirmed_villager) => {
@@ -195,8 +195,7 @@ pub fn predict(
 			});
 
 			if can_get_more_information {
-				info!(
-						logger: log, "{} different evil layouts exist, need more information!", matching_layouts.len());
+				info!(logger: log, "{} different evil layouts exist, need more information!", matching_layouts.len());
 			} else {
 				// best guess
 				// TODO: Prioritize night effects
@@ -369,11 +368,11 @@ fn validate_assignment(
 		};
 
 		if testimony_valid != *truthful {
-			debug!(logger: log, "Validation failed: {}", board_config.description);
+			info!(logger: log, "Validation failed: {}", board_config.description);
 			return false;
 		}
 	}
 
-	debug!(logger: log, "Validation passed: {}", board_config.description);
+	info!(logger: log, "Validation passed: {}", board_config.description);
 	true
 }

@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fmt::Display;
 use std::hash::Hash;
 
+use demon_bluff_gameplay_engine::game_state::Action;
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
 use serde::Serialize;
 
@@ -16,6 +17,32 @@ pub enum PlayerAction {
 	TryReveal(VillagerIndex),
 	TryExecute(VillagerIndex),
 	Ability(AbilityAttempt),
+}
+
+impl PlayerAction {
+	pub fn matches_action(&self, action: &Action) -> bool {
+		match self {
+			Self::TryReveal(villager_index) => {
+				if let Action::TryReveal(result) = action
+					&& result.index() == villager_index
+				{
+					true
+				} else {
+					false
+				}
+			}
+			Self::TryExecute(villager_index) => {
+				if let Action::TryExecute(attempt) = action
+					&& attempt.target() == villager_index
+				{
+					true
+				} else {
+					false
+				}
+			}
+			Self::Ability(_) => todo!(),
+		}
+	}
 }
 
 impl AbilityAttempt {
