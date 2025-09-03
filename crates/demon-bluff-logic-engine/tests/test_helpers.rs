@@ -47,6 +47,10 @@ pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after
 		let log = log::logger();
 		let player_actions = predict(&log, &game_state).expect("Failed prediction!");
 
+		if index == total_actions - 1 && player_actions.len() > 1 {
+			panic!("Last prediction should always be decisive!");
+		}
+
 		let mut found_match = false;
 		for player_action in player_actions {
 			if player_action.matches_action(&action) {
