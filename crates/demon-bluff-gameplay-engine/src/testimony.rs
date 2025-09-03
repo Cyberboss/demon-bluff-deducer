@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 
 use crate::{
 	Expression,
@@ -29,10 +30,19 @@ pub enum ArchitectClaim {
 	Equal,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Display, Serialize, Deserialize, Hash, PartialOrd, Ord)]
-pub enum BakerClaim {
-	Original,
-	Was(VillagerArchetype),
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub struct BakerClaim {
+	was: Option<VillagerArchetype>,
+}
+
+impl BakerClaim {
+	pub fn new(was: Option<VillagerArchetype>) -> Self {
+		Self { was }
+	}
+
+	pub fn was(&self) -> &Option<VillagerArchetype> {
+		&self.was
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
@@ -56,11 +66,57 @@ impl Display for RoleClaim {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct ScoutClaim {
 	evil_role: VillagerArchetype,
-	distance: u8,
+	distance: usize,
+}
+
+impl ScoutClaim {
+	pub fn new(evil_role: VillagerArchetype, distance: usize) -> Self {
+		Self {
+			evil_role,
+			distance,
+		}
+	}
+
+	pub fn evil_role(&self) -> &VillagerArchetype {
+		&self.evil_role
+	}
+
+	pub fn distance(&self) -> usize {
+		self.distance
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct EvilPairsClaim(u8);
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, Display)]
+pub enum AffectType {
+	Puppeted,
+	CorruptedByEvil,
+	Outcasted,
+	Cloned,
+	Killed,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub struct AffectedClaim {
+	index: VillagerIndex,
+	affect_type: AffectType,
+}
+
+impl AffectedClaim {
+	pub fn new(index: VillagerIndex, affect_type: AffectType) -> Self {
+		Self { index, affect_type }
+	}
+
+	pub fn index(&self) -> &VillagerIndex {
+		&self.index
+	}
+
+	pub fn affect_type(&self) -> &AffectType {
+		&self.affect_type
+	}
+}
 
 impl Display for EvilPairsClaim {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -76,12 +132,11 @@ pub enum Testimony {
 	NotCorrupt(VillagerIndex),
 	Lying(VillagerIndex),
 	Cured(VillagerIndex),
-	Architect(ArchitectClaim),
 	Baker(BakerClaim),
 	Role(RoleClaim),
 	Invincible(VillagerIndex),
-	Knitter(EvilPairsClaim),
-	Affected(VillagerIndex),
+	// TODO: What are they saying?
+	Affected(AffectedClaim),
 	FakeEvil(VillagerIndex),
 	SelfDestruct(VillagerIndex),
 	Slayed(SlayResult),
@@ -489,6 +544,10 @@ impl Testimony {
 			non_optional_expression
 		}
 	}
+
+	pub fn architect(claim: ArchitectClaim, total_villagers: usize) -> Expression<Testimony> {
+		todo!("Architect claim")
+	}
 }
 
 impl Display for Testimony {
@@ -500,17 +559,15 @@ impl Display for Testimony {
 			Self::NotCorrupt(villager_index) => write!(f, "{villager_index} is not corrupt"),
 			Self::Lying(villager_index) => write!(f, "{villager_index} is lying"),
 			Self::Cured(villager_index) => write!(f, "{villager_index} was cured of corruption"),
-			Self::Architect(architect_claim) => write!(f, "{architect_claim} side(s) more evil"),
-			Self::Baker(baker_claim) => match baker_claim {
-				BakerClaim::Original => write!(f, "I was the OG Baker"),
-				BakerClaim::Was(villager_archetype) => write!(f, "I was a {villager_archetype}"),
+			Self::Baker(baker_claim) => match &baker_claim.was {
+				None => write!(f, "I was the OG Baker"),
+				Some(villager_archetype) => write!(f, "I was a {villager_archetype}"),
 			},
 			Self::Role(role_claim) => {
 				write!(f, "{} is a {}", role_claim.villager, role_claim.archetype)
 			}
 			Self::Invincible(villager_index) => write!(f, "{villager_index} is invincible"),
-			Self::Knitter(evil_pairs_claim) => write!(f, "{evil_pairs_claim} evil pairs present"),
-			Self::Affected(villager_index) => write!(f, "{villager_index} was affected"),
+			Self::Affected(claim) => write!(f, "{} was {}", claim.index(), claim.affect_type()),
 			Self::FakeEvil(villager_index) => write!(f, "{villager_index} looks evil but isn't"),
 			Self::SelfDestruct(villager_index) => {
 				write!(f, "{villager_index} will self destruct")

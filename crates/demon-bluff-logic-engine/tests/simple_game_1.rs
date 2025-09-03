@@ -72,8 +72,6 @@ pub fn simple_game_1() {
 
 	// kill confessor
 	println!("Prediction 3:");
-	colog::init();
-	let log = log::logger();
 	prediction = predict(&log, &state).expect("prediction failed??");
 
 	assert_eq!(

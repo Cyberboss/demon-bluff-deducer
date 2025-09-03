@@ -1,7 +1,7 @@
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::{
-		AbilityResult, Action, DrawStats, GameStateMutationError, GameStateMutationResult,
+		self, AbilityResult, Action, DrawStats, GameStateMutationError, GameStateMutationResult,
 		KillAttempt, KillData, KillResult, RevealResult, SlayerKill, new_game,
 	},
 	testimony::{ArchitectClaim, BakerClaim, RoleClaim, SlayResult, Testimony},
@@ -108,9 +108,10 @@ pub fn test_game_1() {
 			VillagerIndex(3),
 			Some(VillagerInstance::new(
 				VillagerArchetype::GoodVillager(GoodVillager::Architect),
-				Some(Expression::Leaf(Testimony::Architect(
+				Some(Testimony::architect(
 					ArchitectClaim::Right,
-				))),
+					state.total_villagers(),
+				)),
 			)),
 		)))
 		.expect("malformed game step??");
@@ -120,7 +121,10 @@ pub fn test_game_1() {
 		VillagerIndex(4),
 		Some(VillagerInstance::new(
 			VillagerArchetype::GoodVillager(GoodVillager::Druid),
-			Some(Expression::Leaf(Testimony::Baker(BakerClaim::Original))),
+			Some(Expression::Leaf(Testimony::Baker(BakerClaim::new(
+				VillagerIndex(4),
+				None,
+			)))),
 		)),
 	)));
 

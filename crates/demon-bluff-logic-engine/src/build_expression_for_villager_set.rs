@@ -1,23 +1,38 @@
-use demon_bluff_gameplay_engine::{Expression, testimony::Testimony, villager::ConfirmedVillager};
+use std::fmt::Display;
 
-pub fn build_expression_for_villager_set(
-	confirmeds: &Vec<ConfirmedVillager>,
-) -> Option<Expression<Testimony>> {
+use demon_bluff_gameplay_engine::{
+	Expression,
+	testimony::{self, Testimony},
+	villager::{ConfirmedVillager, VillagerIndex},
+};
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IndexTestimony {
+	pub index: VillagerIndex,
+	pub testimony: Testimony,
+}
+
+impl Display for IndexTestimony {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} says: {}", self.index, self.testimony)
+	}
+}
+
+pub fn build_expression_for_villager_set<'a>(
+	confirmeds: impl IntoIterator<Item = &'a ConfirmedVillager>,
+) -> Option<Expression<IndexTestimony>> {
 	let mut expression = None;
-	for confirmed in confirmeds {
+	for (index, confirmed) in confirmeds.into_iter().enumerate() {
 		let testimony_expression = match confirmed.instance().testimony() {
-			Some(testimony) => {
-				let testimony = testimony.clone();
-				Some(
-					if !confirmed.instance().archetype().cannot_lie()
-						&& (confirmed.corrupted() || confirmed.true_identity().lies())
-					{
-						Expression::Not(Box::new(testimony))
-					} else {
-						testimony
-					},
-				)
-			}
+			Some(testimony) => Some(
+				if !confirmed.instance().archetype().cannot_lie()
+					&& (confirmed.corrupted() || confirmed.true_identity().lies())
+				{
+					Expression::Not(Box::new(map_testimony(testimony, &VillagerIndex(index))))
+				} else {
+					map_testimony(testimony, &VillagerIndex(index))
+				},
+			),
 			None => None,
 		};
 
@@ -34,4 +49,25 @@ pub fn build_expression_for_villager_set(
 	}
 
 	expression
+}
+
+fn map_testimony(
+	original: &Expression<Testimony>,
+	index: &VillagerIndex,
+) -> Expression<IndexTestimony> {
+	match original {
+		Expression::Leaf(testimony) => Expression::Leaf(IndexTestimony {
+			index: index.clone(),
+			testimony: testimony.clone(),
+		}),
+		Expression::Not(expression) => Expression::Not(Box::new(map_testimony(expression, index))),
+		Expression::And(lhs, rhs) => Expression::And(
+			Box::new(map_testimony(lhs, index)),
+			Box::new(map_testimony(rhs, index)),
+		),
+		Expression::Or(lhs, rhs) => Expression::Or(
+			Box::new(map_testimony(lhs, index)),
+			Box::new(map_testimony(rhs, index)),
+		),
+	}
 }

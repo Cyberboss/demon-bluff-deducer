@@ -10,22 +10,24 @@ mod prediction_error;
 
 use core::panic;
 use std::{
+	arch::breakpoint,
 	cmp::max,
 	collections::{HashMap, HashSet, hash_map::Entry},
+	str::FromStr,
 };
 
-use build_board_layouts::{BoardLayout, build_board_layouts};
-use build_expression_for_villager_set::build_expression_for_villager_set;
+use build_board_layouts::{BoardLayout, TheoreticalVillager, build_board_layouts};
+use build_expression_for_villager_set::{IndexTestimony, build_expression_for_villager_set};
 use demon_bluff_gameplay_engine::{
 	Expression,
 	affect::Affect,
 	game_state::{self, GameState},
-	testimony::Testimony,
-	villager::Villager,
+	testimony::{self, ConfessorClaim, Testimony, index_offset},
+	villager::{GoodVillager, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use engine::evaluate;
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
-use log::{Log, info, warn};
+use log::{Log, debug, info, warn};
 
 pub use self::{
 	engine::{Breakpoint, DebuggerContext, DesireNode, FITNESS_UNIMPLEMENTED, HypothesisNode},
@@ -80,8 +82,14 @@ pub fn predict(
 		let mut master_expression = None;
 		for config_expression in potential_board_configurations
 			.iter()
-			.filter_map(|board_config| build_expression_for_villager_set(&board_config.villagers))
-		{
+			.filter_map(|board_config| {
+				build_expression_for_villager_set(
+					board_config
+						.villagers
+						.iter()
+						.map(|theoretical_villager| &theoretical_villager.inner),
+				)
+			}) {
 			master_expression = Some(match master_expression {
 				Some(previous_expression) => Expression::Or(
 					Box::new(previous_expression),
@@ -95,14 +103,21 @@ pub fn predict(
 		if let Some(master_expression) = master_expression {
 			let potential_assignments = collect_satisfying_assignments(&master_expression);
 			if potential_assignments.is_empty() {
-				panic!("Game is unsolvable!");
+				return Err(PredictionError::GameUnsolvable);
 			}
 
 			let mut matching_layouts = HashSet::new();
-
+			let mut matching_configs = 0;
 			for (index, board_expression) in potential_board_expressions.into_iter().enumerate() {
 				for assignment in &potential_assignments {
-					if evaluate_with_assignment(&board_expression, &assignment) {
+					if evaluate_with_assignment(&board_expression, &assignment)
+						&& validate_assignment(
+							log,
+							assignment,
+							&potential_board_configurations[index],
+							state,
+						) {
+						matching_configs += 1;
 						matching_layouts
 							.insert(potential_board_configurations[index].evil_locations.clone());
 					}
@@ -110,6 +125,7 @@ pub fn predict(
 			}
 
 			let mut layout_number = 0;
+			info!(logger: log, "Filtered to {} evil layouts amongst {} configurations", matching_layouts.len(), matching_configs);
 			for layout in &matching_layouts {
 				layout_number += 1;
 				info!(logger: log, "Potential Layout {}", layout_number);
@@ -183,6 +199,7 @@ pub fn predict(
 						logger: log, "{} different evil layouts exist, need more information!", matching_layouts.len());
 			} else {
 				// best guess
+				// TODO: Prioritize night effects
 				warn!(
 					logger: log,
 					"{} different evil layouts exist and no more information can be gathered. Providing the {} most common evil indexes with {} matches each. God help you",
@@ -222,6 +239,7 @@ fn kill_board_config(board_config: BoardLayout, state: &GameState) -> HashSet<Pl
 	// minor thing, important to kill evils with night effects first
 	for evil_index in &board_config.evil_locations {
 		if let Some(Affect::Night(_)) = board_config.villagers[evil_index.0]
+			.inner
 			.true_identity()
 			.affect(state.total_villagers(), Some(evil_index.clone()))
 		{
@@ -235,4 +253,127 @@ fn kill_board_config(board_config: BoardLayout, state: &GameState) -> HashSet<Pl
 	}
 
 	kills
+}
+
+fn validate_assignment(
+	log: &impl Log,
+	assignment: &HashMap<IndexTestimony, bool>,
+	board_config: &BoardLayout,
+	game_state: &GameState,
+) -> bool {
+	let theoreticals = &board_config.villagers;
+
+	for (index_testimony, truthful) in assignment {
+		let testimony_valid = match &index_testimony.testimony {
+			Testimony::Good(villager_index) => !theoreticals[villager_index.0]
+				.inner
+				.true_identity()
+				.is_evil(),
+			Testimony::Evil(villager_index) => theoreticals[villager_index.0]
+				.inner
+				.true_identity()
+				.is_evil(),
+			Testimony::Corrupt(villager_index) => theoreticals[villager_index.0].inner.corrupted(),
+			Testimony::NotCorrupt(villager_index) => {
+				!theoreticals[villager_index.0].inner.corrupted()
+			}
+			Testimony::Lying(villager_index) => {
+				let confirmed = &theoreticals[villager_index.0].inner;
+				confirmed.corrupted()
+					|| (!confirmed.instance().archetype().cannot_lie()
+						&& confirmed.true_identity().lies())
+			}
+			Testimony::Cured(villager_index) => {
+				let theoretical = &theoreticals[villager_index.0];
+				theoretical.was_corrupt && !theoretical.inner.corrupted()
+			}
+			Testimony::Baker(baker_claim) => {
+				let theoretical = &theoreticals[index_testimony.index.0];
+				theoretical.baked_from == *baker_claim.was()
+			}
+			Testimony::Role(role_claim) => {
+				theoreticals[role_claim.index().0].inner.true_identity() == role_claim.role()
+			}
+			Testimony::Invincible(villager_index) => {
+				*theoreticals[villager_index.0].inner.true_identity()
+					== VillagerArchetype::GoodVillager(GoodVillager::Knight)
+			}
+			Testimony::Affected(affected_claim) => {
+				theoreticals[affected_claim.index().0].affection.as_ref()
+					== Some(affected_claim.affect_type())
+			}
+			Testimony::FakeEvil(villager_index) => {
+				*theoreticals[villager_index.0].inner.true_identity()
+					== VillagerArchetype::Outcast(Outcast::Wretch)
+			}
+			Testimony::SelfDestruct(villager_index) => {
+				*theoreticals[villager_index.0].inner.true_identity()
+					== VillagerArchetype::Outcast(Outcast::Bombardier)
+			}
+			Testimony::Slayed(slay_result) => {
+				if slay_result.slayed() {
+					true
+				} else {
+					let confirmed_target = &theoreticals[slay_result.index().0].inner;
+					let confirmed_me = &theoreticals[index_testimony.index.0].inner;
+					!confirmed_target.true_identity().is_evil() || confirmed_me.corrupted()
+				}
+			}
+			Testimony::Confess(confession) => {
+				let confirmed = &theoreticals[index_testimony.index.0].inner;
+				match confession {
+					ConfessorClaim::Good => {
+						!confirmed.corrupted() && !confirmed.true_identity().is_evil()
+					}
+					ConfessorClaim::Dizzy => {
+						confirmed.corrupted() || confirmed.true_identity().is_evil()
+					}
+				}
+			}
+			Testimony::Scout(scout_claim) => {
+				let likely_talking_about = theoreticals
+					.iter()
+					.filter(|theoretical| {
+						theoretical.inner.true_identity() == scout_claim.evil_role()
+					})
+					.enumerate()
+					.next();
+
+				match likely_talking_about {
+					Some((target_index, _)) => {
+						let clockwise_read = index_offset(
+							&VillagerIndex(target_index),
+							game_state.total_villagers(),
+							scout_claim.distance(),
+							true,
+						);
+						let counterclockwise_read = index_offset(
+							&VillagerIndex(target_index),
+							game_state.total_villagers(),
+							scout_claim.distance(),
+							true,
+						);
+
+						// TODO: Need to check there are no closer eviles in either direction
+						theoreticals[counterclockwise_read.0]
+							.inner
+							.true_identity()
+							.is_evil() || theoreticals[clockwise_read.0]
+							.inner
+							.true_identity()
+							.is_evil()
+					}
+					None => false,
+				}
+			}
+		};
+
+		if testimony_valid != *truthful {
+			debug!(logger: log, "Validation failed: {}", board_config.description);
+			return false;
+		}
+	}
+
+	debug!(logger: log, "Validation passed: {}", board_config.description);
+	true
 }

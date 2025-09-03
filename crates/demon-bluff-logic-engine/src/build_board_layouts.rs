@@ -1,22 +1,43 @@
 use std::{
 	arch::breakpoint,
 	collections::{BTreeSet, HashSet},
+	str::FromStr,
 };
 
 use demon_bluff_gameplay_engine::{
 	affect::Affect,
 	game_state::GameState,
-	testimony::index_offset,
+	testimony::{AffectType, index_offset},
 	villager::{
-		ConfirmedVillager, GoodVillager, Minion, Villager, VillagerArchetype, VillagerIndex,
-		VillagerInstance,
+		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
+		VillagerIndex, VillagerInstance,
 	},
 };
 use itertools::Itertools;
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct TheoreticalVillager {
+	pub inner: ConfirmedVillager,
+	pub was_corrupt: bool,
+	pub baked_from: Option<VillagerArchetype>,
+	pub affection: Option<AffectType>,
+}
+
+impl From<ConfirmedVillager> for TheoreticalVillager {
+	fn from(value: ConfirmedVillager) -> Self {
+		let was_corrupt = value.corrupted();
+		Self {
+			inner: value,
+			was_corrupt,
+			baked_from: None,
+			affection: None,
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct BoardLayout {
-	pub villagers: Vec<ConfirmedVillager>,
+	pub villagers: Vec<TheoreticalVillager>,
 	pub evil_locations: BTreeSet<VillagerIndex>,
 	pub description: String,
 }
@@ -105,51 +126,92 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 
 									if index == **disguise_index {
 										let disguised_archetype = (*evil_archetype).clone();
+
+										let mut unknown_hidden = false;
+										let instance = match instance_and_confirmed {
+											Some((instance, _)) => instance.clone(),
+											None => {
+												// for our purposes, the instance doesn't matter here
+												unknown_hidden = true;
+												VillagerInstance::new(
+													VillagerArchetype::GoodVillager(
+														GoodVillager::Confessor,
+													),
+													None,
+												)
+											}
+										};
+
 										if !first_desc {
-											desc = format!("{} - ", desc);
+											desc = format!("{}, ", desc);
 										} else {
 											first_desc = false;
 										}
-
 										desc = format!(
-											"{}{} actually a {}",
-											desc, index, disguised_archetype
+											"{}{}: {} (actually a {})",
+											desc,
+											index,
+											if unknown_hidden {
+												String::from_str("Unknown").unwrap()
+											} else {
+												format!("{}", instance.archetype())
+											},
+											disguised_archetype
 										);
 
 										ConfirmedVillager::new(
-											(match instance_and_confirmed {
-												Some((instance, _)) => instance.clone(),
-												None => {
-													// for our purposes, the instance doesn't matter here
-													VillagerInstance::new(
-														VillagerArchetype::GoodVillager(
-															GoodVillager::Confessor,
-														),
-														None,
-													)
-												}
-											})
-											.clone(),
+											instance.clone(),
 											Some(disguised_archetype),
 											false,
 										)
-									} else if let Some((instance, confirmed)) =
-										instance_and_confirmed
-									{
-										if let Some(confirmed) = confirmed {
-											confirmed.clone()
-										} else {
-											let corrupt = instance.archetype().starts_corrupted();
-											ConfirmedVillager::new(instance.clone(), None, corrupt)
-										}
 									} else {
-										let corrupt = good_archetype.starts_corrupted();
-										ConfirmedVillager::new(
-											VillagerInstance::new((*good_archetype).clone(), None),
-											None,
-											corrupt,
-										)
+										let mut unknown_hidden = false;
+										let confirmed = if let Some((instance, confirmed)) =
+											instance_and_confirmed
+										{
+											if let Some(confirmed) = confirmed {
+												confirmed.clone()
+											} else {
+												let corrupt =
+													instance.archetype().starts_corrupted();
+												ConfirmedVillager::new(
+													instance.clone(),
+													None,
+													corrupt,
+												)
+											}
+										} else {
+											unknown_hidden = true;
+											let corrupt = good_archetype.starts_corrupted();
+											ConfirmedVillager::new(
+												VillagerInstance::new(
+													(*good_archetype).clone(),
+													None,
+												),
+												None,
+												corrupt,
+											)
+										};
+
+										if !first_desc {
+											desc = format!("{}, ", desc);
+										} else {
+											first_desc = false;
+										}
+										desc = format!(
+											"{}{}: {}",
+											desc,
+											index,
+											if unknown_hidden {
+												String::from_str("Unknown").unwrap()
+											} else {
+												format!("{}", confirmed.true_identity())
+											},
+										);
+
+										confirmed
 									}
+									.into()
 								})
 								.collect();
 
@@ -157,15 +219,20 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 								.iter()
 								.map(|index| (*index).clone())
 								.collect();
-							let affected_confirmeds = with_affects(
+
+							// TODO: Test pass order once deck builder mode releases
+							let adjacency_affected_theoreticals = with_adjacent_affects(
 								game_state,
 								confirmeds,
 								extra_outcasts,
 								evil_locations,
 								desc,
 							);
+							// TODO: PlagueDoctor pass
+							// TODO: Shaman (Cloner) pass
+							// TODO: Baker pass
 
-							layouts.extend(affected_confirmeds);
+							layouts.extend(adjacency_affected_theoreticals);
 						}
 					}
 				}
@@ -176,9 +243,9 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	layouts
 }
 
-fn with_affects(
+fn with_adjacent_affects(
 	game_state: &GameState,
-	mut initial_confirmeds: Vec<ConfirmedVillager>,
+	mut initial_theoreticals: Vec<TheoreticalVillager>,
 	extra_outcasts: u8,
 	evil_locations: BTreeSet<VillagerIndex>,
 	base_desc: String,
@@ -189,9 +256,10 @@ fn with_affects(
 
 	let mut affecting_indicies = Vec::new();
 
-	for (index, confirmed) in initial_confirmeds.iter_mut().enumerate() {
+	for (index, theoretical) in initial_theoreticals.iter_mut().enumerate() {
 		let index = VillagerIndex(index);
-		if let Some(affect) = confirmed
+		if let Some(affect) = theoretical
+			.inner
 			.true_identity()
 			.affect(game_state.total_villagers(), Some(index.clone()))
 		{
@@ -213,15 +281,13 @@ fn with_affects(
 		.iter()
 		.permutations(affecting_indicies.len())
 	{
-		// TODO: currently all VillagerAffects are adjacency affects. Change this if that every changes
-		// TODO: I eat my words already, this won't work for PlagueDoctors
 		for distribution_permutation in generate_boolean_permutations(affect_permutation.len()) {
-			let mut mutated_confirmeds = initial_confirmeds.clone();
+			let mut mutated_confirmeds = initial_theoreticals.clone();
 			let mut mutated_desc = base_desc.clone();
 			for i in 0..affect_permutation.len() {
 				let to_the_left = distribution_permutation[i];
 				let affecting_index = affect_permutation[i];
-				let confirmed = &initial_confirmeds[affecting_index.0];
+				let affector = &initial_theoreticals[affecting_index.0];
 				let affected_index = index_offset(
 					affecting_index,
 					game_state.total_villagers(),
@@ -229,45 +295,55 @@ fn with_affects(
 					to_the_left,
 				);
 				let affected_villager = &mut mutated_confirmeds[affected_index.0];
-				match confirmed
+				match affector
+					.inner
 					.true_identity()
 					.affect(game_state.total_villagers(), Some(affecting_index.clone()))
 					.expect("Affect should be here!")
 				{
 					Affect::Corrupt(_) => {
-						if affected_villager.true_identity().can_be_corrupted()
-							&& !affected_villager.corrupted()
+						// plague doctor handled in third pass
+						if *affector.inner.true_identity()
+							!= VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+							&& affected_villager.inner.true_identity().can_be_corrupted()
+							&& !affected_villager.inner.corrupted()
 						{
 							mutated_desc =
 								format!("{} - {} was corrupted", mutated_desc, affected_index);
-							mutated_confirmeds[affected_index.0] = ConfirmedVillager::new(
-								affected_villager.instance().clone(),
-								affected_villager.hidden_identity().clone(),
+							affected_villager.inner = ConfirmedVillager::new(
+								affected_villager.inner.instance().clone(),
+								affected_villager.inner.hidden_identity().clone(),
 								true,
 							);
+							if affector.inner.true_identity().is_evil() {
+								affected_villager.affection = Some(AffectType::CorruptedByEvil);
+							}
+
+							affected_villager.was_corrupt = true;
 						}
 					}
 					Affect::Puppet(_) => {
-						if affected_villager.true_identity().can_be_converted() {
+						if affected_villager.inner.true_identity().can_be_converted() {
 							mutated_desc =
 								format!("{} - {} was puppeted", mutated_desc, affected_index);
-							mutated_confirmeds[affected_index.0] = ConfirmedVillager::new(
-								affected_villager.instance().clone(),
+							affected_villager.inner = ConfirmedVillager::new(
+								affected_villager.inner.instance().clone(),
 								Some(VillagerArchetype::Minion(Minion::Puppet)),
 								false,
 							);
+							affected_villager.affection = Some(AffectType::Puppeted);
 						}
 					}
 					Affect::Outcast(_) => {
 						// TODO: this outcast conversion process sucks, make it better
 						if extra_outcasts == 0
-							&& affected_villager.true_identity().can_be_converted()
+							&& affected_villager.inner.true_identity().can_be_converted()
 						{
 							mutated_desc = format!(
 								"{} - {} was converted to an outcast",
 								mutated_desc, affected_index
 							);
-							mutated_confirmeds[affected_index.0] = ConfirmedVillager::new(
+							affected_villager.inner = ConfirmedVillager::new(
 								VillagerInstance::new(
 									game_state
 										.deck()
@@ -283,12 +359,15 @@ fn with_affects(
 								Some(VillagerArchetype::Minion(Minion::Puppet)),
 								false,
 							);
+							affected_villager.affection = Some(AffectType::Outcasted)
 						}
 					}
-					Affect::DupeVillager
-					| Affect::FakeOutcast
-					| Affect::BlockLastNReveals(_)
-					| Affect::Night(_) => panic!("This isn't a villager affect!"),
+					Affect::DupeVillager => {
+						// handled in another pass
+					}
+					Affect::FakeOutcast | Affect::BlockLastNReveals(_) | Affect::Night(_) => {
+						panic!("This isn't a villager affect!")
+					}
 				}
 			}
 
@@ -302,7 +381,7 @@ fn with_affects(
 
 	if !any_affects_applied {
 		with_affects.push(BoardLayout {
-			villagers: initial_confirmeds,
+			villagers: initial_theoreticals,
 			description: base_desc,
 			evil_locations: evil_locations,
 		});

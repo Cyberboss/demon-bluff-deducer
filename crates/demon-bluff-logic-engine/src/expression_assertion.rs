@@ -1,4 +1,8 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+	collections::{HashMap, HashSet},
+	fmt::Display,
+	hash::Hash,
+};
 
 use demon_bluff_gameplay_engine::{Expression, testimony::Testimony};
 
@@ -31,9 +35,10 @@ pub fn probability_expression_asserts_x_given_true(
 	})
 }
 
-pub fn collect_satisfying_assignments(
-	expression: &Expression<Testimony>,
-) -> Vec<HashMap<Testimony, bool>> {
+pub fn collect_satisfying_assignments<T>(expression: &Expression<T>) -> Vec<HashMap<T, bool>>
+where
+	T: Display + Hash + Eq + Clone,
+{
 	let variables = collect_variables(expression);
 	let mut assignments = Vec::new();
 
@@ -55,13 +60,19 @@ pub fn collect_satisfying_assignments(
 	assignments
 }
 
-fn collect_variables(expression: &Expression<Testimony>) -> HashSet<Testimony> {
+fn collect_variables<T>(expression: &Expression<T>) -> HashSet<T>
+where
+	T: Display + Hash + Eq + Clone,
+{
 	let mut vars = HashSet::new();
 	collect_variables_helper(expression, &mut vars);
 	vars
 }
 
-fn collect_variables_helper(expression: &Expression<Testimony>, vars: &mut HashSet<Testimony>) {
+fn collect_variables_helper<T>(expression: &Expression<T>, vars: &mut HashSet<T>)
+where
+	T: Display + Hash + Eq + Clone,
+{
 	match expression {
 		Expression::Leaf(testimony) => {
 			vars.insert(testimony.clone());
@@ -77,14 +88,17 @@ fn collect_variables_helper(expression: &Expression<Testimony>, vars: &mut HashS
 }
 
 /// Evaluate the expression with a given variable assignment
-pub fn evaluate_with_assignment(
-	expression: &Expression<Testimony>,
-	assignment: &HashMap<Testimony, bool>,
-) -> bool {
+pub fn evaluate_with_assignment<T>(
+	expression: &Expression<T>,
+	assignment: &HashMap<T, bool>,
+) -> bool
+where
+	T: Display + Hash + Eq + Clone,
+{
 	match expression {
 		Expression::Leaf(testimony) => *assignment
 			.get(testimony)
-			.unwrap_or_else(|| panic!("Missing assignment for testiomony: {}", testimony)),
+			.unwrap_or_else(|| panic!("Missing assignment for testimony: {}", testimony)),
 		Expression::Not(inner) => !evaluate_with_assignment(&inner, assignment),
 		Expression::And(lhs, rhs) => {
 			evaluate_with_assignment(lhs, assignment) && evaluate_with_assignment(rhs, assignment)
