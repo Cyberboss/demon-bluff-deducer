@@ -127,6 +127,7 @@ impl Display for EvilPairsClaim {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum Testimony {
 	Good(VillagerIndex),
+	// both are needed because of wretch (looks evil) != !(looks good)
 	Evil(VillagerIndex),
 	Corrupt(VillagerIndex),
 	Lying(VillagerIndex),
@@ -307,27 +308,21 @@ impl Testimony {
 
 	pub fn empress(suspects: &[VillagerIndex; 3]) -> Expression<Testimony> {
 		let statement_1 = Expression::And(
-			Box::new(Expression::Not(Box::new(Expression::Leaf(
-				Testimony::Good(suspects[0].clone()),
-			)))),
+			Box::new(Expression::Leaf(Testimony::Evil(suspects[0].clone()))),
 			Box::new(Expression::And(
 				Box::new(Expression::Leaf(Testimony::Good(suspects[1].clone()))),
 				Box::new(Expression::Leaf(Testimony::Good(suspects[2].clone()))),
 			)),
 		);
 		let statement_2 = Expression::And(
-			Box::new(Expression::Not(Box::new(Expression::Leaf(
-				Testimony::Good(suspects[1].clone()),
-			)))),
+			Box::new(Expression::Leaf(Testimony::Evil(suspects[1].clone()))),
 			Box::new(Expression::And(
 				Box::new(Expression::Leaf(Testimony::Good(suspects[0].clone()))),
 				Box::new(Expression::Leaf(Testimony::Good(suspects[2].clone()))),
 			)),
 		);
 		let statement_3 = Expression::And(
-			Box::new(Expression::Not(Box::new(Expression::Leaf(
-				Testimony::Good(suspects[2].clone()),
-			)))),
+			Box::new(Expression::Leaf(Testimony::Evil(suspects[2].clone()))),
 			Box::new(Expression::And(
 				Box::new(Expression::Leaf(Testimony::Good(suspects[1].clone()))),
 				Box::new(Expression::Leaf(Testimony::Good(suspects[0].clone()))),
