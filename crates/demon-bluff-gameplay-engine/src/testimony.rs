@@ -298,6 +298,43 @@ impl Testimony {
 		}
 	}
 
+	pub fn empress(suspects: &[VillagerIndex; 3]) -> Expression<Testimony> {
+		let statement_1 = Expression::And(
+			Box::new(Expression::Not(Box::new(Expression::Leaf(
+				Testimony::Good(suspects[0].clone()),
+			)))),
+			Box::new(Expression::And(
+				Box::new(Expression::Leaf(Testimony::Good(suspects[1].clone()))),
+				Box::new(Expression::Leaf(Testimony::Good(suspects[2].clone()))),
+			)),
+		);
+		let statement_2 = Expression::And(
+			Box::new(Expression::Not(Box::new(Expression::Leaf(
+				Testimony::Good(suspects[1].clone()),
+			)))),
+			Box::new(Expression::And(
+				Box::new(Expression::Leaf(Testimony::Good(suspects[0].clone()))),
+				Box::new(Expression::Leaf(Testimony::Good(suspects[2].clone()))),
+			)),
+		);
+		let statement_3 = Expression::And(
+			Box::new(Expression::Not(Box::new(Expression::Leaf(
+				Testimony::Good(suspects[2].clone()),
+			)))),
+			Box::new(Expression::And(
+				Box::new(Expression::Leaf(Testimony::Good(suspects[1].clone()))),
+				Box::new(Expression::Leaf(Testimony::Good(suspects[0].clone()))),
+			)),
+		);
+
+		let expression = Expression::Or(
+			Box::new(statement_3),
+			Box::new(Expression::Or(Box::new(statement_1), Box::new(statement_2))),
+		);
+
+		expression
+	}
+
 	pub fn lover(
 		start_index: &VillagerIndex,
 		amount: usize,
