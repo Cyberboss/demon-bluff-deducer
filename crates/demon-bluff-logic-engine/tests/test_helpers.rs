@@ -5,6 +5,7 @@ use std::{
 
 use demon_bluff_gameplay_engine::game_state::{Action, GameState, GameStateMutationResult};
 use demon_bluff_logic_engine::{PlayerAction, predict};
+use itertools::Itertools;
 
 pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
 	let mut path = PathBuf::new();
@@ -52,7 +53,7 @@ pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after
 		}
 
 		let mut found_match = false;
-		for player_action in player_actions {
+		for player_action in &player_actions {
 			if player_action.matches_action(&action) {
 				found_match = true;
 				break;
@@ -61,8 +62,13 @@ pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after
 
 		assert!(
 			found_match,
-			"Unexpected player action predicted on turn #{}!",
-			index + 1
+			"Unexpected player action predicted on turn #{}! Got: {} - Expected: {}",
+			index + 1,
+			player_actions
+				.iter()
+				.map(|action| format!("{}", action))
+				.join("|"),
+			action
 		);
 
 		match game_state

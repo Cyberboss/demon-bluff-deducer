@@ -40,7 +40,15 @@ impl PlayerAction {
 					false
 				}
 			}
-			Self::Ability(_) => todo!(),
+			Self::Ability(ability_attempt) => {
+				if let Action::Ability(result) = action
+					&& *result.source() == ability_attempt.source
+				{
+					true
+				} else {
+					false
+				}
+			}
 		}
 	}
 }

@@ -1,6 +1,6 @@
 use std::{
 	arch::breakpoint,
-	collections::{BTreeSet, HashMap, HashSet},
+	collections::{BTreeSet, HashMap, HashSet, VecDeque},
 	thread::yield_now,
 };
 
@@ -19,16 +19,53 @@ use crate::{
 pub fn with_theoretical_testimony(
 	game_state: &GameState,
 	board_configs: impl IntoIterator<Item = BoardLayout>,
-) -> HashMap<BoardLayout, AbilityAttempt> {
-	let mut results = HashMap::new();
-	for inital_board_config in board_configs {
-		for (index, theoretical) in inital_board_config.villagers.iter().enumerate() {
-			if let None = theoretical.inner.instance().testimony() {
-				for (layout, ability_attempt) in
-					theoretical_testimonies(game_state, &inital_board_config, VillagerIndex(index))
-				{
-					results.insert(layout, ability_attempt);
+) -> HashMap<AbilityAttempt, Vec<BoardLayout>> {
+	let board_configs: Vec<BoardLayout> = board_configs.into_iter().collect();
+	let mut iterators = Vec::new();
+	for initial_board_config in &board_configs {
+		iterators.push(iter_board_villagers(game_state, initial_board_config));
+	}
+
+	let mut results = HashMap::with_capacity(iterators[0].len());
+	loop {
+		let mut group: Vec<(BoardLayout, AbilityAttempt)> = Vec::new();
+		for iterator in &mut iterators {
+			if let Some(next_value) = iterator.pop_front() {
+				if group.len() > 0 {
+					assert_eq!(group[0].1, next_value.1);
 				}
+
+				group.push(next_value);
+			}
+		}
+
+		if group.len() == 0 {
+			break;
+		}
+
+		// the length of each iterator should be the same
+		assert_eq!(group.len(), iterators.len());
+
+		results.insert(
+			group[0].1.clone(),
+			group.into_iter().map(|(layout, _)| layout).collect(),
+		);
+	}
+
+	results
+}
+
+fn iter_board_villagers(
+	game_state: &GameState,
+	inital_board_config: &BoardLayout,
+) -> VecDeque<(BoardLayout, AbilityAttempt)> {
+	let mut results = VecDeque::new();
+	for (index, theoretical) in inital_board_config.villagers.iter().enumerate() {
+		if let None = theoretical.inner.instance().testimony() {
+			for tuple in
+				theoretical_testimonies(game_state, &inital_board_config, VillagerIndex(index))
+			{
+				results.push_back(tuple);
 			}
 		}
 	}
@@ -61,7 +98,7 @@ gen fn theoretical_testimonies(
 			GoodVillager::Hunter => todo!("Hunter testimony generation"),
 			GoodVillager::Jester => todo!("Jester testimony generation"),
 			GoodVillager::Judge => {
-				for (index, theoretical) in theoreticals.iter().enumerate() {
+				for (index, _) in theoreticals.iter().enumerate() {
 					let index = VillagerIndex(index);
 
 					let mut targets = HashSet::with_capacity(1);
@@ -70,17 +107,13 @@ gen fn theoretical_testimonies(
 						breakpoint();
 					}
 
-					let mut base_expr = Expression::Leaf(Testimony::Lying(index.clone()));
-					let wont_lie = !theoretical.inner.will_lie();
-					if wont_lie {
-						base_expr = Expression::Not(Box::new(base_expr));
-					}
+					let base_expr = Expression::Leaf(Testimony::Lying(index.clone()));
 
 					let mut next_layout = board_config.clone();
 					next_layout.villagers[testifier_index.0]
 						.inner
 						.instance_mut()
-						.set_testimony(lie_if_required(base_expr, testifier));
+						.set_testimony(base_expr);
 
 					let testimony_reference = next_layout.villagers[testifier_index.0]
 						.inner
@@ -94,12 +127,39 @@ gen fn theoretical_testimonies(
 						next_layout.description, testifier_index, testimony_reference
 					);
 
-					if index.0 == 0 || index.0 == 4 {
-						next_layout.of_interest = true;
-					}
-
+					let mut next_layout2 = next_layout.clone();
 					yield (
 						next_layout,
+						AbilityAttempt::new(testifier_index.clone(), targets.clone()),
+					);
+
+					let negative_testimony = Expression::Not(Box::new(
+						next_layout2.villagers[testifier_index.0]
+							.inner
+							.instance()
+							.testimony()
+							.as_ref()
+							.unwrap()
+							.clone(),
+					));
+					next_layout2.villagers[testifier_index.0]
+						.inner
+						.instance_mut()
+						.set_testimony(negative_testimony);
+
+					let testimony_reference = next_layout2.villagers[testifier_index.0]
+						.inner
+						.instance()
+						.testimony()
+						.as_ref()
+						.unwrap();
+
+					next_layout2.description = format!(
+						"{} - {} says {}",
+						next_layout2.description, testifier_index, testimony_reference
+					);
+					yield (
+						next_layout2,
 						AbilityAttempt::new(testifier_index.clone(), targets),
 					);
 				}
@@ -125,16 +185,4 @@ gen fn theoretical_testimonies(
 			panic!("A {} should not have a testimony!", archetype)
 		}
 	}
-}
-
-fn lie_if_required(
-	mut testimony: Expression<Testimony>,
-	theoretical: &TheoreticalVillager,
-) -> Expression<Testimony> {
-	if theoretical.inner.will_lie() {
-		breakpoint();
-		testimony = Expression::Not(Box::new(testimony));
-	}
-
-	testimony
 }

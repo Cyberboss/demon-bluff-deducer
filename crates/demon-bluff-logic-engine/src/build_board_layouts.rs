@@ -43,7 +43,6 @@ pub struct BoardLayout {
 	pub villagers: Vec<TheoreticalVillager>,
 	pub evil_locations: BTreeSet<VillagerIndex>,
 	pub description: String,
-	pub of_interest: bool,
 }
 
 pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
@@ -404,7 +403,6 @@ fn with_adjacent_affects(
 				villagers: mutated_confirmeds,
 				description: mutated_desc,
 				evil_locations: evil_locations.clone(),
-				of_interest: false,
 			});
 		}
 	}
@@ -414,7 +412,6 @@ fn with_adjacent_affects(
 			villagers: initial_theoreticals,
 			description: base_desc,
 			evil_locations: evil_locations,
-			of_interest: false,
 		});
 	}
 

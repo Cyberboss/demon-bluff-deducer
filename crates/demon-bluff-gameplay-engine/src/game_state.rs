@@ -1,4 +1,4 @@
-use std::mem::replace;
+use std::{fmt::Display, mem::replace};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -92,6 +92,17 @@ pub enum Action {
 	TryExecute(KillAttempt),
 	Ability(AbilityResult),
 	LilisNightKill(Option<VillagerIndex>),
+}
+
+impl Display for Action {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::TryReveal(reveal_result) => write!(f, "Reveal {}", reveal_result.index),
+			Self::TryExecute(kill_attempt) => write!(f, "Kill {}", kill_attempt.target),
+			Self::Ability(ability_result) => write!(f, "Ability {}", ability_result.source),
+			Self::LilisNightKill(_) => todo!(),
+		}
+	}
 }
 
 #[derive(Error, Debug)]
@@ -198,6 +209,10 @@ impl AbilityResult {
 			testimony,
 			slayer_kill,
 		}
+	}
+
+	pub fn source(&self) -> &VillagerIndex {
+		&self.source
 	}
 }
 

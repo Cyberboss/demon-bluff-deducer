@@ -89,13 +89,14 @@ pub fn predict(
 	if any_revealed {
 		let initial_layouts = build_board_layouts(state);
 
-		match predict_core(log, state, initial_layouts, None) {
+		match predict_core(log, state, initial_layouts, false) {
 			PredictionResult2::KillResult(hash_set) => {
 				return hash_set;
 			}
 			PredictionResult2::NeedMoreInfoResult(hash_set) => {
 				need_more_info_result = Some(hash_set)
 			}
+			PredictionResult2::ConfigCountsAfterAbility(_) => panic!("Incorrect return type!"),
 		}
 	}
 
@@ -132,20 +133,53 @@ pub fn predict(
 			let initial_layouts = need_more_info_result.expect("Udhfhfhfh");
 			let layouts = with_theoretical_testimony(state, initial_layouts);
 
-			let raw_layouts: Vec<BoardLayout> = layouts.keys().cloned().collect();
-			if let PredictionResult2::KillResult(result) =
-				predict_core(log, state, raw_layouts, Some(layouts))
-			{
-				result
-			} else {
-				panic!("Prediction was not allowed to return non and it did it anyway")
+			// for each theoretical testimony find the group of
+
+			let mut least_options: Option<(HashSet<AbilityAttempt>, usize)> = None;
+			for (ability_attempt, predicted_layouts) in layouts {
+				if let PredictionResult2::ConfigCountsAfterAbility(result) =
+					predict_core(log, state, predicted_layouts, true)
+				{
+					let thing = match least_options {
+						Some((mut old_least_options, count)) => {
+							if count > result {
+								let mut new_least_options = HashSet::new();
+								new_least_options.insert(ability_attempt);
+								(new_least_options, result)
+							} else {
+								if count == result {
+									old_least_options.insert(ability_attempt);
+								}
+
+								(old_least_options, count)
+							}
+						}
+						None => {
+							let mut new_least_options = HashSet::new();
+							new_least_options.insert(ability_attempt);
+							(new_least_options, result)
+						}
+					};
+
+					least_options = Some(thing);
+				} else {
+					panic!("Prediction was not allowed to return non and it did it anyway")
+				}
 			}
+
+			Ok(least_options
+				.expect("No value ability usages found??")
+				.0
+				.into_iter()
+				.map(|ability_attempt| PlayerAction::Ability(ability_attempt))
+				.collect())
 		}
 	}
 }
 
 enum PredictionResult2 {
 	KillResult(Result<HashSet<PlayerAction>, PredictionError>),
+	ConfigCountsAfterAbility(usize),
 	NeedMoreInfoResult(HashSet<BoardLayout>),
 }
 
@@ -158,47 +192,33 @@ fn predict_core(
 	log: &impl Log,
 	state: &GameState,
 	layouts: impl IntoIterator<Item = BoardLayout>,
-	ability_selector: Option<HashMap<BoardLayout, AbilityAttempt>>,
+	count_configs: bool,
 ) -> PredictionResult2 {
 	// Step one, build possible board layouts as an ExpressionWithTag HashMap<Vec<VillagerArchetype, ExpressionWithTag<Testimony>>>
-	let prediction_result = predict_board_configs(log, state, layouts, ability_selector.is_none());
+	let prediction_result = predict_board_configs(log, state, layouts, !count_configs);
 	match prediction_result {
 		Ok(valid_prediction) => {
 			match valid_prediction {
 				PredictionResult3::PredictionResult(valid_prediction) => {
+					if count_configs {
+						// we actually want to eliminate board layouts that have narrowed things down to the remaining evils
+
+						let result = PredictionResult2::ConfigCountsAfterAbility(
+							valid_prediction.board_layouts_by_similar_configs.len(),
+						);
+
+						return result;
+					}
+
 					if let Some((most_common_indicies, appear_in_layouts)) =
 						valid_prediction.most_common_indicies
 					{
 						let mut actions: HashSet<PlayerAction> =
 							HashSet::with_capacity(most_common_indicies.len());
-						if let Some(ability_selector) = &ability_selector {
-							// we actually want to eliminate board layouts that have narrowed things down to the remaining evils
-							let mut least_common_indicies_count = usize::MAX;
-							for index_group in
-								valid_prediction.board_layouts_by_similar_configs.keys()
-							{
-								least_common_indicies_count =
-									min(least_common_indicies_count, index_group.len());
-							}
-
-							for (index_group, board_layouts) in
-								valid_prediction.board_layouts_by_similar_configs
-							{
-								if index_group.len() > least_common_indicies_count {
-									continue;
-								}
-
-								for layout in board_layouts {
-									let ability = ability_selector.get(&layout).unwrap().clone();
-									actions.insert(PlayerAction::Ability(ability));
-								}
-							}
-						} else {
-							// select the most common indicies
-							for index in most_common_indicies {
-								// TODO: does it make sense to kill ASAP if there's a night affect in play?
-								actions.insert(PlayerAction::TryExecute(index));
-							}
+						// select the most common indicies
+						for index in most_common_indicies {
+							// TODO: does it make sense to kill ASAP if there's a night affect in play?
+							actions.insert(PlayerAction::TryExecute(index));
 						}
 
 						assert_ne!(0, actions.len());
