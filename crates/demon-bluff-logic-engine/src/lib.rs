@@ -494,7 +494,7 @@ fn validate_assignment(
 			Testimony::Good(villager_index) => !theoreticals[villager_index.0]
 				.inner
 				.true_identity()
-				.is_evil(),
+				.appears_evil(),
 			Testimony::Corrupt(villager_index) => theoreticals[villager_index.0].inner.corrupted(),
 			Testimony::Lying(villager_index) => theoreticals[villager_index.0].inner.will_lie(),
 			Testimony::Cured(villager_index) => {
