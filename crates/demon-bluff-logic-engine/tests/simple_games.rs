@@ -176,7 +176,7 @@ fn simple_game_5() {
 				)),
 			)),
 		],
-		Some(6),
+		None,
 	);
 }
 
@@ -266,7 +266,7 @@ fn simple_game_6() {
 				)),
 			)),
 		],
-		Some(6),
+		None,
 	);
 }
 
@@ -356,7 +356,7 @@ fn simple_game_7() {
 				)),
 			)),
 		],
-		Some(6),
+		None,
 	);
 }
 
@@ -448,6 +448,71 @@ fn simple_game_8() {
 				)),
 			)),
 		],
-		Some(6),
+		None,
+	);
+}
+
+#[test]
+fn simple_game_9() {
+	let game_state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Lover),
+			VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
+			VillagerArchetype::GoodVillager(GoodVillager::Enlightened),
+			VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+			VillagerArchetype::GoodVillager(GoodVillager::Medium),
+			VillagerArchetype::GoodVillager(GoodVillager::Judge),
+			VillagerArchetype::Minion(Minion::Minion),
+		],
+		DrawStats::new(5, 0, 1, 0),
+		1,
+		false,
+	);
+
+	run_game(
+		&game_state,
+		vec![
+			Action::TryReveal(RevealResult::new(
+				VillagerIndex(0),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Lover),
+					Some(Testimony::lover(
+						&VillagerIndex(0),
+						1,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			Action::TryReveal(RevealResult::new(
+				VillagerIndex(1),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+					Some(Testimony::hunter(
+						&VillagerIndex(2),
+						2,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			Action::TryReveal(RevealResult::new(
+				VillagerIndex(2),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Enlightened),
+					Some(Testimony::englightened(
+						&VillagerIndex(2),
+						Direction::Equidistant,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			Action::TryExecute(KillAttempt::new(
+				VillagerIndex(5),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false)
+						.expect("Bad kill data"),
+				)),
+			)),
+		],
+		Some(3),
 	);
 }
