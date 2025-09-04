@@ -14,6 +14,7 @@ use std::{
 	collections::{BTreeMap, BTreeSet, HashMap, HashSet, hash_map::Entry},
 	fs::File,
 	str::FromStr,
+	sync::atomic::{AtomicI32, Ordering},
 	usize,
 };
 
@@ -32,6 +33,7 @@ use demon_bluff_gameplay_engine::{
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
 use log::{Log, debug, info, logger, warn};
 use player_action::AbilityAttempt;
+use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use with_theoretical_testimony::with_theoretical_testimony;
 
 pub use self::{player_action::PlayerAction, prediction_error::PredictionError};
@@ -282,9 +284,31 @@ fn predict_board_configs(
 
 		let mut all_matching_layouts = HashSet::new();
 		let mut matching_layouts = HashSet::new();
-		let mut matching_configs = 0;
-		for (index, board_expression) in potential_board_expressions.into_iter().enumerate() {
-			for assignment in &potential_assignments {
+
+		let things_to_check: Vec<(
+			usize,
+			&Expression<IndexTestimony>,
+			&HashMap<IndexTestimony, bool>,
+		)> = potential_board_expressions
+			.iter()
+			.enumerate()
+			.flat_map(|(index, board_expression)| {
+				let vec: Vec<(
+					usize,
+					&Expression<IndexTestimony>,
+					&HashMap<IndexTestimony, bool>,
+				)> = potential_assignments
+					.iter()
+					.map(|assignment| (index, board_expression, assignment))
+					.collect();
+				vec
+			})
+			.collect();
+
+		let matching_configs = AtomicI32::new(0);
+		let iteration_result: Vec<BoardLayout> = things_to_check
+			.into_par_iter()
+			.filter_map(|(index, board_expression, assignment)| {
 				if evaluate_with_assignment(&board_expression, &assignment)
 					&& validate_assignment(
 						log,
@@ -292,15 +316,21 @@ fn predict_board_configs(
 						&potential_board_configurations[index],
 						game_state,
 					) {
-					matching_configs += 1;
-					matching_layouts
-						.insert(potential_board_configurations[index].evil_locations.clone());
-					all_matching_layouts.insert(potential_board_configurations[index].clone());
+					matching_configs.fetch_add(1, Ordering::Relaxed);
+					Some(potential_board_configurations[index].clone())
+				} else {
+					None
 				}
-			}
+			})
+			.collect();
+
+		for matching_board_config in iteration_result {
+			matching_layouts.insert(matching_board_config.evil_locations.clone());
+			all_matching_layouts.insert(matching_board_config);
 		}
 
 		let mut layout_number = 0;
+		let matching_configs = matching_configs.fetch_add(0, Ordering::Acquire);
 		info!(logger: log, "Filtered to {} evil layouts amongst {} configurations", matching_layouts.len(), matching_configs);
 		for layout in &matching_layouts {
 			layout_number += 1;

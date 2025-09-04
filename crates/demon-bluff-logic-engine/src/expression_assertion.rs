@@ -5,36 +5,41 @@ use std::{
 };
 
 use demon_bluff_gameplay_engine::{Expression, testimony::Testimony};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 pub fn collect_satisfying_assignments<T>(expression: &Expression<T>) -> Vec<HashMap<T, bool>>
 where
-	T: Display + Hash + Eq + Clone,
+	T: Display + Hash + Eq + Clone + Send + Sync,
 {
 	let variables = collect_variables(expression);
-	let mut assignments = Vec::new();
 
 	// Generate all possible assignments (2^n where n is number of variables)
 	let num_vars = variables.len();
 	let total_potential_assignments = 1 << num_vars;
-	for i in 0..total_potential_assignments {
-		let mut assignment = HashMap::new();
+	let assignments = (0..total_potential_assignments)
+		.into_par_iter()
+		.filter_map(|i| {
+			let mut assignment = HashMap::new();
 
-		for (j, var) in variables.iter().enumerate() {
-			assignment.insert(var.clone(), (i & (1 << j)) != 0);
-		}
+			for (j, var) in variables.iter().enumerate() {
+				assignment.insert(var.clone(), (i & (1 << j)) != 0);
+			}
 
-		// Check if this assignment satisfies the expression
-		if evaluate_with_assignment(expression, &assignment) {
-			assignments.push(assignment);
-		}
-	}
+			// Check if this assignment satisfies the expression
+			if evaluate_with_assignment(expression, &assignment) {
+				Some(assignment)
+			} else {
+				None
+			}
+		})
+		.collect();
 
 	assignments
 }
 
 fn collect_variables<T>(expression: &Expression<T>) -> HashSet<T>
 where
-	T: Display + Hash + Eq + Clone,
+	T: Display + Hash + Eq + Clone + Send + Sync,
 {
 	let mut vars = HashSet::new();
 	collect_variables_helper(expression, &mut vars);
