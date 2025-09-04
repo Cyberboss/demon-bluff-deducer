@@ -1,7 +1,8 @@
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::{
-		AbilityResult, Action, DrawStats, KillAttempt, KillData, KillResult, RevealResult, new_game,
+		AbilityResult, Action, DrawStats, KillAttempt, KillData, KillResult, RevealResult,
+		UnrevealedKillData, new_game,
 	},
 	testimony::{ConfessorClaim, Direction, RoleClaim, Testimony},
 	villager::{GoodVillager, Minion, VillagerArchetype, VillagerIndex, VillagerInstance},
@@ -488,7 +489,7 @@ fn simple_game_9() {
 				Some(VillagerInstance::new(
 					VillagerArchetype::GoodVillager(GoodVillager::Hunter),
 					Some(Testimony::hunter(
-						&VillagerIndex(2),
+						&VillagerIndex(1),
 						2,
 						game_state.total_villagers(),
 					)),
@@ -507,10 +508,17 @@ fn simple_game_9() {
 			)),
 			Action::TryExecute(KillAttempt::new(
 				VillagerIndex(5),
-				Some(KillResult::Revealed(
+				Some(KillResult::Unrevealed(UnrevealedKillData::new(
+					VillagerInstance::new(
+						VillagerArchetype::GoodVillager(GoodVillager::Medium),
+						Some(Expression::Leaf(Testimony::Role(RoleClaim::new(
+							VillagerIndex(5),
+							VillagerArchetype::GoodVillager(GoodVillager::Medium),
+						)))),
+					),
 					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false)
 						.expect("Bad kill data"),
-				)),
+				))),
 			)),
 		],
 		Some(3),

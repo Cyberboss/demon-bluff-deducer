@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
 	Expression,
-	testimony::Testimony,
+	testimony::{self, Testimony},
 	villager::{
 		ActiveVillager, ConfirmedVillager, Demon, ExecutionResult, GoodVillager, HiddenVillager,
 		Minion, Outcast, Villager, VillagerArchetype, VillagerIndex, VillagerInstance,
@@ -62,8 +62,7 @@ pub enum KillResult {
 
 #[derive(Debug)]
 pub struct UnrevealedKillData {
-	identity: VillagerArchetype,
-	testimony: Option<Expression<Testimony>>,
+	instance: VillagerInstance,
 	inner: KillData,
 }
 
@@ -189,6 +188,12 @@ impl KillData {
 			true_identity,
 			corrupted,
 		})
+	}
+}
+
+impl UnrevealedKillData {
+	pub fn new(instance: VillagerInstance, inner: KillData) -> Self {
+		Self { instance, inner }
 	}
 }
 
@@ -527,12 +532,9 @@ impl GameState {
 						match attempt.result {
 							Some(result) => match result {
 								KillResult::Unrevealed(kill_data) => {
-									let new_instance = VillagerInstance::new(
-										kill_data.identity,
-										kill_data.testimony,
-									);
+									let new_instance = kill_data.instance;
 
-									if valid_draw(&self.deck, new_instance.archetype()) {
+									if !valid_draw(&self.deck, new_instance.archetype()) {
 										return Err(GameStateMutationError::InvalidReveal);
 									}
 
@@ -674,10 +676,7 @@ impl GameState {
 									// safe to do this here, slayer can only kill once
 									match &slayer_kill.result {
 										KillResult::Unrevealed(kill_data) => {
-											let new_instance = VillagerInstance::new(
-												kill_data.identity.clone(),
-												kill_data.testimony.clone(),
-											);
+											let new_instance = &kill_data.instance;
 											if valid_draw(&self.deck, new_instance.archetype()) {
 												return Err(GameStateMutationError::InvalidReveal);
 											}
@@ -691,7 +690,7 @@ impl GameState {
 											}
 
 											let confirmed_villager = ConfirmedVillager::new(
-												new_instance,
+												new_instance.clone(),
 												kill_data.inner.true_identity.clone(),
 												kill_data.inner.corrupted,
 											);
