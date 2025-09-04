@@ -44,26 +44,24 @@ impl<Type> Expression<Type>
 where
 	Type: Display,
 {
-	pub fn or_from_iterator(iterator: impl Iterator<Item = Type>) -> Option<Self> {
+	pub fn or_from_iterator(iterator: impl Iterator<Item = Expression<Type>>) -> Option<Self> {
 		let mut expr = None;
 		for item in iterator {
-			let unary_expression = Expression::Leaf(item);
 			expr = Some(match expr {
-				Some(expr) => Expression::Or(Box::new(expr), Box::new(unary_expression)),
-				None => unary_expression,
+				Some(expr) => Expression::Or(Box::new(expr), Box::new(item)),
+				None => item,
 			});
 		}
 
 		expr
 	}
 
-	pub fn and_from_iterator(iterator: impl Iterator<Item = Type>) -> Option<Self> {
+	pub fn and_from_iterator(iterator: impl Iterator<Item = Expression<Type>>) -> Option<Self> {
 		let mut expr = None;
 		for item in iterator {
-			let unary_expression = Expression::Leaf(item);
 			expr = Some(match expr {
-				Some(expr) => Expression::And(Box::new(expr), Box::new(unary_expression)),
-				None => unary_expression,
+				Some(expr) => Expression::And(Box::new(expr), Box::new(item)),
+				None => item,
 			});
 		}
 

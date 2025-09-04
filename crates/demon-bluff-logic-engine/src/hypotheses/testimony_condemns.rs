@@ -152,7 +152,6 @@ fn condemns(
 		}
 		Testimony::Good(_)
 		| Testimony::Corrupt(_)
-		| Testimony::NotCorrupt(_)
 		| Testimony::Cured(_)
 		| Testimony::Baker(_)
 		| Testimony::Invincible(_)

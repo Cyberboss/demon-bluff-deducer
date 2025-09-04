@@ -44,7 +44,8 @@ where
 
 	// Generate all possible assignments (2^n where n is number of variables)
 	let num_vars = variables.len();
-	for i in 0..(1 << num_vars) {
+	let total_potential_assignments = 1 << num_vars;
+	for i in 0..total_potential_assignments {
 		let mut assignment = HashMap::new();
 
 		for (j, var) in variables.iter().enumerate() {

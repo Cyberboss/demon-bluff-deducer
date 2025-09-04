@@ -129,7 +129,6 @@ pub enum Testimony {
 	Good(VillagerIndex),
 	Evil(VillagerIndex),
 	Corrupt(VillagerIndex),
-	NotCorrupt(VillagerIndex),
 	Lying(VillagerIndex),
 	Cured(VillagerIndex),
 	Baker(BakerClaim),
@@ -223,18 +222,18 @@ impl Testimony {
 
 		let mut expr;
 		if villagers_cured == 0 {
-			expr = Expression::and_from_iterator(
-				potential_indicies
-					.iter()
-					.map(|index| Testimony::NotCorrupt(VillagerIndex(*index))),
-			);
+			expr = Expression::and_from_iterator(potential_indicies.iter().map(|index| {
+				Expression::Not(Box::new(Expression::Leaf(Testimony::Corrupt(
+					VillagerIndex(*index),
+				))))
+			}));
 		} else {
 			expr = None;
 			for combo in potential_indicies.iter().combinations(villagers_cured) {
 				let new_expr = Expression::and_from_iterator(
 					combo
 						.iter()
-						.map(|index| Testimony::Cured(VillagerIndex(**index))),
+						.map(|index| Expression::Leaf(Testimony::Cured(VillagerIndex(**index)))),
 				);
 
 				let new_expr =
@@ -556,7 +555,6 @@ impl Display for Testimony {
 			Self::Good(villager_index) => write!(f, "{villager_index} is good"),
 			Self::Evil(villager_index) => write!(f, "{villager_index} is evil"),
 			Self::Corrupt(villager_index) => write!(f, "{villager_index} is corrupt"),
-			Self::NotCorrupt(villager_index) => write!(f, "{villager_index} is not corrupt"),
 			Self::Lying(villager_index) => write!(f, "{villager_index} is lying"),
 			Self::Cured(villager_index) => write!(f, "{villager_index} was cured of corruption"),
 			Self::Baker(baker_claim) => match &baker_claim.was {

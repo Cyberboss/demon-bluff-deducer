@@ -103,15 +103,6 @@ impl HypothesisBuilder for TestimonyHypothesisBuilder {
 				desire_villager_testimony(villager_index);
 				Some(IsCorruptHypothesisBuilder::new(villager_index.clone()).into())
 			}
-			Testimony::NotCorrupt(villager_index) => {
-				desire_villager_testimony(villager_index);
-				Some(
-					NegateHypothesisBuilder::new(IsCorruptHypothesisBuilder::new(
-						villager_index.clone(),
-					))
-					.into(),
-				)
-			}
 			Testimony::Lying(villager_index) => {
 				desire_villager_testimony(villager_index);
 				Some(
@@ -193,7 +184,6 @@ impl Hypothesis for TestimonyHypothesis {
 			| Testimony::Evil(villager_index)
 			| Testimony::Corrupt(villager_index)
 			| Testimony::Lying(villager_index)
-			| Testimony::NotCorrupt(villager_index)
 			| Testimony::SelfDestruct(villager_index) => {
 				let reverse_testimony_desire = self
 					.reverse_testimony_desires

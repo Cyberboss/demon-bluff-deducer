@@ -14,19 +14,22 @@ use demon_bluff_gameplay_engine::{
 	},
 };
 use itertools::Itertools;
+use serde::de;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub struct TheoreticalVillager {
 	pub inner: ConfirmedVillager,
+	pub actually_dead: bool,
 	pub was_corrupt: bool,
 	pub baked_from: Option<VillagerArchetype>,
 	pub affection: Option<AffectType>,
 }
 
-impl From<ConfirmedVillager> for TheoreticalVillager {
-	fn from(value: ConfirmedVillager) -> Self {
+impl TheoreticalVillager {
+	pub fn new(value: ConfirmedVillager, dead: bool) -> Self {
 		let was_corrupt = value.corrupted();
 		Self {
+			actually_dead: dead,
 			inner: value,
 			was_corrupt,
 			baked_from: None,
@@ -35,11 +38,12 @@ impl From<ConfirmedVillager> for TheoreticalVillager {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
 pub struct BoardLayout {
 	pub villagers: Vec<TheoreticalVillager>,
 	pub evil_locations: BTreeSet<VillagerIndex>,
 	pub description: String,
+	pub of_interest: bool,
 }
 
 pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
@@ -114,16 +118,21 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 								.iter()
 								.map(|villager| match villager {
 									Villager::Active(active_villager) => {
-										Some((active_villager.instance(), None))
+										(Some((active_villager.instance(), None)), false)
 									}
-									Villager::Hidden(_) => None,
-									Villager::Confirmed(confirmed_villager) => Some((
-										confirmed_villager.instance(),
-										Some(confirmed_villager),
-									)),
+									Villager::Hidden(hidden_villager) => {
+										(None, hidden_villager.dead())
+									}
+									Villager::Confirmed(confirmed_villager) => (
+										Some((
+											confirmed_villager.instance(),
+											Some(confirmed_villager),
+										)),
+										true,
+									),
 								})
 								.enumerate()
-								.map(|(index, instance_and_confirmed)| {
+								.map(|(index, (instance_and_confirmed, dead))| {
 									let index = VillagerIndex(index);
 
 									if index == **disguise_index {
@@ -161,25 +170,31 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 											disguised_archetype
 										);
 
-										ConfirmedVillager::new(
-											instance.clone(),
-											Some(disguised_archetype),
+										TheoreticalVillager::new(
+											ConfirmedVillager::new(
+												instance.clone(),
+												Some(disguised_archetype),
+												false,
+											),
 											false,
 										)
 									} else {
 										let mut unknown_hidden = false;
-										let confirmed = if let Some((instance, confirmed)) =
+										let theoretical = if let Some((instance, confirmed)) =
 											instance_and_confirmed
 										{
 											if let Some(confirmed) = confirmed {
-												confirmed.clone()
+												TheoreticalVillager::new(confirmed.clone(), dead)
 											} else {
 												let corrupt =
 													instance.archetype().starts_corrupted();
-												ConfirmedVillager::new(
-													instance.clone(),
-													None,
-													corrupt,
+												TheoreticalVillager::new(
+													ConfirmedVillager::new(
+														instance.clone(),
+														None,
+														corrupt,
+													),
+													dead,
 												)
 											}
 										} else {
@@ -187,10 +202,16 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 											let good_archetype = good_archetype_option
 												.expect("No good archetype available to populate!");
 											let corrupt = good_archetype.starts_corrupted();
-											ConfirmedVillager::new(
-												VillagerInstance::new(good_archetype.clone(), None),
-												None,
-												corrupt,
+											TheoreticalVillager::new(
+												ConfirmedVillager::new(
+													VillagerInstance::new(
+														good_archetype.clone(),
+														None,
+													),
+													None,
+													corrupt,
+												),
+												dead,
 											)
 										};
 
@@ -206,13 +227,12 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 											if unknown_hidden {
 												String::from_str("Unknown").unwrap()
 											} else {
-												format!("{}", confirmed.true_identity())
+												format!("{}", theoretical.inner.true_identity())
 											},
 										);
 
-										confirmed
+										theoretical
 									}
-									.into()
 								})
 								.collect();
 
@@ -384,6 +404,7 @@ fn with_adjacent_affects(
 				villagers: mutated_confirmeds,
 				description: mutated_desc,
 				evil_locations: evil_locations.clone(),
+				of_interest: false,
 			});
 		}
 	}
@@ -393,6 +414,7 @@ fn with_adjacent_affects(
 			villagers: initial_theoreticals,
 			description: base_desc,
 			evil_locations: evil_locations,
+			of_interest: false,
 		});
 	}
 

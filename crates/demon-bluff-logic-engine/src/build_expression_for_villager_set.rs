@@ -12,6 +12,12 @@ pub struct IndexTestimony {
 	pub testimony: Testimony,
 }
 
+impl IndexTestimony {
+	pub fn new(index: VillagerIndex, testimony: Testimony) -> Self {
+		Self { index, testimony }
+	}
+}
+
 impl Display for IndexTestimony {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{} says: {}", self.index, self.testimony)
@@ -56,10 +62,9 @@ fn map_testimony(
 	index: &VillagerIndex,
 ) -> Expression<IndexTestimony> {
 	match original {
-		Expression::Leaf(testimony) => Expression::Leaf(IndexTestimony {
-			index: index.clone(),
-			testimony: testimony.clone(),
-		}),
+		Expression::Leaf(testimony) => {
+			Expression::Leaf(IndexTestimony::new(index.clone(), testimony.clone()))
+		}
 		Expression::Not(expression) => Expression::Not(Box::new(map_testimony(expression, index))),
 		Expression::And(lhs, rhs) => Expression::And(
 			Box::new(map_testimony(lhs, index)),

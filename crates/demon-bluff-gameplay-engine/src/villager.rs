@@ -655,7 +655,11 @@ impl VillagerArchetype {
 				}
 				Outcast::PlagueDoctor => Expression::or_from_iterator(
 					other_indicies(&index, total_villagers).map(|other_index| {
-						VillagerAffect::from_index(&index, &other_index, total_villagers)
+						Expression::Leaf(VillagerAffect::from_index(
+							&index,
+							&other_index,
+							total_villagers,
+						))
 					}),
 				)
 				.map(Affect::Corrupt),
@@ -804,6 +808,10 @@ impl ConfirmedVillager {
 			true_identity,
 			corrupted,
 		}
+	}
+
+	pub fn will_lie(&self) -> bool {
+		!self.instance.archetype.cannot_lie() && (self.corrupted || self.true_identity().lies())
 	}
 
 	pub fn true_identity(&self) -> &VillagerArchetype {

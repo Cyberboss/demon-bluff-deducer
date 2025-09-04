@@ -122,7 +122,6 @@ fn exonerates(testimony: &Testimony, defendant: &VillagerIndex, testifier: &Vill
 		}
 		Testimony::Evil(_)
 		| Testimony::Lying(_)
-		| Testimony::NotCorrupt(_)
 		| Testimony::Cured(_)
 		| Testimony::Baker(_)
 		| Testimony::Affected(_)
