@@ -2,9 +2,7 @@
 
 mod build_board_layouts;
 mod build_expression_for_villager_set;
-mod engine;
 mod expression_assertion;
-mod hypotheses;
 mod player_action;
 mod prediction_error;
 mod with_theoretical_testimony;
@@ -31,34 +29,12 @@ use demon_bluff_gameplay_engine::{
 		VillagerIndex, VillagerInstance,
 	},
 };
-use engine::evaluate;
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
 use log::{Log, debug, info, logger, warn};
 use player_action::AbilityAttempt;
 use with_theoretical_testimony::with_theoretical_testimony;
 
-pub use self::{
-	engine::{Breakpoint, DebuggerContext, DesireNode, FITNESS_UNIMPLEMENTED, HypothesisNode},
-	player_action::PlayerAction,
-	prediction_error::PredictionError,
-};
-use crate::hypotheses::MasterHypothesisBuilder;
-
-pub fn predict_with_debugger<FDebugBreak>(
-	log: &impl Log,
-	state: &GameState,
-	breakpoint_handler: FDebugBreak,
-) -> Result<HashSet<PlayerAction>, PredictionError>
-where
-	FDebugBreak: FnMut(Breakpoint) + Clone,
-{
-	evaluate(
-		state,
-		MasterHypothesisBuilder::default(),
-		log,
-		Some(breakpoint_handler),
-	)
-}
+pub use self::{player_action::PlayerAction, prediction_error::PredictionError};
 
 struct PredictionResult {
 	all_matching_layouts: HashSet<BoardLayout>,
@@ -516,10 +492,6 @@ fn validate_assignment(
 
 		let testimony_valid = match &index_testimony.testimony {
 			Testimony::Good(villager_index) => !theoreticals[villager_index.0]
-				.inner
-				.true_identity()
-				.is_evil(),
-			Testimony::Evil(villager_index) => theoreticals[villager_index.0]
 				.inner
 				.true_identity()
 				.is_evil(),
