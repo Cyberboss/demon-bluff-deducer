@@ -127,6 +127,7 @@ impl Display for EvilPairsClaim {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum Testimony {
 	Good(VillagerIndex),
+	Evil(VillagerIndex),
 	Corrupt(VillagerIndex),
 	Lying(VillagerIndex),
 	Cured(VillagerIndex),
@@ -254,11 +255,17 @@ impl Testimony {
 	) -> Expression<Testimony> {
 		// hunter = (+N is evil || -N is evil) && (+(<N) good && -(<N) good)
 
-		let clockwise_evil_unary = Expression::Not(Box::new(Expression::Leaf(Testimony::Good(
-			index_offset(start_index, total_villagers, distance, true),
-		))));
-		let counter_clockwise_evil_unary = Expression::Not(Box::new(Expression::Leaf(
-			Testimony::Good(index_offset(start_index, total_villagers, distance, false)),
+		let clockwise_evil_unary = Expression::Leaf(Testimony::Evil(index_offset(
+			start_index,
+			total_villagers,
+			distance,
+			true,
+		)));
+		let counter_clockwise_evil_unary = Expression::Leaf(Testimony::Evil(index_offset(
+			start_index,
+			total_villagers,
+			distance,
+			false,
 		)));
 
 		let evil_or = Expression::Or(
@@ -346,11 +353,17 @@ impl Testimony {
 
 		if amount == 2 {
 			Expression::And(
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Good(index_offset(start_index, total_villagers, 1, true)),
+				Box::new(Expression::Leaf(Testimony::Evil(index_offset(
+					start_index,
+					total_villagers,
+					1,
+					true,
 				)))),
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Good(index_offset(start_index, total_villagers, 1, false)),
+				Box::new(Expression::Leaf(Testimony::Evil(index_offset(
+					start_index,
+					total_villagers,
+					1,
+					false,
 				)))),
 			)
 		} else if amount == 0 {
@@ -377,13 +390,19 @@ impl Testimony {
 						1,
 						true,
 					)))),
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Good(index_offset(start_index, total_villagers, 1, false)),
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
+						start_index,
+						total_villagers,
+						1,
+						false,
 					)))),
 				)),
 				Box::new(Expression::And(
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Good(index_offset(start_index, total_villagers, 1, true)),
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
+						start_index,
+						total_villagers,
+						1,
+						true,
 					)))),
 					Box::new(Expression::Leaf(Testimony::Good(index_offset(
 						start_index,
@@ -466,30 +485,26 @@ impl Testimony {
 
 			let evil_expression = if odd_villagers {
 				Expression::And(
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Good(index_offset(
-							start_index,
-							total_villagers,
-							non_opposite_villagers_per_side,
-							true,
-						)),
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
+						start_index,
+						total_villagers,
+						non_opposite_villagers_per_side,
+						true,
 					)))),
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Good(index_offset(
-							start_index,
-							total_villagers,
-							non_opposite_villagers_per_side,
-							false,
-						)),
+					Box::new(Expression::Leaf(Testimony::Evil(index_offset(
+						start_index,
+						total_villagers,
+						non_opposite_villagers_per_side,
+						false,
 					)))),
 				)
 			} else {
-				Expression::Not(Box::new(Expression::Leaf(Testimony::Good(index_offset(
+				Expression::Leaf(Testimony::Evil(index_offset(
 					start_index,
 					total_villagers,
 					half_villagers,
 					true,
-				)))))
+				)))
 			};
 
 			match expression {
@@ -513,9 +528,7 @@ impl Testimony {
 					);
 
 					let mut expression = Expression::And(
-						Box::new(Expression::Not(Box::new(Expression::Leaf(
-							Testimony::Good(evil_index.clone()),
-						)))),
+						Box::new(Expression::Leaf(Testimony::Evil(evil_index.clone()))),
 						Box::new(Expression::Leaf(Testimony::Good(good_index.clone()))),
 					);
 
@@ -577,6 +590,7 @@ impl Display for Testimony {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Good(villager_index) => write!(f, "{villager_index} is good"),
+			Self::Evil(villager_index) => write!(f, "{villager_index} is evil"),
 			Self::Corrupt(villager_index) => write!(f, "{villager_index} is corrupt"),
 			Self::Lying(villager_index) => write!(f, "{villager_index} is lying"),
 			Self::Cured(villager_index) => write!(f, "{villager_index} was cured of corruption"),
@@ -642,12 +656,8 @@ fn test_hunter() {
 				Box::new(Expression::Leaf(Testimony::Good(VillagerIndex(0))))  // #1
 			)),
 			Box::new(Expression::Or(
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Good(VillagerIndex(3))
-				)))), // #4
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Good(VillagerIndex(4))
-				)))) // #5
+				Box::new(Expression::Leaf(Testimony::Evil(VillagerIndex(3)))), // #4
+				Box::new(Expression::Leaf(Testimony::Evil(VillagerIndex(4))))  // #5
 			))
 		),
 		Testimony::hunter(&VillagerIndex(1), 2, 5)
