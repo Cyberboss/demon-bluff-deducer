@@ -5,15 +5,13 @@ mod build_expression_for_villager_set;
 mod expression_assertion;
 mod player_action;
 mod prediction_error;
+mod reveal_strategy;
 mod with_theoretical_testimony;
 
 use core::panic;
 use std::{
-	arch::breakpoint,
-	cmp::{max, min},
-	collections::{BTreeMap, BTreeSet, HashMap, HashSet, hash_map::Entry},
-	fs::File,
-	str::FromStr,
+	cmp::max,
+	collections::{BTreeSet, HashMap, HashSet, hash_map::Entry},
 	sync::atomic::{AtomicI32, Ordering},
 	usize,
 };
@@ -23,20 +21,19 @@ use build_expression_for_villager_set::{IndexTestimony, build_expression_for_vil
 use demon_bluff_gameplay_engine::{
 	Expression,
 	affect::Affect,
-	game_state::{self, GameState},
-	testimony::{self, ConfessorClaim, Testimony, index_offset},
-	villager::{
-		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
-		VillagerIndex, VillagerInstance,
-	},
+	game_state::GameState,
+	testimony::{ConfessorClaim, Testimony, index_offset},
+	villager::{GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
-use log::{Log, debug, info, logger, warn};
+use log::{Log, debug, info, warn};
 use player_action::AbilityAttempt;
-use rayon::prelude::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use with_theoretical_testimony::with_theoretical_testimony;
 
-pub use self::{player_action::PlayerAction, prediction_error::PredictionError};
+pub use self::{
+	player_action::PlayerAction, prediction_error::PredictionError, reveal_strategy::RevealStrategy,
+};
 
 struct PredictionResult {
 	all_matching_layouts: HashSet<BoardLayout>,
@@ -47,14 +44,8 @@ struct PredictionResult {
 pub fn predict(
 	log: &impl Log,
 	state: &GameState,
+	reveal_strategy: RevealStrategy,
 ) -> Result<HashSet<PlayerAction>, PredictionError> {
-	/* evaluate(
-		state,
-		MasterHypothesisBuilder::default(),
-		log,
-		None::<fn(Breakpoint)>,
-	)*/
-
 	let mut any_revealed = false;
 	state.iter_villagers(|_, villager| {
 		if let Villager::Hidden(_) = villager {
@@ -78,15 +69,6 @@ pub fn predict(
 		}
 	}
 
-	if state.night_actions_in_play()
-		|| state
-			.deck()
-			.iter()
-			.any(|archetype| *archetype == VillagerArchetype::Minion(Minion::Witch))
-	{
-		todo!("Need better revealing algorithm to support these cases")
-	}
-
 	// Step three, need more info. Figure out how to best use reveals/abilities to gain info
 	// For now just reveal the first hidden index and we'll make it better later
 	let mut hidden_index = None;
@@ -99,12 +81,7 @@ pub fn predict(
 	});
 
 	match hidden_index {
-		Some(villager_to_reveal) => {
-			let mut actions = HashSet::new();
-			actions.insert(PlayerAction::TryReveal(villager_to_reveal));
-
-			Ok(actions)
-		}
+		Some(villager_to_reveal) => Ok(reveal_strategy.get_reveal(log, state)),
 		None => {
 			info!(logger: log, "We must try to use an ability");
 

@@ -7,9 +7,9 @@ use demon_bluff_gameplay_engine::{
 	testimony::{ConfessorClaim, Direction, RoleClaim, Testimony},
 	villager::{GoodVillager, Minion, VillagerArchetype, VillagerIndex, VillagerInstance},
 };
-use demon_bluff_logic_engine::{PlayerAction, predict};
+use demon_bluff_logic_engine::{PlayerAction, RevealStrategy, predict};
 
-use crate::helpers::run_game;
+use super::run_game;
 
 #[test]
 pub fn game_1() {
@@ -30,7 +30,8 @@ pub fn game_1() {
 
 	// reveal lover
 	println!("Prediction 1:");
-	let mut prediction = predict(&log, &state).expect("prediction failed??");
+	let mut prediction =
+		predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryReveal(VillagerIndex(0)),
@@ -54,7 +55,7 @@ pub fn game_1() {
 
 	// reveal confessor (fake)
 	println!("Prediction 2:");
-	prediction = predict(&log, &state).expect("prediction failed??");
+	prediction = predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryReveal(VillagerIndex(1)),
@@ -74,7 +75,7 @@ pub fn game_1() {
 
 	// kill confessor
 	println!("Prediction 3:");
-	prediction = predict(&log, &state).expect("prediction failed??");
+	prediction = predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryExecute(VillagerIndex(1)),
@@ -112,7 +113,8 @@ pub fn game_2() {
 
 	// reveal confessor (fake)
 	println!("Prediction 1:");
-	let mut prediction = predict(&log, &state).expect("prediction failed??");
+	let mut prediction =
+		predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryReveal(VillagerIndex(0)),
@@ -132,7 +134,7 @@ pub fn game_2() {
 
 	// kill confessor
 	println!("Prediction 2:");
-	prediction = predict(&log, &state).expect("prediction failed??");
+	prediction = predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryExecute(VillagerIndex(0)),
@@ -171,7 +173,8 @@ pub fn game_3() {
 
 	// reveal enlightend
 	println!("Prediction 1:");
-	let mut prediction = predict(&log, &state).expect("prediction failed??");
+	let mut prediction =
+		predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryReveal(VillagerIndex(0)),
@@ -194,7 +197,7 @@ pub fn game_3() {
 
 	// reveal hunter(fake)
 	println!("Prediction 2:");
-	prediction = predict(&log, &state).expect("prediction failed??");
+	prediction = predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	assert_eq!(
 		&PlayerAction::TryReveal(VillagerIndex(1)),
@@ -217,7 +220,7 @@ pub fn game_3() {
 
 	// kill fake hunter
 	println!("Prediction 3:");
-	prediction = predict(&log, &state).expect("prediction failed??");
+	prediction = predict(&log, &state, RevealStrategy::Simple).expect("prediction failed??");
 
 	// From Naksu: these are essentially their respective claims (visualization of evil claims showing enlightened isn't claimed evil), they are incompatible meaning one of them is lying. there is only one liar. #2's claim does not allow for #1 to be a liar, therefore #2 is the only option. #3 doesn't matter
 	assert_eq!(

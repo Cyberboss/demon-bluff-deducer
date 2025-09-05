@@ -4,10 +4,14 @@ use std::{
 };
 
 use demon_bluff_gameplay_engine::game_state::{Action, GameState, GameStateMutationResult};
-use demon_bluff_logic_engine::{PlayerAction, predict};
+use demon_bluff_logic_engine::{PlayerAction, RevealStrategy, predict};
 use itertools::Itertools;
 
-pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
+pub fn test_game_state(
+	state_name: &str,
+	expected_outcome: PlayerAction,
+	reveal_strategy: RevealStrategy,
+) {
 	let mut path = PathBuf::new();
 	path.push("tests");
 	path.push("game_states");
@@ -22,8 +26,9 @@ pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
 	// colog::init();
 
 	let log = log::logger();
-	let action =
-		predict(&log, &game_state).unwrap_or_else(|err| panic!("Prediction error occured: {err}"));
+	let action = predict(&log, &game_state, reveal_strategy).unwrap_or_else(
+		|err: demon_bluff_logic_engine::PredictionError| panic!("Prediction error occured: {err}"),
+	);
 
 	assert_eq!(
 		expected_outcome,
@@ -35,7 +40,12 @@ pub fn test_game_state(state_name: &str, expected_outcome: PlayerAction) {
 	assert_eq!(1, action.len());
 }
 
-pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after: Option<usize>) {
+pub fn run_game(
+	game_state: &GameState,
+	expected_actions: Vec<Action>,
+	log_after: Option<usize>,
+	reveal_strategy: RevealStrategy,
+) {
 	let mut game_state = game_state.clone();
 	let total_actions = expected_actions.len();
 	for (index, action) in expected_actions.into_iter().enumerate() {
@@ -46,7 +56,8 @@ pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after
 		}
 
 		let log = log::logger();
-		let player_actions = predict(&log, &game_state).expect("Failed prediction!");
+		let player_actions =
+			predict(&log, &game_state, reveal_strategy).expect("Failed prediction!");
 
 		if index == total_actions - 1 && player_actions.len() > 1 {
 			panic!(

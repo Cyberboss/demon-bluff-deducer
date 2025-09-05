@@ -5,7 +5,7 @@ use demon_bluff_gameplay_engine::{
 	villager::{GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance},
 };
 
-use crate::helpers::run_game;
+use super::run_game;
 
 #[test]
 fn game_11() {
