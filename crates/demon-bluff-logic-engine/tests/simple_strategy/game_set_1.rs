@@ -1,18 +1,233 @@
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::{
-		AbilityResult, Action, DrawStats, KillAttempt, KillData, KillResult, RevealResult,
-		UnrevealedKillData, new_game,
+		AbilityResult, Action, DrawStats, GameStateMutationResult, KillAttempt, KillData,
+		KillResult, RevealResult, new_game,
 	},
 	testimony::{ConfessorClaim, Direction, RoleClaim, Testimony},
 	villager::{GoodVillager, Minion, VillagerArchetype, VillagerIndex, VillagerInstance},
 };
-use test_helpers::run_game;
+use demon_bluff_logic_engine::{PlayerAction, predict};
 
-mod test_helpers;
+use crate::helpers::run_game;
 
 #[test]
-fn simple_game_4() {
+pub fn game_1() {
+	let log = log::logger();
+
+	let mut state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Lover),
+			VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
+			VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+			VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+			VillagerArchetype::Minion(Minion::Minion),
+		],
+		DrawStats::new(4, 0, 1, 0),
+		1,
+		false,
+	);
+
+	// reveal lover
+	println!("Prediction 1:");
+	let mut prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryReveal(VillagerIndex(0)),
+		prediction.iter().next().unwrap()
+	);
+
+	let mut mutation_result = state
+		.mutate(Action::TryReveal(RevealResult::new(
+			VillagerIndex(0),
+			Some(VillagerInstance::new(
+				VillagerArchetype::GoodVillager(GoodVillager::Lover),
+				Some(Testimony::lover(
+					&VillagerIndex(0),
+					1,
+					state.total_villagers(),
+				)),
+			)),
+		)))
+		.expect("malformed game step??");
+	assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+	// reveal confessor (fake)
+	println!("Prediction 2:");
+	prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryReveal(VillagerIndex(1)),
+		prediction.iter().next().unwrap()
+	);
+
+	mutation_result = state
+		.mutate(Action::TryReveal(RevealResult::new(
+			VillagerIndex(1),
+			Some(VillagerInstance::new(
+				VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+				Some(Expression::Leaf(Testimony::Confess(ConfessorClaim::Dizzy))),
+			)),
+		)))
+		.expect("malformed game step??");
+	assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+	// kill confessor
+	println!("Prediction 3:");
+	prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryExecute(VillagerIndex(1)),
+		prediction.iter().next().unwrap()
+	);
+
+	mutation_result = state
+		.mutate(Action::TryExecute(KillAttempt::new(
+			VillagerIndex(1),
+			Some(KillResult::Revealed(
+				KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false)
+					.expect("This is valid kill data"),
+			)),
+		)))
+		.expect("malformed game step??");
+	assert_eq!(GameStateMutationResult::Win, mutation_result);
+}
+
+#[test]
+pub fn game_2() {
+	let log = log::logger();
+
+	let mut state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Lover),
+			VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
+			VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+			VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+			VillagerArchetype::Minion(Minion::Minion),
+		],
+		DrawStats::new(4, 0, 1, 0),
+		1,
+		false,
+	);
+
+	// reveal confessor (fake)
+	println!("Prediction 1:");
+	let mut prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryReveal(VillagerIndex(0)),
+		prediction.iter().next().unwrap()
+	);
+
+	let mut mutation_result = state
+		.mutate(Action::TryReveal(RevealResult::new(
+			VillagerIndex(0),
+			Some(VillagerInstance::new(
+				VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+				Some(Expression::Leaf(Testimony::Confess(ConfessorClaim::Dizzy))),
+			)),
+		)))
+		.expect("malformed game step??");
+	assert_eq!(GameStateMutationResult::Continue, mutation_result);
+
+	// kill confessor
+	println!("Prediction 2:");
+	prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryExecute(VillagerIndex(0)),
+		prediction.iter().next().unwrap()
+	);
+
+	mutation_result = state
+		.mutate(Action::TryExecute(KillAttempt::new(
+			VillagerIndex(0),
+			Some(KillResult::Revealed(
+				KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false)
+					.expect("This is valid kill data"),
+			)),
+		)))
+		.expect("malformed game step??");
+	assert_eq!(GameStateMutationResult::Win, mutation_result);
+}
+
+#[test]
+pub fn game_3() {
+	let log = log::logger();
+
+	let mut state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Lover),
+			VillagerArchetype::GoodVillager(GoodVillager::Gemcrafter),
+			VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+			VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+			VillagerArchetype::GoodVillager(GoodVillager::Enlightened),
+			VillagerArchetype::Minion(Minion::Minion),
+		],
+		DrawStats::new(4, 0, 1, 0),
+		1,
+		false,
+	);
+
+	// reveal enlightend
+	println!("Prediction 1:");
+	let mut prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryReveal(VillagerIndex(0)),
+		prediction.iter().next().unwrap()
+	);
+
+	state
+		.mutate(Action::TryReveal(RevealResult::new(
+			VillagerIndex(0),
+			Some(VillagerInstance::new(
+				VillagerArchetype::GoodVillager(GoodVillager::Enlightened),
+				Some(Testimony::englightened(
+					&VillagerIndex(0),
+					Direction::Clockwise,
+					state.total_villagers(),
+				)),
+			)),
+		)))
+		.expect("Bad mutation?");
+
+	// reveal hunter(fake)
+	println!("Prediction 2:");
+	prediction = predict(&log, &state).expect("prediction failed??");
+
+	assert_eq!(
+		&PlayerAction::TryReveal(VillagerIndex(1)),
+		prediction.iter().next().unwrap()
+	);
+
+	state
+		.mutate(Action::TryReveal(RevealResult::new(
+			VillagerIndex(1),
+			Some(VillagerInstance::new(
+				VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+				Some(Testimony::hunter(
+					&VillagerIndex(1),
+					2,
+					state.total_villagers(),
+				)),
+			)),
+		)))
+		.expect("Bad mutation?");
+
+	// kill fake hunter
+	println!("Prediction 3:");
+	prediction = predict(&log, &state).expect("prediction failed??");
+
+	// From Naksu: these are essentially their respective claims (visualization of evil claims showing enlightened isn't claimed evil), they are incompatible meaning one of them is lying. there is only one liar. #2's claim does not allow for #1 to be a liar, therefore #2 is the only option. #3 doesn't matter
+	assert_eq!(
+		&PlayerAction::TryExecute(VillagerIndex(1)),
+		prediction.iter().next().unwrap()
+	);
+}
+
+#[test]
+fn game_4() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -90,7 +305,7 @@ fn simple_game_4() {
 }
 
 #[test]
-fn simple_game_5() {
+fn game_5() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -182,7 +397,7 @@ fn simple_game_5() {
 }
 
 #[test]
-fn simple_game_6() {
+fn game_6() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -272,7 +487,7 @@ fn simple_game_6() {
 }
 
 #[test]
-fn simple_game_7() {
+fn game_7() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -362,7 +577,7 @@ fn simple_game_7() {
 }
 
 #[test]
-fn simple_game_8() {
+fn game_8() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -454,7 +669,7 @@ fn simple_game_8() {
 }
 
 #[test]
-fn simple_game_9() {
+fn game_9() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -546,7 +761,7 @@ fn simple_game_9() {
 }
 
 #[test]
-fn simple_game_10() {
+fn game_10() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -604,6 +819,6 @@ fn simple_game_10() {
 				)),
 			)),
 		],
-		Some(3),
+		None,
 	);
 }

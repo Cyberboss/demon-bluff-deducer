@@ -1,12 +1,11 @@
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::{Action, DrawStats, KillAttempt, KillData, KillResult, RevealResult, new_game},
-	testimony::{ConfessorClaim, Direction, RoleClaim, Testimony},
+	testimony::{Direction, RoleClaim, Testimony},
 	villager::{GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance},
 };
-use test_helpers::run_game;
 
-mod test_helpers;
+use crate::helpers::run_game;
 
 #[test]
 fn game_11() {
@@ -165,7 +164,7 @@ fn game_12() {
 				)),
 			)),
 		],
-		Some(7),
+		None,
 	);
 }
 
@@ -260,6 +259,6 @@ fn game_13() {
 				)),
 			)),
 		],
-		Some(7),
+		None,
 	);
 }
