@@ -8,7 +8,7 @@ use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::{self, GameState},
 	testimony::Testimony,
-	villager::{self, GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
+	villager::{self, GoodVillager, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 
 use crate::{
@@ -23,10 +23,11 @@ pub fn with_theoretical_testimony(
 	let board_configs: Vec<BoardLayout> = board_configs.into_iter().collect();
 	let mut iterators = Vec::new();
 	for initial_board_config in &board_configs {
-		iterators.push(iter_board_villagers(game_state, initial_board_config));
+		iterators.push(iter_board_villagers_once(game_state, initial_board_config));
 	}
 
-	let mut results = HashMap::with_capacity(iterators[0].len());
+	let mut results: HashMap<AbilityAttempt, Vec<BoardLayout>> =
+		HashMap::with_capacity(iterators[0].len());
 	loop {
 		let mut group: Vec<(BoardLayout, AbilityAttempt)> = Vec::new();
 		for iterator in &mut iterators {
@@ -52,10 +53,39 @@ pub fn with_theoretical_testimony(
 		);
 	}
 
-	results
+	// recursively expand every solution until all testimonies are acquired
+	let mut any_potential_testimonies_remaining = false;
+	'outer: for potential_layout in results
+		.iter()
+		.flat_map(|(_, potential_layouts)| potential_layouts.iter())
+	{
+		for theoretical in &potential_layout.villagers {
+			if theoretical.inner.instance().testimony().is_none() {
+				any_potential_testimonies_remaining = true;
+				break 'outer;
+			}
+		}
+	}
+
+	if any_potential_testimonies_remaining {
+		let mut expanded_results = HashMap::new();
+		for (ability_attempt, new_layouts) in results {
+			let expanded_layouts = with_theoretical_testimony(game_state, new_layouts);
+			let total_expanded_layouts = expanded_layouts
+				.into_iter()
+				.flat_map(|(_, expanded_layouts)| expanded_layouts.into_iter())
+				.collect();
+
+			expanded_results.insert(ability_attempt, total_expanded_layouts);
+		}
+
+		expanded_results
+	} else {
+		results
+	}
 }
 
-fn iter_board_villagers(
+fn iter_board_villagers_once(
 	game_state: &GameState,
 	inital_board_config: &BoardLayout,
 ) -> VecDeque<(BoardLayout, AbilityAttempt)> {
@@ -67,6 +97,8 @@ fn iter_board_villagers(
 			{
 				results.push_back(tuple);
 			}
+
+			break;
 		}
 	}
 

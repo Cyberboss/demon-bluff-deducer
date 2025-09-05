@@ -55,38 +55,41 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	let mut unrevealed_villagers = 0;
 	let mut outcast_count = 0;
 
-	game_state.iter_villagers(|index, villager| match villager {
-		Villager::Hidden(hidden_villager) => {
-			if !hidden_villager.cant_kill() {
-				disguisable_indicies.push(index);
-			}
+	game_state.iter_villagers(|index, villager| {
+		match villager {
+			Villager::Hidden(hidden_villager) => {
+				if !hidden_villager.cant_kill() {
+					disguisable_indicies.push(index);
+				}
 
-			unrevealed_villagers += 1;
+				unrevealed_villagers += 1;
+			}
+			Villager::Active(active_villager) => {
+				if matches!(
+					active_villager.instance().archetype(),
+					VillagerArchetype::Outcast(_)
+				) {
+					outcast_count += 1;
+				}
+
+				if !active_villager.cant_kill() {
+					disguisable_indicies.push(index);
+				}
+			}
+			Villager::Confirmed(confirmed_villager) => {
+				let true_identity = confirmed_villager.true_identity();
+				if true_identity.is_evil() {
+					remaining_evils -= 1;
+				}
+
+				if matches!(true_identity, VillagerArchetype::Outcast(_)) {
+					outcast_count += 1;
+				}
+
+				remaining_initial_draw.remove(true_identity);
+			}
 		}
-		Villager::Active(active_villager) => {
-			if matches!(
-				active_villager.instance().archetype(),
-				VillagerArchetype::Outcast(_)
-			) {
-				outcast_count += 1;
-			}
-
-			if !active_villager.cant_kill() {
-				disguisable_indicies.push(index);
-			}
-		}
-		Villager::Confirmed(confirmed_villager) => {
-			let true_identity = confirmed_villager.true_identity();
-			if true_identity.is_evil() {
-				remaining_evils -= 1;
-			}
-
-			if matches!(true_identity, VillagerArchetype::Outcast(_)) {
-				outcast_count += 1;
-			}
-
-			remaining_initial_draw.remove(true_identity);
-		}
+		true
 	});
 
 	let extra_outcasts = if outcast_count > game_state.draw_stats().outcasts() {

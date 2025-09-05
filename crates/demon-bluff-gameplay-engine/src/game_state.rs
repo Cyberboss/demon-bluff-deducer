@@ -321,10 +321,12 @@ impl GameState {
 
 	pub fn iter_villagers<'a, F>(&'a self, mut f: F)
 	where
-		F: FnMut(VillagerIndex, &'a Villager),
+		F: FnMut(VillagerIndex, &'a Villager) -> bool,
 	{
 		for (index, villager) in self.villagers.iter().enumerate() {
-			f(VillagerIndex(index), villager);
+			if !f(VillagerIndex(index), villager) {
+				break;
+			}
 		}
 	}
 

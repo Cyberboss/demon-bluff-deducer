@@ -19,6 +19,7 @@ mod with_theoretical_testimony;
 
 use core::panic;
 use std::{
+	arch::breakpoint,
 	cmp::max,
 	collections::{BTreeSet, HashMap, HashSet, hash_map::Entry},
 	sync::atomic::{AtomicI32, Ordering},
@@ -59,8 +60,10 @@ pub fn predict(
 	let mut any_revealed = false;
 	state.iter_villagers(|_, villager| {
 		if let Villager::Hidden(_) = villager {
+			true
 		} else {
 			any_revealed = true;
+			false
 		}
 	});
 
@@ -88,6 +91,9 @@ pub fn predict(
 			&& !hidden_villager.cant_reveal()
 		{
 			revealable_index = Some(index);
+			false
+		} else {
+			true
 		}
 	});
 
@@ -382,14 +388,18 @@ fn predict_board_configs(
 				can_get_more_information |= match villager {
 					Villager::Active(active_villager) => active_villager.instance().testimony(),
 					Villager::Hidden(hidden_villager) => {
-						can_get_more_information |= !hidden_villager.cant_reveal();
-						return;
+						if !hidden_villager.cant_reveal() {
+							can_get_more_information = true;
+						}
+
+						return !can_get_more_information;
 					}
 					Villager::Confirmed(confirmed_villager) => {
 						confirmed_villager.instance().testimony()
 					}
 				}
-				.is_none()
+				.is_none();
+				!can_get_more_information
 			});
 		}
 

@@ -31,6 +31,9 @@ fn simple_reveal(game_state: &GameState) -> HashSet<PlayerAction> {
 			&& let Villager::Hidden(_) = villager
 		{
 			hidden_index = Some(index);
+			false
+		} else {
+			true
 		}
 	});
 
