@@ -16,10 +16,7 @@ pub const VILLAGERS_MIN: usize = 7;
 pub const VILLAGERS_MAX: usize = 9;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, PartialOrd, Ord)]
-pub enum Expression<Type>
-where
-	Type: Display,
-{
+pub enum Expression<Type> {
 	Leaf(Type),
 	Not(Box<Expression<Type>>),
 	And(Box<Expression<Type>>, Box<Expression<Type>>),
@@ -40,10 +37,7 @@ where
 	}
 }
 
-impl<Type> Expression<Type>
-where
-	Type: Display,
-{
+impl<Type> Expression<Type> {
 	pub fn or_from_iterator(iterator: impl Iterator<Item = Expression<Type>>) -> Option<Self> {
 		let mut expr = None;
 		for item in iterator {
