@@ -56,8 +56,11 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	let mut outcast_count = 0;
 
 	game_state.iter_villagers(|index, villager| match villager {
-		Villager::Hidden(_) => {
-			disguisable_indicies.push(index);
+		Villager::Hidden(hidden_villager) => {
+			if !hidden_villager.cant_kill() {
+				disguisable_indicies.push(index);
+			}
+
 			unrevealed_villagers += 1;
 		}
 		Villager::Active(active_villager) => {
@@ -67,7 +70,10 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			) {
 				outcast_count += 1;
 			}
-			disguisable_indicies.push(index);
+
+			if !active_villager.cant_kill() {
+				disguisable_indicies.push(index);
+			}
 		}
 		Villager::Confirmed(confirmed_villager) => {
 			let true_identity = confirmed_villager.true_identity();
