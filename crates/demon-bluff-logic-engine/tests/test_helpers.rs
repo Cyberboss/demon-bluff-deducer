@@ -49,7 +49,13 @@ pub fn run_game(game_state: &GameState, expected_actions: Vec<Action>, log_after
 		let player_actions = predict(&log, &game_state).expect("Failed prediction!");
 
 		if index == total_actions - 1 && player_actions.len() > 1 {
-			panic!("Last prediction should always be decisive!");
+			panic!(
+				"Last prediction should always be decisive! Got: {}",
+				player_actions
+					.iter()
+					.map(|action| format!("{}", action))
+					.join("|")
+			);
 		}
 
 		let mut found_match = false;
