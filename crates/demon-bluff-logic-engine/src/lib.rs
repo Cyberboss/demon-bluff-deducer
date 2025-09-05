@@ -1,8 +1,17 @@
-#![feature(breakpoint, cold_path, rust_cold_cc, hash_set_entry, gen_blocks)]
+#![feature(
+	breakpoint,
+	cold_path,
+	rust_cold_cc,
+	hash_set_entry,
+	gen_blocks,
+	maybe_uninit_slice,
+	maybe_uninit_fill
+)]
 
 mod build_board_layouts;
 mod build_expression_for_villager_set;
 mod expression_assertion;
+mod optimized_expression;
 mod player_action;
 mod prediction_error;
 mod reveal_strategy;
@@ -27,6 +36,7 @@ use demon_bluff_gameplay_engine::{
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
 use log::{Log, debug, info, warn};
+use optimized_expression::OptimizedExpression;
 use player_action::AbilityAttempt;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use with_theoretical_testimony::with_theoretical_testimony;
@@ -255,7 +265,9 @@ fn predict_board_configs(
 	}
 
 	if let Some(master_expression) = master_expression {
-		let potential_assignments = collect_satisfying_assignments(&master_expression);
+		let optimized_master_expression = OptimizedExpression::new(&master_expression);
+
+		let potential_assignments = collect_satisfying_assignments(&optimized_master_expression);
 		if potential_assignments.is_empty() {
 			return Err(PredictionError::GameUnsolvable);
 		}
@@ -263,34 +275,35 @@ fn predict_board_configs(
 		let mut all_matching_layouts = HashSet::new();
 		let mut matching_layouts = HashSet::new();
 
-		let things_to_check: Vec<(
-			usize,
-			&Expression<IndexTestimony>,
-			&HashMap<IndexTestimony, bool>,
-		)> = potential_board_expressions
-			.iter()
-			.enumerate()
-			.flat_map(|(index, board_expression)| {
-				let vec: Vec<(
-					usize,
-					&Expression<IndexTestimony>,
-					&HashMap<IndexTestimony, bool>,
-				)> = potential_assignments
-					.iter()
-					.map(|assignment| (index, board_expression, assignment))
-					.collect();
-				vec
-			})
-			.collect();
+		let optimized_expressions: Vec<OptimizedExpression<IndexTestimony>> =
+			potential_board_expressions
+				.iter()
+				.map(|board_expression| OptimizedExpression::new(&board_expression))
+				.collect();
+
+		let things_to_check: Vec<(usize, &OptimizedExpression<IndexTestimony>, &Vec<bool>)> =
+			optimized_expressions
+				.iter()
+				.enumerate()
+				.flat_map(|(index, board_expression)| {
+					let vec: Vec<(usize, &OptimizedExpression<IndexTestimony>, &Vec<bool>)> =
+						potential_assignments
+							.iter()
+							.map(|assignment| (index, board_expression, assignment))
+							.collect();
+					vec
+				})
+				.collect();
 
 		let matching_configs = AtomicI32::new(0);
 		let iteration_result: Vec<BoardLayout> = things_to_check
 			.into_par_iter()
 			.filter_map(|(index, board_expression, assignment)| {
-				if evaluate_with_assignment(&board_expression, &assignment)
+				if board_expression.satisfies(|variable_index| assignment[variable_index])
 					&& validate_assignment(
 						log,
 						assignment,
+						board_expression.variables(),
 						&potential_board_configurations[index],
 						game_state,
 					) {
@@ -487,7 +500,8 @@ fn kill_board_configs(
 
 fn validate_assignment(
 	log: &impl Log,
-	assignment: &HashMap<IndexTestimony, bool>,
+	assignment: &Vec<bool>,
+	variables: &[IndexTestimony],
 	board_config: &BoardLayout,
 	game_state: &GameState,
 ) -> bool {
@@ -506,7 +520,8 @@ fn validate_assignment(
 	}*/
 
 	let theoreticals = &board_config.villagers;
-	for (index_testimony, truthful) in assignment {
+	for (variable_index, truthful) in assignment.iter().enumerate() {
+		let index_testimony = &variables[variable_index];
 		let testifier = &theoreticals[index_testimony.index.0];
 		if !assignment_applies(testifier, &index_testimony.testimony) {
 			continue;

@@ -7,26 +7,26 @@ use std::{
 use demon_bluff_gameplay_engine::{Expression, testimony::Testimony};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
-pub fn collect_satisfying_assignments<T>(expression: &Expression<T>) -> Vec<HashMap<T, bool>>
+use crate::optimized_expression::OptimizedExpression;
+
+pub fn collect_satisfying_assignments<T>(expression: &OptimizedExpression<T>) -> Vec<Vec<bool>>
 where
 	T: Display + Hash + Eq + Clone + Send + Sync,
 {
-	let variables = collect_variables(expression);
-
 	// Generate all possible assignments (2^n where n is number of variables)
-	let num_vars = variables.len();
+	let num_vars = expression.variables().len();
 	let total_potential_assignments = 1 << num_vars;
 	let assignments = (0..total_potential_assignments)
 		.into_par_iter()
 		.filter_map(|i| {
-			let mut assignment = HashMap::new();
+			let mut assignment = Vec::new();
 
-			for (j, var) in variables.iter().enumerate() {
-				assignment.insert(var.clone(), (i & (1 << j)) != 0);
+			for (j, _) in expression.variables().iter().enumerate() {
+				assignment.push((i & (1 << j)) != 0);
 			}
 
 			// Check if this assignment satisfies the expression
-			if evaluate_with_assignment(expression, &assignment) {
+			if expression.satisfies(|variable_index| assignment[variable_index]) {
 				Some(assignment)
 			} else {
 				None
