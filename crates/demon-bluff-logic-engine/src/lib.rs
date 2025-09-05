@@ -71,17 +71,18 @@ pub fn predict(
 
 	// Step three, need more info. Figure out how to best use reveals/abilities to gain info
 	// For now just reveal the first hidden index and we'll make it better later
-	let mut hidden_index = None;
+	let mut revealable_index = None;
 	state.iter_villagers(|index, villager| {
-		if hidden_index.is_none()
-			&& let Villager::Hidden(_) = villager
+		if revealable_index.is_none()
+			&& let Villager::Hidden(hidden_villager) = villager
+			&& !hidden_villager.cant_reveal()
 		{
-			hidden_index = Some(index);
+			revealable_index = Some(index);
 		}
 	});
 
-	match hidden_index {
-		Some(villager_to_reveal) => Ok(reveal_strategy.get_reveal(log, state)),
+	match revealable_index {
+		Some(_) => Ok(reveal_strategy.get_reveal(log, state)),
 		None => {
 			info!(logger: log, "We must try to use an ability");
 
@@ -570,16 +571,20 @@ fn validate_assignment(
 				}
 			}
 			Testimony::Scout(scout_claim) => {
-				let likely_talking_about = theoreticals
+				let mut iterator = theoreticals
 					.iter()
 					.filter(|theoretical| {
 						theoretical.inner.true_identity() == scout_claim.evil_role()
 					})
-					.enumerate()
-					.next();
+					.enumerate();
+				let likely_talking_about = iterator.next();
 
 				match likely_talking_about {
 					Some((target_index, _)) => {
+						if iterator.next().is_some() {
+							todo!("Handle multiple matches in scout claim!");
+						}
+
 						let clockwise_read = index_offset(
 							&VillagerIndex(target_index),
 							game_state.total_villagers(),
@@ -590,7 +595,7 @@ fn validate_assignment(
 							&VillagerIndex(target_index),
 							game_state.total_villagers(),
 							scout_claim.distance(),
-							true,
+							false,
 						);
 
 						// TODO: Need to check there are no closer eviles in either direction
