@@ -513,6 +513,20 @@ fn validate_assignment(
 	board_config: &BoardLayout,
 	game_state: &GameState,
 ) -> bool {
+	/*
+	if game_state.reveal_order().len() == 7
+		&& board_config
+			.evil_locations
+			.contains(&VillagerIndex::number(5))
+		&& board_config
+			.evil_locations
+			.contains(&VillagerIndex::number(6))
+	{
+		let json = serde_json::to_string_pretty(board_config).unwrap();
+		std::fs::write("S:/workspace/demon-bluff-deducer/board_config.json", json).unwrap();
+		panic!("Done")
+	}*/
+
 	let theoreticals = &board_config.villagers;
 	for (index_testimony, truthful) in assignment {
 		let testifier = &theoreticals[index_testimony.index.0];
