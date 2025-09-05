@@ -85,7 +85,7 @@ fn game_12() {
 			VillagerArchetype::Minion(Minion::Twinion),
 		],
 		DrawStats::new(4, 1, 2, 0),
-		1,
+		2,
 		false,
 	);
 
@@ -150,15 +150,15 @@ fn game_12() {
 					None,
 				)),
 			)),
-			Action::TryReveal(RevealResult::new(
-				VillagerIndex::number(7),
-				Some(VillagerInstance::new(
-					VillagerArchetype::GoodVillager(GoodVillager::Confessor),
-					Some(Expression::Leaf(Testimony::Confess(ConfessorClaim::Good))),
+			Action::TryExecute(KillAttempt::new(
+				VillagerIndex::number(6),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Twinion)), false)
+						.expect("Bad kill data?"),
 				)),
 			)),
 			Action::TryExecute(KillAttempt::new(
-				VillagerIndex::number(6),
+				VillagerIndex::number(5),
 				Some(KillResult::Revealed(
 					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false)
 						.expect("Bad kill data?"),
