@@ -793,12 +793,9 @@ fn validate_assignment(
 				}
 			}
 			Testimony::Scout(scout_claim) => {
-				let mut iterator = theoreticals
-					.iter()
-					.filter(|theoretical| {
-						theoretical.inner.true_identity() == scout_claim.evil_role()
-					})
-					.enumerate();
+				let mut iterator = theoreticals.iter().enumerate().filter(|(_, theoretical)| {
+					theoretical.inner.true_identity() == scout_claim.evil_role()
+				});
 				let likely_talking_about = iterator.next();
 
 				match likely_talking_about {
@@ -807,14 +804,15 @@ fn validate_assignment(
 							todo!("Handle multiple matches in scout claim!");
 						}
 
+						let target_index = VillagerIndex(target_index);
 						let clockwise_read = index_offset(
-							&VillagerIndex(target_index),
+							&target_index,
 							game_state.total_villagers(),
 							scout_claim.distance(),
 							true,
 						);
 						let counterclockwise_read = index_offset(
-							&VillagerIndex(target_index),
+							&target_index,
 							game_state.total_villagers(),
 							scout_claim.distance(),
 							false,
