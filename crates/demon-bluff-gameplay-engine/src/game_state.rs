@@ -39,7 +39,7 @@ pub struct GameState {
 	villagers: Vec<Villager>,
 	reveal_order: Vec<VillagerIndex>,
 	hitpoints: u8,
-	total_evils: u8,
+	total_evils: usize,
 }
 
 #[derive(Debug)]
@@ -270,7 +270,7 @@ impl GameState {
 		villagers: Vec<Villager>,
 		reveal_order: Vec<VillagerIndex>,
 		hitpoints: u8,
-		total_evils: u8,
+		total_evils: usize,
 	) -> Result<Self, GameStateInitError> {
 		if draw_stats.total_villagers() != villagers.len() {
 			return Err(GameStateInitError::VillagerCountMismatch);
@@ -330,7 +330,7 @@ impl GameState {
 		}
 	}
 
-	pub fn total_evils(&self) -> u8 {
+	pub fn total_evils(&self) -> usize {
 		self.total_evils
 	}
 
@@ -369,7 +369,7 @@ impl GameState {
 		false
 	}
 
-	pub fn evils_killed(&self) -> u8 {
+	pub fn evils_killed(&self) -> usize {
 		self.villagers
 			.iter()
 			.map(|villager| match villager {
@@ -425,7 +425,7 @@ impl GameState {
 					}
 				}
 			})
-			.sum::<u8>()
+			.sum()
 	}
 
 	pub fn mutate(
@@ -806,7 +806,7 @@ impl GameState {
 pub fn new_game(
 	deck: Vec<VillagerArchetype>,
 	draw_stats: DrawStats,
-	total_evils: u8,
+	total_evils: usize,
 	night_effects_active: bool,
 ) -> GameState {
 	let total_villagers = draw_stats.total_villagers();

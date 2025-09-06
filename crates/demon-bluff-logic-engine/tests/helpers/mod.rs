@@ -6,6 +6,7 @@ use std::{
 use demon_bluff_gameplay_engine::game_state::{Action, GameState, GameStateMutationResult};
 use demon_bluff_logic_engine::{PlayerAction, RevealStrategy, predict};
 use itertools::Itertools;
+use log::info;
 
 pub fn test_game_state(
 	state_name: &str,
@@ -48,14 +49,16 @@ pub fn run_game(
 ) {
 	let mut game_state = game_state.clone();
 	let total_actions = expected_actions.len();
+	let mut log = log::logger();
+	colog::init();
 	for (index, action) in expected_actions.into_iter().enumerate() {
 		if let Some(log_after) = log_after
 			&& log_after == index
 		{
-			colog::init();
+			log = log::logger();
 		}
 
-		let log = log::logger();
+		info!(logger: log::logger(), "Starting turn #{}", index + 1);
 		let player_actions =
 			predict(&log, &game_state, reveal_strategy).expect("Failed prediction!");
 

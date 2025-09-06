@@ -1,4 +1,5 @@
 use std::{
+	arch::breakpoint,
 	collections::{HashMap, HashSet},
 	fmt::Display,
 	hash::Hash,
@@ -15,7 +16,12 @@ where
 {
 	// Generate all possible assignments (2^n where n is number of variables)
 	let num_vars = expression.variables().len();
-	let total_potential_assignments = 1 << num_vars;
+	let total_potential_assignments: u64 = 1 << num_vars;
+
+	if total_potential_assignments > u32::MAX as u64 {
+		breakpoint();
+	}
+
 	let assignments = (0..total_potential_assignments)
 		.into_par_iter()
 		.filter_map(|i| {

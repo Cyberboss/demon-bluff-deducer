@@ -36,6 +36,7 @@ use demon_bluff_gameplay_engine::{
 	villager::{GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
+use itertools::Itertools;
 use log::{Log, debug, info, warn};
 use optimized_expression::OptimizedExpression;
 use player_action::AbilityAttempt;
@@ -47,7 +48,7 @@ pub use self::{
 };
 
 struct PredictionResult {
-	all_matching_layouts: HashSet<BoardLayout>,
+	all_matching_layouts: HashMap<BoardLayout, Vec<HashMap<IndexTestimony, bool>>>,
 	board_layouts_by_similar_configs: HashMap<BTreeSet<VillagerIndex>, BTreeSet<BoardLayout>>,
 	most_common_indicies: Option<(Vec<VillagerIndex>, Option<usize>)>,
 }
@@ -71,7 +72,14 @@ pub fn predict(
 	if any_revealed {
 		let initial_layouts = build_board_layouts(state);
 
-		match predict_core(log, state, initial_layouts, false) {
+		match predict_core(
+			log,
+			state,
+			initial_layouts
+				.into_iter()
+				.map(|board_layout| (board_layout, None)),
+			false,
+		) {
 			PredictionResult2::KillResult(hash_set) => {
 				return hash_set;
 			}
@@ -100,19 +108,59 @@ pub fn predict(
 	match revealable_index {
 		Some(_) => Ok(reveal_strategy.get_reveal(log, state)),
 		None => {
-			info!(logger: log, "We must try to use an ability");
+			let mut remaining_unused_abilities = 0;
+			state.iter_villagers(|_, villager| {
+				match villager {
+					Villager::Active(active_villager) => {
+						if active_villager.instance().testimony().is_none() {
+							remaining_unused_abilities += 1;
+						}
+					}
+					Villager::Hidden(_) => {}
+					Villager::Confirmed(confirmed_villager) => {
+						if confirmed_villager.instance().testimony().is_none() {
+							remaining_unused_abilities += 1;
+						}
+					}
+				}
+				true
+			});
 
-			let initial_layouts = need_more_info_result.expect("Udhfhfhfh");
-			let layouts = with_theoretical_testimony(initial_layouts);
+			info!(logger: log, "We must try to use an ability. Predicting outcomes of remaining {} unused abilities", remaining_unused_abilities);
+
+			let mut initial_layouts = need_more_info_result.expect("Udhfhfhfh");
+
+			// evaluating every ability combination is too damn expensive (and impossible to empiracally verify in the game)
+			// order here wants to be deterministic for testing purposes, so collect and sort the keys
+			let mut sorted_boards = Vec::with_capacity(initial_layouts.len());
+			sorted_boards.extend(initial_layouts.iter().map(|(layout, _)| layout).cloned());
+			sorted_boards.sort();
+
+			let layouts = with_theoretical_testimony(
+				log,
+				state,
+				sorted_boards.into_iter().map(|layout| {
+					let potential_assignments = initial_layouts.remove(&layout).unwrap();
+					(layout, potential_assignments)
+				}),
+			);
 
 			// for each theoretical testimony find the group of
 
 			let mut least_options: Option<(HashSet<AbilityAttempt>, usize)> = None;
 			for (ability_attempt, predicted_layouts) in layouts {
-				if let PredictionResult2::ConfigCountsAfterAbility(result) =
-					predict_core(log, state, predicted_layouts, true)
-				{
-					let thing = match least_options {
+				if let PredictionResult2::ConfigCountsAfterAbility(result) = predict_core(
+					log,
+					state,
+					predicted_layouts
+						.into_iter()
+						.map(|(board_config, potential_assignments)| {
+							(board_config, Some(potential_assignments))
+						}),
+					true,
+				) {
+					let (ability_uses, potential_evil_location_configurations) = match least_options
+					{
 						Some((mut old_least_options, count)) => {
 							if count > result {
 								let mut new_least_options = HashSet::new();
@@ -133,7 +181,14 @@ pub fn predict(
 						}
 					};
 
-					least_options = Some(thing);
+					// optimization, take the first result that gives us all remaining evils
+					let this_one_works = potential_evil_location_configurations == 1;
+
+					least_options = Some((ability_uses, potential_evil_location_configurations));
+
+					if this_one_works {
+						break;
+					}
 				} else {
 					panic!("Prediction was not allowed to return non and it did it anyway")
 				}
@@ -152,18 +207,18 @@ pub fn predict(
 enum PredictionResult2 {
 	KillResult(Result<HashSet<PlayerAction>, PredictionError>),
 	ConfigCountsAfterAbility(usize),
-	NeedMoreInfoResult(HashSet<BoardLayout>),
+	NeedMoreInfoResult(HashMap<BoardLayout, Vec<HashMap<IndexTestimony, bool>>>),
 }
 
 enum PredictionResult3 {
 	PredictionResult(PredictionResult),
-	NeedMoreInfoResult(HashSet<BoardLayout>),
+	NeedMoreInfoResult(HashMap<BoardLayout, Vec<HashMap<IndexTestimony, bool>>>),
 }
 
 fn predict_core(
 	log: &impl Log,
 	state: &GameState,
-	layouts: impl IntoIterator<Item = BoardLayout>,
+	layouts: impl Iterator<Item = (BoardLayout, Option<Vec<HashMap<IndexTestimony, bool>>>)>,
 	count_configs: bool,
 ) -> PredictionResult2 {
 	// Step one, build possible board layouts as an ExpressionWithTag HashMap<Vec<VillagerArchetype, ExpressionWithTag<Testimony>>>
@@ -205,7 +260,10 @@ fn predict_core(
 					);
 
 					PredictionResult2::KillResult(Ok(kill_board_configs(
-						valid_prediction.all_matching_layouts,
+						valid_prediction
+							.all_matching_layouts
+							.into_iter()
+							.map(|(layout, _)| layout),
 						state,
 					)))
 				}
@@ -221,10 +279,13 @@ fn predict_core(
 fn predict_board_configs(
 	log: &impl Log,
 	game_state: &GameState,
-	configs: impl IntoIterator<Item = BoardLayout>,
+	configs: impl Iterator<Item = (BoardLayout, Option<Vec<HashMap<IndexTestimony, bool>>>)>,
 	allow_retry: bool,
 ) -> Result<PredictionResult3, PredictionError> {
-	let potential_board_configurations: Vec<BoardLayout> = configs.into_iter().collect();
+	let potential_board_configurations: Vec<(
+		BoardLayout,
+		Option<Vec<HashMap<IndexTestimony, bool>>>,
+	)> = configs.into_iter().collect();
 
 	if potential_board_configurations.is_empty() {
 		return Err(PredictionError::GameUnsolvable);
@@ -233,15 +294,22 @@ fn predict_board_configs(
 	// Step two run possibilities, if only one satisfies, execute evils in board layout, if more than one satisfies and at least one evil overlaps on all, execute that one, otherwise, gather more info
 	info!(logger: log, "{} potential board configurations with remaining evils", potential_board_configurations.len());
 	if potential_board_configurations.len() == 1 {
-		let board_config = &potential_board_configurations[0];
+		let (board_config, _) = &potential_board_configurations[0];
 		let mut final_configs = HashMap::with_capacity(1);
 		final_configs.insert(
 			board_config.evil_locations.clone(),
-			potential_board_configurations.iter().cloned().collect(),
+			potential_board_configurations
+				.iter()
+				.map(|(config, _)| config)
+				.cloned()
+				.collect(),
 		);
 
 		return Ok(PredictionResult3::PredictionResult(PredictionResult {
-			all_matching_layouts: potential_board_configurations.into_iter().collect(),
+			all_matching_layouts: potential_board_configurations
+				.into_iter()
+				.map(|(layout, _)| (layout, Vec::new()))
+				.collect(),
 			board_layouts_by_similar_configs: final_configs,
 			most_common_indicies: None,
 		}));
@@ -250,16 +318,17 @@ fn predict_board_configs(
 	let mut potential_board_expressions = Vec::with_capacity(potential_board_configurations.len());
 
 	let mut master_expression = None;
-	for config_expression in potential_board_configurations
-		.iter()
-		.filter_map(|board_config| {
-			build_expression_for_villager_set(
-				board_config
-					.villagers
-					.iter()
-					.map(|theoretical_villager| &theoretical_villager.inner),
-			)
-		}) {
+	for config_expression in
+		potential_board_configurations
+			.iter()
+			.filter_map(|(board_config, _)| {
+				build_expression_for_villager_set(
+					board_config
+						.villagers
+						.iter()
+						.map(|theoretical_villager| &theoretical_villager.inner),
+				)
+			}) {
 		master_expression = Some(match master_expression {
 			Some(previous_expression) => Expression::Or(
 				Box::new(previous_expression),
@@ -273,19 +342,92 @@ fn predict_board_configs(
 	if let Some(master_expression) = master_expression {
 		let optimized_master_expression = OptimizedExpression::new(&master_expression);
 
-		let potential_assignments = collect_satisfying_assignments(&optimized_master_expression);
-		if potential_assignments.is_empty() {
-			return Err(PredictionError::GameUnsolvable);
-		}
-
-		let mut all_matching_layouts = HashSet::new();
-		let mut matching_layouts = HashSet::new();
-
 		let optimized_expressions: Vec<OptimizedExpression<IndexTestimony>> =
 			potential_board_expressions
 				.iter()
 				.map(|board_expression| OptimizedExpression::new(&board_expression))
 				.collect();
+
+		let mut potential_assignment_mappings = if !allow_retry {
+			Some(Vec::with_capacity(potential_board_configurations.len()))
+		} else {
+			None
+		};
+
+		let potential_assignments = if allow_retry {
+			collect_satisfying_assignments(&optimized_master_expression)
+		} else {
+			// all board configurations should have potential assignments alongside them and they should NOT overlap
+			// convert them to optimized form
+			potential_board_configurations
+				.iter()
+				.enumerate()
+				.flat_map(|(index, (_, potential_assignments))| {
+					potential_assignments
+						.as_ref()
+						.expect("We should have potential assignments predicted!")
+						.iter()
+						.map(move |potential_assignment| (index, potential_assignment))
+				})
+				.map(|(index, potential_assignment)| {
+					let mut assignment_vec =
+						Vec::with_capacity(optimized_master_expression.variables().len());
+					let mut mapping_vec: Vec<bool> = Vec::with_capacity(assignment_vec.len());
+					let mut num_used_from_potential_assignment = 0;
+
+					for variable in optimized_master_expression.variables().iter() {
+						assignment_vec.push(match potential_assignment.get(&variable) {
+							Some(testimony_trutfulness) => {
+								num_used_from_potential_assignment += 1;
+								mapping_vec.push(true);
+								*testimony_trutfulness
+							}
+							None => {
+								mapping_vec.push(false);
+								false // shouldn't matter the value here, but definitely reconsider if predictions get weird
+							}
+						});
+					}
+
+					if optimized_expressions[index].variables().len()
+						!= num_used_from_potential_assignment
+					{
+						let mut potential_assignment_has_that_board_expression_doesnt = Vec::new();
+						for (x, _) in potential_assignment {
+							if !optimized_expressions[index]
+								.variables()
+								.iter()
+								.any(|index_testimony| index_testimony == x)
+							{
+								potential_assignment_has_that_board_expression_doesnt
+									.push(x.clone());
+							}
+						}
+
+						breakpoint();
+					}
+
+					potential_assignment_mappings
+						.as_mut()
+						.unwrap()
+						.push((mapping_vec, num_used_from_potential_assignment));
+
+					assignment_vec
+				})
+				.collect()
+		};
+		if potential_assignments.is_empty() {
+			return Err(PredictionError::GameUnsolvable);
+		}
+
+		info!(
+			logger: log,
+			"{} potential assignments to evaluate",
+			potential_assignments.len()
+		);
+		let mut all_matching_layouts: HashMap<BoardLayout, Vec<HashMap<IndexTestimony, bool>>> =
+			HashMap::new();
+		let mut matching_layouts = HashSet::new();
 
 		let things_to_check: Vec<(usize, &OptimizedExpression<IndexTestimony>, &Vec<bool>)> =
 			optimized_expressions
@@ -302,28 +444,68 @@ fn predict_board_configs(
 				.collect();
 
 		let matching_configs = AtomicI32::new(0);
-		let iteration_result: Vec<BoardLayout> = things_to_check
+		let iteration_result: Vec<(usize, HashMap<IndexTestimony, bool>)> = things_to_check
 			.into_par_iter()
 			.filter_map(|(index, board_expression, assignment)| {
+				let mapped_assignment;
+				let assignment = if allow_retry {
+					assignment
+				} else {
+					let (mapping, original_slots_used) =
+						&potential_assignment_mappings.as_ref().unwrap()[index];
+
+					if *original_slots_used != board_expression.variables().len() {
+						breakpoint();
+					}
+
+					let mut mapped_assignment_builder = Vec::with_capacity(*original_slots_used);
+
+					for i in 0..mapping.len() {
+						if mapping[i] {
+							mapped_assignment_builder.push(assignment[i]);
+						}
+					}
+
+					mapped_assignment = Some(mapped_assignment_builder);
+					mapped_assignment.as_ref().unwrap()
+				};
+
 				if board_expression.satisfies(|variable_index| assignment[variable_index])
 					&& validate_assignment(
 						log,
 						assignment,
 						board_expression.variables(),
-						&potential_board_configurations[index],
+						&potential_board_configurations[index].0,
 						game_state,
 					) {
 					matching_configs.fetch_add(1, Ordering::Relaxed);
-					Some(potential_board_configurations[index].clone())
+
+					let mut satisfying_assignment =
+						HashMap::with_capacity(board_expression.variables().len());
+					for (index, variable) in board_expression.variables().iter().enumerate() {
+						satisfying_assignment.insert(variable.clone(), assignment[index]);
+					}
+
+					Some((index, satisfying_assignment))
 				} else {
 					None
 				}
 			})
 			.collect();
 
-		for matching_board_config in iteration_result {
-			matching_layouts.insert(matching_board_config.evil_locations.clone());
-			all_matching_layouts.insert(matching_board_config);
+		for (matching_board_config_index, satisfying_assignment) in iteration_result {
+			let (matching_board_config, _) =
+				&potential_board_configurations[matching_board_config_index];
+			if all_matching_layouts.contains_key(matching_board_config) {
+				let satisfying_assignments = all_matching_layouts
+					.get_mut(matching_board_config)
+					.expect("Should have been initilized in the below line");
+				satisfying_assignments.push(satisfying_assignment);
+			} else {
+				all_matching_layouts
+					.insert(matching_board_config.clone(), vec![satisfying_assignment]);
+				matching_layouts.insert(matching_board_config.evil_locations.clone());
+			}
 		}
 
 		let mut layout_number = 0;
@@ -341,7 +523,13 @@ fn predict_board_configs(
 			let matching_layout = matching_layouts.into_iter().next().unwrap();
 			let matching_configs = potential_board_configurations
 				.into_iter()
-				.filter(|board_config| board_config.evil_locations == matching_layout)
+				.filter_map(|(board_config, _)| {
+					if board_config.evil_locations == matching_layout {
+						Some(board_config)
+					} else {
+						None
+					}
+				})
 				.collect();
 
 			let mut kills = HashMap::with_capacity(1);
@@ -413,7 +601,7 @@ fn predict_board_configs(
 			warn!(logger: log, "We found the most common evil index ({} @ {} occurrences across {} layouts) but we are uncertain!", most_common_index, highest_count, matching_layouts.len());
 			let mut matching_configs: HashMap<BTreeSet<VillagerIndex>, BTreeSet<BoardLayout>> =
 				HashMap::new();
-			for config in all_matching_layouts.iter() {
+			for (config, _) in all_matching_layouts.iter() {
 				match matching_configs.entry(config.evil_locations.clone()) {
 					Entry::Occupied(mut occupied_entry) => {
 						occupied_entry.get_mut().insert(config.clone());
@@ -453,7 +641,7 @@ fn predict_board_configs(
 				BTreeSet<VillagerIndex>,
 				BTreeSet<BoardLayout>,
 			> = HashMap::new();
-			for config in &all_matching_layouts {
+			for (config, _) in &all_matching_layouts {
 				match board_layouts_by_similar_configs.entry(config.evil_locations.clone()) {
 					Entry::Occupied(mut occupied_entry) => {
 						occupied_entry.get_mut().insert(config.clone());
@@ -475,34 +663,37 @@ fn predict_board_configs(
 	} else {
 		info!(logger: log, "No villagers with testimonies, can't predict.");
 		Ok(PredictionResult3::NeedMoreInfoResult(
-			potential_board_configurations.into_iter().collect(),
+			potential_board_configurations
+				.into_iter()
+				.map(|(board_layout, _)| (board_layout, Vec::new()))
+				.collect(),
 		))
 	}
 }
 
 fn kill_board_configs(
-	board_configs: impl IntoIterator<Item = BoardLayout>,
+	board_configs: impl Iterator<Item = BoardLayout>,
 	state: &GameState,
 ) -> HashSet<PlayerAction> {
 	let mut kills = HashSet::new();
 
 	// TODO: Find most common night effect positions
-	let board_config = board_configs.into_iter().next().unwrap();
-
-	// minor thing, important to kill evils with night effects first
-	for evil_index in &board_config.evil_locations {
-		if let Some(Affect::Night(_)) = board_config.villagers[evil_index.0]
-			.inner
-			.true_identity()
-			.affect(state.total_villagers(), Some(evil_index.clone()))
-		{
-			kills.insert(PlayerAction::TryExecute(evil_index.clone()));
-			return kills;
+	for board_config in board_configs {
+		// minor thing, important to kill evils with night effects first
+		for evil_index in &board_config.evil_locations {
+			if let Some(Affect::Night(_)) = board_config.villagers[evil_index.0]
+				.inner
+				.true_identity()
+				.affect(state.total_villagers(), Some(evil_index.clone()))
+			{
+				kills.insert(PlayerAction::TryExecute(evil_index.clone()));
+				return kills;
+			}
 		}
-	}
 
-	for evil_index in board_config.evil_locations {
-		kills.insert(PlayerAction::TryExecute(evil_index));
+		for evil_index in board_config.evil_locations {
+			kills.insert(PlayerAction::TryExecute(evil_index));
+		}
 	}
 
 	kills
@@ -515,6 +706,10 @@ fn validate_assignment(
 	board_config: &BoardLayout,
 	game_state: &GameState,
 ) -> bool {
+	if variables.len() != assignment.len() {
+		breakpoint();
+	}
+
 	assert_eq!(variables.len(), assignment.len());
 	/*
 	if game_state.reveal_order().len() == 7
