@@ -42,43 +42,43 @@ pub struct GameState {
 	total_evils: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RevealResult {
 	index: VillagerIndex,
 	instance: Option<VillagerInstance>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KillAttempt {
 	target: VillagerIndex,
 	result: Option<KillResult>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum KillResult {
 	Unrevealed(UnrevealedKillData),
 	Revealed(KillData),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnrevealedKillData {
 	instance: VillagerInstance,
 	inner: KillData,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KillData {
 	true_identity: Option<VillagerArchetype>,
 	corrupted: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlayerKill {
 	target: VillagerIndex,
 	result: KillResult,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AbilityResult {
 	source: VillagerIndex,
 	testimony: Option<Expression<Testimony>>,

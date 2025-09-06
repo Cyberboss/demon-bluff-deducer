@@ -39,12 +39,13 @@ use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignm
 use itertools::Itertools;
 use log::{Log, debug, info, warn};
 use optimized_expression::OptimizedExpression;
-use player_action::AbilityAttempt;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use with_theoretical_testimony::with_theoretical_testimony;
 
 pub use self::{
-	player_action::PlayerAction, prediction_error::PredictionError, reveal_strategy::RevealStrategy,
+	player_action::{AbilityAttempt, PlayerAction},
+	prediction_error::PredictionError,
+	reveal_strategy::RevealStrategy,
 };
 
 struct PredictionResult {

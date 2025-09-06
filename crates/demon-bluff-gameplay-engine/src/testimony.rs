@@ -576,6 +576,100 @@ impl Testimony {
 		}
 	}
 
+	pub fn jester(targets: &[VillagerIndex; 3], evil_count: usize) -> Expression<Testimony> {
+		match evil_count {
+			0 => Expression::And(
+				Box::new(Expression::Not(Box::new(Expression::Leaf(
+					Testimony::Evil(targets[0].clone()),
+				)))),
+				Box::new(Expression::And(
+					Box::new(Expression::Not(Box::new(Expression::Leaf(
+						Testimony::Evil(targets[1].clone()),
+					)))),
+					Box::new(Expression::Not(Box::new(Expression::Leaf(
+						Testimony::Evil(targets[2].clone()),
+					)))),
+				)),
+			),
+			1 => Expression::Or(
+				Box::new(Expression::And(
+					Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
+					Box::new(Expression::And(
+						Box::new(Expression::Not(Box::new(Expression::Leaf(
+							Testimony::Evil(targets[1].clone()),
+						)))),
+						Box::new(Expression::Not(Box::new(Expression::Leaf(
+							Testimony::Evil(targets[2].clone()),
+						)))),
+					)),
+				)),
+				Box::new(Expression::Or(
+					Box::new(Expression::And(
+						Box::new(Expression::Not(Box::new(Expression::Leaf(
+							Testimony::Evil(targets[0].clone()),
+						)))),
+						Box::new(Expression::And(
+							Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
+							Box::new(Expression::Not(Box::new(Expression::Leaf(
+								Testimony::Evil(targets[2].clone()),
+							)))),
+						)),
+					)),
+					Box::new(Expression::And(
+						Box::new(Expression::Not(Box::new(Expression::Leaf(
+							Testimony::Evil(targets[0].clone()),
+						)))),
+						Box::new(Expression::And(
+							Box::new(Expression::Not(Box::new(Expression::Leaf(
+								Testimony::Evil(targets[1].clone()),
+							)))),
+							Box::new(Expression::Leaf(Testimony::Evil(targets[2].clone()))),
+						)),
+					)),
+				)),
+			),
+			2 => Expression::Or(
+				Box::new(Expression::And(
+					Box::new(Expression::Not(Box::new(Expression::Leaf(
+						Testimony::Evil(targets[0].clone()),
+					)))),
+					Box::new(Expression::And(
+						Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
+						Box::new(Expression::Leaf(Testimony::Evil(targets[2].clone()))),
+					)),
+				)),
+				Box::new(Expression::Or(
+					Box::new(Expression::And(
+						Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
+						Box::new(Expression::And(
+							Box::new(Expression::Not(Box::new(Expression::Leaf(
+								Testimony::Evil(targets[1].clone()),
+							)))),
+							Box::new(Expression::Leaf(Testimony::Evil(targets[2].clone()))),
+						)),
+					)),
+					Box::new(Expression::And(
+						Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
+						Box::new(Expression::And(
+							Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
+							Box::new(Expression::Not(Box::new(Expression::Leaf(
+								Testimony::Evil(targets[2].clone()),
+							)))),
+						)),
+					)),
+				)),
+			),
+			3 => Expression::And(
+				Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
+				Box::new(Expression::And(
+					Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
+					Box::new(Expression::Leaf(Testimony::Evil(targets[2].clone()))),
+				)),
+			),
+			_ => panic!("A jester can only have up to {} targets", targets.len()),
+		}
+	}
+
 	pub fn architect(claim: ArchitectClaim, total_villagers: usize) -> Expression<Testimony> {
 		todo!("Architect claim")
 	}

@@ -420,95 +420,16 @@ gen fn theoretical_testimonies(
 }
 
 fn jester_expression(indexes: &Vec<VillagerIndex>) -> [Expression<Testimony>; 4] {
-	assert_eq!(3, indexes.len());
 	[
-		Expression::And(
-			Box::new(Expression::Not(Box::new(Expression::Leaf(
-				Testimony::Evil(indexes[0].clone()),
-			)))),
-			Box::new(Expression::And(
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Evil(indexes[1].clone()),
-				)))),
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Evil(indexes[2].clone()),
-				)))),
-			)),
+		Testimony::jester(
+			indexes
+				.as_slice()
+				.try_into()
+				.expect("Invalid number of indexes for a jester expression"),
+			0,
 		),
-		Expression::Or(
-			Box::new(Expression::And(
-				Box::new(Expression::Leaf(Testimony::Evil(indexes[0].clone()))),
-				Box::new(Expression::And(
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Evil(indexes[1].clone()),
-					)))),
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Evil(indexes[2].clone()),
-					)))),
-				)),
-			)),
-			Box::new(Expression::Or(
-				Box::new(Expression::And(
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Evil(indexes[0].clone()),
-					)))),
-					Box::new(Expression::And(
-						Box::new(Expression::Leaf(Testimony::Evil(indexes[1].clone()))),
-						Box::new(Expression::Not(Box::new(Expression::Leaf(
-							Testimony::Evil(indexes[2].clone()),
-						)))),
-					)),
-				)),
-				Box::new(Expression::And(
-					Box::new(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Evil(indexes[0].clone()),
-					)))),
-					Box::new(Expression::And(
-						Box::new(Expression::Not(Box::new(Expression::Leaf(
-							Testimony::Evil(indexes[1].clone()),
-						)))),
-						Box::new(Expression::Leaf(Testimony::Evil(indexes[2].clone()))),
-					)),
-				)),
-			)),
-		),
-		Expression::Or(
-			Box::new(Expression::And(
-				Box::new(Expression::Not(Box::new(Expression::Leaf(
-					Testimony::Evil(indexes[0].clone()),
-				)))),
-				Box::new(Expression::And(
-					Box::new(Expression::Leaf(Testimony::Evil(indexes[1].clone()))),
-					Box::new(Expression::Leaf(Testimony::Evil(indexes[2].clone()))),
-				)),
-			)),
-			Box::new(Expression::Or(
-				Box::new(Expression::And(
-					Box::new(Expression::Leaf(Testimony::Evil(indexes[0].clone()))),
-					Box::new(Expression::And(
-						Box::new(Expression::Not(Box::new(Expression::Leaf(
-							Testimony::Evil(indexes[1].clone()),
-						)))),
-						Box::new(Expression::Leaf(Testimony::Evil(indexes[2].clone()))),
-					)),
-				)),
-				Box::new(Expression::And(
-					Box::new(Expression::Leaf(Testimony::Evil(indexes[0].clone()))),
-					Box::new(Expression::And(
-						Box::new(Expression::Leaf(Testimony::Evil(indexes[1].clone()))),
-						Box::new(Expression::Not(Box::new(Expression::Leaf(
-							Testimony::Evil(indexes[2].clone()),
-						)))),
-					)),
-				)),
-			)),
-		),
-		Expression::And(
-			Box::new(Expression::Leaf(Testimony::Evil(indexes[0].clone()))),
-			Box::new(Expression::And(
-				Box::new(Expression::Leaf(Testimony::Evil(indexes[1].clone()))),
-				Box::new(Expression::Leaf(Testimony::Evil(indexes[2].clone()))),
-			)),
-		),
+		Testimony::jester(indexes.as_slice().try_into().unwrap(), 1),
+		Testimony::jester(indexes.as_slice().try_into().unwrap(), 2),
+		Testimony::jester(indexes.as_slice().try_into().unwrap(), 3),
 	]
 }

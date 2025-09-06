@@ -1,8 +1,7 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 use std::fmt::Display;
 use std::hash::Hash;
 
-use demon_bluff_gameplay_engine::game_state::Action;
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
 use serde::Serialize;
 
@@ -19,43 +18,17 @@ pub enum PlayerAction {
 	Ability(AbilityAttempt),
 }
 
-impl PlayerAction {
-	pub fn matches_action(&self, action: &Action) -> bool {
-		match self {
-			Self::TryReveal(villager_index) => {
-				if let Action::TryReveal(result) = action
-					&& result.index() == villager_index
-				{
-					true
-				} else {
-					false
-				}
-			}
-			Self::TryExecute(villager_index) => {
-				if let Action::TryExecute(attempt) = action
-					&& attempt.target() == villager_index
-				{
-					true
-				} else {
-					false
-				}
-			}
-			Self::Ability(ability_attempt) => {
-				if let Action::Ability(result) = action
-					&& *result.source() == ability_attempt.source
-				{
-					true
-				} else {
-					false
-				}
-			}
-		}
-	}
-}
-
 impl AbilityAttempt {
 	pub fn new(source: VillagerIndex, targets: BTreeSet<VillagerIndex>) -> Self {
 		Self { source, targets }
+	}
+
+	pub fn source(&self) -> &VillagerIndex {
+		&self.source
+	}
+
+	pub fn targets(&self) -> &BTreeSet<VillagerIndex> {
+		&self.targets
 	}
 }
 
