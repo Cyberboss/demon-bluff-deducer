@@ -560,18 +560,6 @@ impl Testimony {
 			let mut non_optional_expression = expression
 				.expect("Logic error in enlightened testimony builder directional route!");
 
-			if !odd_villagers {
-				// The equidistant villagers is also good
-				for equidistant_villager in equidistant_villagers {
-					non_optional_expression = Expression::And(
-						Box::new(non_optional_expression),
-						Box::new(Expression::Leaf(Testimony::Good(
-							equidistant_villager.clone(),
-						))),
-					);
-				}
-			}
-
 			non_optional_expression
 		}
 	}
