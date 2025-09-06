@@ -32,7 +32,7 @@ use demon_bluff_gameplay_engine::{
 	Expression,
 	affect::Affect,
 	game_state::GameState,
-	testimony::{ConfessorClaim, Testimony, index_offset},
+	testimony::{ConfessorClaim, Direction, Testimony, index_offset},
 	villager::{GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
@@ -829,6 +829,49 @@ fn validate_assignment(
 					}
 					None => false,
 				}
+			}
+			Testimony::Enlightened(direction) => {
+				let expected_direction;
+				let mut i = 0;
+				loop {
+					i += 1;
+					let clockwise_read = index_offset(
+						&index_testimony.index,
+						game_state.total_villagers(),
+						i,
+						true,
+					);
+					let counterclockwise_read = index_offset(
+						&index_testimony.index,
+						game_state.total_villagers(),
+						i,
+						false,
+					);
+
+					let clockwise_appears_evil = theoreticals[clockwise_read.0]
+						.inner
+						.true_identity()
+						.appears_evil();
+					let counterclockwise_appears_evil = theoreticals[counterclockwise_read.0]
+						.inner
+						.true_identity()
+						.appears_evil();
+
+					let inner_expected_direction =
+						match (clockwise_appears_evil, counterclockwise_appears_evil) {
+							(true, true) => Some(Direction::Equidistant),
+							(true, false) => Some(Direction::Clockwise),
+							(false, true) => Some(Direction::CounterClockwise),
+							(false, false) => None,
+						};
+
+					if let Some(inner_expected_direction) = inner_expected_direction {
+						expected_direction = inner_expected_direction;
+						break;
+					}
+				}
+
+				*direction == expected_direction
 			}
 		};
 

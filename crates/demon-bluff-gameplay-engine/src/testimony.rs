@@ -142,6 +142,9 @@ pub enum Testimony {
 	Slayed(SlayResult),
 	Confess(ConfessorClaim),
 	Scout(ScoutClaim),
+	// as sane as it'd sound to express this in terms of good/evil it blows up the problem space way too much
+	// handle it at validation time
+	Enlightened(Direction),
 }
 
 impl EvilPairsClaim {
@@ -415,6 +418,8 @@ impl Testimony {
 		direction: Direction,
 		total_villagers: usize,
 	) -> Expression<Testimony> {
+		return Expression::Leaf(Testimony::Enlightened(direction));
+
 		if total_villagers < 3 {
 			panic!("No thank you");
 		}
@@ -697,6 +702,7 @@ impl Display for Testimony {
 				"{} is {} away from the nearest evil",
 				scout_claim.evil_role, scout_claim.distance
 			),
+			Self::Enlightened(direction) => write!(f, "Closest evil is {}", direction),
 		}
 	}
 }
