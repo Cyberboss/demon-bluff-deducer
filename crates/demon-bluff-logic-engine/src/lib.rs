@@ -128,27 +128,27 @@ pub fn predict(
 
 			info!(logger: log, "We must try to use an ability. Predicting outcomes of remaining {} unused abilities", remaining_unused_abilities);
 
-			let mut initial_layouts = need_more_info_result.expect("Udhfhfhfh");
+			let initial_layouts = need_more_info_result.expect("Udhfhfhfh");
+
+			let mut layouts = with_theoretical_testimony(log, state, initial_layouts);
+
+			let mut attempt_order = Vec::with_capacity(layouts.len());
+			attempt_order.extend(
+				layouts
+					.iter()
+					.map(|(ability_attempt, _)| ability_attempt)
+					.cloned(),
+			);
+			attempt_order.sort();
 
 			// evaluating every ability combination is too damn expensive (and impossible to empiracally verify in the game)
 			// order here wants to be deterministic for testing purposes, so collect and sort the keys
-			let mut sorted_boards = Vec::with_capacity(initial_layouts.len());
-			sorted_boards.extend(initial_layouts.iter().map(|(layout, _)| layout).cloned());
-			sorted_boards.sort();
-
-			let layouts = with_theoretical_testimony(
-				log,
-				state,
-				sorted_boards.into_iter().map(|layout| {
-					let potential_assignments = initial_layouts.remove(&layout).unwrap();
-					(layout, potential_assignments)
-				}),
-			);
 
 			// for each theoretical testimony find the group of
-
 			let mut least_options: Option<(HashSet<AbilityAttempt>, usize)> = None;
-			for (ability_attempt, predicted_layouts) in layouts {
+			for ability_attempt in attempt_order {
+				let (_, predicted_layouts) =
+					layouts.remove_entry(&ability_attempt).expect("Impossble");
 				if let PredictionResult2::ConfigCountsAfterAbility(result) = predict_core(
 					log,
 					state,
@@ -190,7 +190,7 @@ pub fn predict(
 						break;
 					}
 				} else {
-					panic!("Prediction was not allowed to return non and it did it anyway")
+					panic!("Prediction was not allowed to return non and it did it anyway");
 				}
 			}
 

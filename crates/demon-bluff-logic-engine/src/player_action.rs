@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::fmt::Display;
 use std::hash::Hash;
 
@@ -6,10 +6,10 @@ use demon_bluff_gameplay_engine::game_state::Action;
 use demon_bluff_gameplay_engine::villager::VillagerIndex;
 use serde::Serialize;
 
-#[derive(Debug, Eq, Clone, Serialize)]
+#[derive(Debug, Eq, Clone, Serialize, PartialOrd, Ord)]
 pub struct AbilityAttempt {
 	source: VillagerIndex,
-	targets: HashSet<VillagerIndex>,
+	targets: BTreeSet<VillagerIndex>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize)]
@@ -54,7 +54,7 @@ impl PlayerAction {
 }
 
 impl AbilityAttempt {
-	pub fn new(source: VillagerIndex, targets: HashSet<VillagerIndex>) -> Self {
+	pub fn new(source: VillagerIndex, targets: BTreeSet<VillagerIndex>) -> Self {
 		Self { source, targets }
 	}
 }

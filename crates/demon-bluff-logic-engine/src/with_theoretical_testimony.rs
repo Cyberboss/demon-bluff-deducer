@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 use demon_bluff_gameplay_engine::{
 	Expression,
@@ -7,7 +7,7 @@ use demon_bluff_gameplay_engine::{
 	villager::{GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
 };
 use itertools::Itertools;
-use log::{Log, info};
+use log::Log;
 
 use crate::{
 	build_board_layouts::BoardLayout,
@@ -21,10 +21,7 @@ pub fn with_theoretical_testimony(
 	log: &impl Log,
 	game_state: &GameState,
 	board_configs: impl IntoIterator<Item = (BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-) -> Vec<(
-	AbilityAttempt,
-	Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-)> {
+) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
 	let mut seen_ability_combinations = Vec::new();
 	let mut current_ability_combination = HashSet::new();
 	with_theoretical_testimony_inner(
@@ -41,10 +38,7 @@ pub fn with_theoretical_testimony_inner(
 	board_configs: impl IntoIterator<Item = (BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
 	seen_ability_combinations: &mut Vec<HashSet<AbilityAttempt>>,
 	current_ability_combination: &mut HashSet<AbilityAttempt>,
-) -> Vec<(
-	AbilityAttempt,
-	Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-)> {
+) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
 	let invalid_ability_attempts = seen_ability_combinations
 		.iter()
 		.filter_map(|attempt_set| {
@@ -90,10 +84,10 @@ pub fn with_theoretical_testimony_inner(
 		));
 	}
 
-	let mut results: Vec<(
+	let mut results: HashMap<
 		AbilityAttempt,
 		Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-	)> = Vec::with_capacity(iterators[0].len());
+	> = HashMap::with_capacity(iterators[0].len());
 	loop {
 		let mut group: Vec<(
 			BoardLayout,
@@ -117,13 +111,13 @@ pub fn with_theoretical_testimony_inner(
 		// the length of each iterator should be the same
 		assert_eq!(group.len(), iterators.len());
 
-		results.push((
+		results.insert(
 			group[0].1.clone(),
 			group
 				.into_iter()
 				.map(|(layout, _, potential_assignments)| (layout, potential_assignments))
 				.collect(),
-		));
+		);
 	}
 
 	// recursively expand every solution until all testimonies are acquired
@@ -141,7 +135,7 @@ pub fn with_theoretical_testimony_inner(
 	}
 
 	if any_potential_testimonies_remaining {
-		let mut expanded_results = Vec::new();
+		let mut expanded_results = HashMap::new();
 		for (ability_attempt, new_layouts) in results {
 			// to prevent exponential explosion, check layouts are satisfiable before recursing
 			let valid_layouts_and_assignments: Vec<(
@@ -201,7 +195,7 @@ pub fn with_theoretical_testimony_inner(
 
 				current_ability_combination.remove(&ability_attempt);
 
-				expanded_results.push((ability_attempt, total_expanded_layouts));
+				expanded_results.insert(ability_attempt, total_expanded_layouts);
 			}
 		}
 
@@ -290,7 +284,7 @@ gen fn theoretical_testimonies(
 					.map(|(index, _)| VillagerIndex(index))
 					.combinations(3)
 				{
-					let mut targets = HashSet::with_capacity(3);
+					let mut targets = BTreeSet::new();
 					targets.extend(index_combo.iter().cloned());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
 					if invalid_ability_attempts.contains(&ability_attempt) {
@@ -326,7 +320,7 @@ gen fn theoretical_testimonies(
 				for (index, _) in theoreticals.iter().enumerate() {
 					let target_index = VillagerIndex(index);
 
-					let mut targets = HashSet::with_capacity(1);
+					let mut targets = BTreeSet::new();
 					targets.insert(target_index.clone());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
 
