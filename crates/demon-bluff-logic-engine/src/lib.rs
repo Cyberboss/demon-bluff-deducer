@@ -708,7 +708,7 @@ fn validate_assignment(
 	game_state: &GameState,
 ) -> bool {
 	if variables.len() != assignment.len() {
-		breakpoint();
+		panic!("This again");
 	}
 
 	assert_eq!(variables.len(), assignment.len());
@@ -822,10 +822,10 @@ fn validate_assignment(
 						theoreticals[counterclockwise_read.0]
 							.inner
 							.true_identity()
-							.is_evil() || theoreticals[clockwise_read.0]
+							.appears_evil() || theoreticals[clockwise_read.0]
 							.inner
 							.true_identity()
-							.is_evil()
+							.appears_evil()
 					}
 					None => false,
 				}
