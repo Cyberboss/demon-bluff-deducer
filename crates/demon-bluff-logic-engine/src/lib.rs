@@ -103,7 +103,7 @@ pub fn predict(
 			info!(logger: log, "We must try to use an ability");
 
 			let initial_layouts = need_more_info_result.expect("Udhfhfhfh");
-			let layouts = with_theoretical_testimony(state, initial_layouts);
+			let layouts = with_theoretical_testimony(initial_layouts);
 
 			// for each theoretical testimony find the group of
 
@@ -515,6 +515,7 @@ fn validate_assignment(
 	board_config: &BoardLayout,
 	game_state: &GameState,
 ) -> bool {
+	assert_eq!(variables.len(), assignment.len());
 	/*
 	if game_state.reveal_order().len() == 7
 		&& board_config

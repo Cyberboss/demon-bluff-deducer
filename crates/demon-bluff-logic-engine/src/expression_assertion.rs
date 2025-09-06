@@ -4,7 +4,7 @@ use std::{
 	hash::Hash,
 };
 
-use demon_bluff_gameplay_engine::{Expression, testimony::Testimony};
+use demon_bluff_gameplay_engine::Expression;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use crate::optimized_expression::OptimizedExpression;

@@ -5,9 +5,10 @@ use std::{
 };
 
 use demon_bluff_gameplay_engine::{
+	Expression,
 	affect::Affect,
 	game_state::GameState,
-	testimony::{AffectType, index_offset},
+	testimony::{AffectType, ConfessorClaim, Testimony, index_offset},
 	villager::{
 		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
 		VillagerIndex, VillagerInstance,
@@ -21,12 +22,13 @@ pub struct TheoreticalVillager {
 	pub inner: ConfirmedVillager,
 	pub actually_dead: bool,
 	pub was_corrupt: bool,
+	pub revealed: bool,
 	pub baked_from: Option<VillagerArchetype>,
 	pub affection: Option<AffectType>,
 }
 
 impl TheoreticalVillager {
-	pub fn new(value: ConfirmedVillager, dead: bool) -> Self {
+	pub fn new(value: ConfirmedVillager, dead: bool, revealed: bool) -> Self {
 		let was_corrupt = value.corrupted();
 		Self {
 			actually_dead: dead,
@@ -34,6 +36,7 @@ impl TheoreticalVillager {
 			was_corrupt,
 			baked_from: None,
 			affection: None,
+			revealed,
 		}
 	}
 }
@@ -183,6 +186,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 										false,
 									),
 									false,
+									!unknown_hidden,
 								)
 							} else {
 								let mut unknown_hidden = false;
@@ -190,12 +194,17 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 									instance_and_confirmed
 								{
 									if let Some(confirmed) = confirmed {
-										TheoreticalVillager::new(confirmed.clone(), dead)
+										TheoreticalVillager::new(
+											confirmed.clone(),
+											dead,
+											!unknown_hidden,
+										)
 									} else {
 										let corrupt = instance.archetype().starts_corrupted();
 										TheoreticalVillager::new(
 											ConfirmedVillager::new(instance.clone(), None, corrupt),
 											dead,
+											!unknown_hidden,
 										)
 									}
 								} else {
@@ -210,6 +219,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 											corrupt,
 										),
 										dead,
+										!unknown_hidden,
 									)
 								};
 
