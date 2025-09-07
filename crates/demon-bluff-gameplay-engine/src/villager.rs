@@ -842,6 +842,10 @@ impl ConfirmedVillager {
 		self.corrupted
 	}
 
+	pub fn set_corrupted(&mut self, corrupted: bool) {
+		self.corrupted = corrupted;
+	}
+
 	pub fn lies(&self) -> bool {
 		self.true_identity().lies() || self.corrupted
 	}

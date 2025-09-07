@@ -107,8 +107,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	};
 
 	// there's probably redundancies in this loop but they will be deduplicated
-	// TODO: Consider doppleganger
-	// TODO: Consider baker
 	let mut layouts = HashSet::new();
 	for disguise_index_combo in disguisable_indicies.iter().permutations(remaining_evils) {
 		for evil_archetype_combo in remaining_initial_draw
@@ -243,11 +241,15 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			// TODO: Test pass order once deck builder mode releases
 			let adjacency_affected_theoreticals =
 				with_adjacent_affects(game_state, confirmeds, extra_outcasts, evil_locations, desc);
-			// TODO: PlagueDoctor pass
 			// TODO: Shaman (Cloner) pass
+			// TODO: Doppleganger pass
+			let plague_doctor_affected_theoreticals = adjacency_affected_theoreticals
+				.into_iter()
+				.flat_map(with_plague_doctors);
+			// TODO: Alchemist pass
 			// TODO: Baker pass
 
-			layouts.extend(adjacency_affected_theoreticals);
+			layouts.extend(plague_doctor_affected_theoreticals);
 		}
 	}
 
@@ -418,4 +420,46 @@ fn generate_boolean_permutations(n: usize) -> Vec<Vec<bool>> {
 		permutations.push(current_permutation);
 	}
 	permutations
+}
+
+gen fn with_plague_doctors(layout: BoardLayout) -> BoardLayout {
+	let mut affectable_indicies = Vec::with_capacity(layout.villagers.len() - 1);
+	let num_plague_doctors = layout
+		.villagers
+		.iter()
+		.enumerate()
+		.filter(|(index, villager)| {
+			if *villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+			{
+				true
+			} else {
+				if !villager.inner.corrupted() && villager.inner.true_identity().can_be_corrupted()
+				{
+					affectable_indicies.push(*index);
+				}
+
+				false
+			}
+		})
+		.count();
+
+	if num_plague_doctors == 0 {
+		yield layout;
+		return;
+	}
+
+	for affected_indices in affectable_indicies
+		.into_iter()
+		.combinations(num_plague_doctors)
+	{
+		let mut next_layout = layout.clone();
+
+		for index in affected_indices {
+			let mutated_theoretical = &mut next_layout.villagers[index];
+			mutated_theoretical.was_corrupt = true;
+			mutated_theoretical.inner.set_corrupted(true)
+		}
+
+		yield next_layout;
+	}
 }
