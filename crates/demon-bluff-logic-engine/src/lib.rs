@@ -660,18 +660,36 @@ fn predict_board_configs(
 			if allow_retry {
 				// always perfer to kill hidden villagers if necessary to get more info
 				let mut has_hiddens = false;
+				let mut has_knights = false;
 				for index in &most_common_evil_index_occurrences {
-					if let Villager::Hidden(_) = game_state.villager(index) {
+					let villager = game_state.villager(index);
+					if let Villager::Hidden(_) = villager {
 						has_hiddens = true;
 						break;
+					} else if let Villager::Active(active_villager) = villager {
+						if *active_villager.instance().archetype()
+							== VillagerArchetype::GoodVillager(GoodVillager::Knight)
+						{
+							has_knights = true;
+						}
 					}
 				}
 
 				if has_hiddens {
-					info!(logger: log, "One of the choices is a hidden villager. We will aim to kill these for more information.");
+					info!(logger: log, "One or more of the choices is a hidden villager. We will aim to kill these for more information.");
 					most_common_evil_index_occurrences.retain(|index| {
 						if let Villager::Hidden(_) = game_state.villager(index) {
 							true
+						} else {
+							false
+						}
+					});
+				} else if has_knights {
+					info!(logger: log, "One or more of the choices is a knight. We will aim to kill these first to attempt to retain health.");
+					most_common_evil_index_occurrences.retain(|index| {
+						if let Villager::Active(active_villager) = game_state.villager(index) {
+							*active_villager.instance().archetype()
+								== VillagerArchetype::GoodVillager(GoodVillager::Knight)
 						} else {
 							false
 						}
