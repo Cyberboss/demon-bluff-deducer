@@ -427,6 +427,22 @@ impl Testimony {
 		return Expression::Leaf(Testimony::Enlightened(direction));
 	}
 
+	pub fn oracle(
+		targets: &[VillagerIndex; 2],
+		archetype: VillagerArchetype,
+	) -> Expression<Testimony> {
+		Expression::Or(
+			Box::new(Expression::Leaf(Testimony::Role(RoleClaim::new(
+				targets[0].clone(),
+				archetype.clone(),
+			)))),
+			Box::new(Expression::Leaf(Testimony::Role(RoleClaim::new(
+				targets[1].clone(),
+				archetype,
+			)))),
+		)
+	}
+
 	pub fn jester(targets: &[VillagerIndex; 3], evil_count: usize) -> Expression<Testimony> {
 		match evil_count {
 			0 => Expression::And(
