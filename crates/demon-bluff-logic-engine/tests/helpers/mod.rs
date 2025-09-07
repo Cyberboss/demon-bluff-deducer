@@ -2,6 +2,7 @@ use std::{
 	fmt::{Display, write},
 	fs::{self, File},
 	path::PathBuf,
+	sync::OnceLock,
 	time::Instant,
 };
 
@@ -55,6 +56,8 @@ pub enum TestAction {
 	Ability(Vec<VillagerIndex>, AbilityResult),
 }
 
+static LOGGER_INITIALIZED: OnceLock<bool> = OnceLock::new();
+
 pub fn run_game(
 	game_state: &GameState,
 	expected_actions: Vec<TestAction>,
@@ -64,7 +67,10 @@ pub fn run_game(
 	let mut game_state = game_state.clone();
 	let total_actions = expected_actions.len();
 	let mut log = log::logger();
-	colog::init();
+	if LOGGER_INITIALIZED.try_insert(true).is_ok() {
+		colog::init();
+	}
+
 	for (index, action) in expected_actions.into_iter().enumerate() {
 		if let Some(log_after) = log_after
 			&& log_after == index

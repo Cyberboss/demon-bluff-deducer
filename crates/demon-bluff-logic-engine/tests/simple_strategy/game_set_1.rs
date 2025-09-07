@@ -382,7 +382,7 @@ fn game_5() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(0)],
+				vec![VillagerIndex::number(1)],
 				AbilityResult::new(
 					VillagerIndex(3),
 					Some(Expression::Not(Box::new(Expression::Leaf(
@@ -477,7 +477,7 @@ fn game_6() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(0)],
+				vec![VillagerIndex::number(1)],
 				AbilityResult::new(
 					VillagerIndex(3),
 					Some(Expression::Leaf(Testimony::Lying(VillagerIndex(0)))),
@@ -570,10 +570,12 @@ fn game_7() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(4)],
+				vec![VillagerIndex::number(1)],
 				AbilityResult::new(
 					VillagerIndex(3),
-					Some(Expression::Leaf(Testimony::Lying(VillagerIndex(4)))),
+					Some(Expression::Not(Box::new(Expression::Leaf(
+						Testimony::Lying(VillagerIndex::number(1)),
+					)))),
 					None,
 				),
 			),
@@ -663,12 +665,10 @@ fn game_8() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(4)],
+				vec![VillagerIndex::number(1)],
 				AbilityResult::new(
 					VillagerIndex(3),
-					Some(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Lying(VillagerIndex(4)),
-					)))),
+					Some(Expression::Leaf(Testimony::Lying(VillagerIndex::number(1)))),
 					None,
 				),
 			),
@@ -758,12 +758,10 @@ fn game_9() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(4)],
+				vec![VillagerIndex::number(1)],
 				AbilityResult::new(
-					VillagerIndex(3),
-					Some(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Lying(VillagerIndex(4)),
-					)))),
+					VillagerIndex::number(4),
+					Some(Expression::Leaf(Testimony::Lying(VillagerIndex::number(1)))),
 					None,
 				),
 			),
