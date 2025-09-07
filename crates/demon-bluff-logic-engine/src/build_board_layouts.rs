@@ -117,82 +117,77 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				.combinations(unrevealed_villagers)
 			{
 				assert_eq!(disguise_index_combo.len(), evil_archetype_combo.len());
-				let mut build_with_good_archetype = |good_archetype_option: Option<
-					&VillagerArchetype,
-				>| {
-					let mut first_desc = true;
-					let mut desc = String::new();
 
-					let confirmeds = game_state
-						.villagers()
-						.iter()
-						.map(|villager| match villager {
-							Villager::Active(active_villager) => {
-								(Some((active_villager.instance(), None)), false)
-							}
-							Villager::Hidden(hidden_villager) => (None, hidden_villager.dead()),
-							Villager::Confirmed(confirmed_villager) => (
-								Some((confirmed_villager.instance(), Some(confirmed_villager))),
-								true,
-							),
-						})
-						.enumerate()
-						.map(|(index, (instance_and_confirmed, dead))| {
-							let index = VillagerIndex(index);
+				let mut first_desc = true;
+				let mut desc = String::new();
 
-							if let Some(disguise_index) = disguise_index_combo
-								.iter()
-								.position(|iterated_index| iterated_index == &&index)
-							{
-								let evil_archetype = evil_archetype_combo[disguise_index];
-								let disguised_archetype = (*evil_archetype).clone();
+				let confirmeds: Vec<TheoreticalVillager> = game_state
+					.villagers()
+					.iter()
+					.map(|villager| match villager {
+						Villager::Active(active_villager) => {
+							(Some((active_villager.instance(), None)), false)
+						}
+						Villager::Hidden(hidden_villager) => (None, hidden_villager.dead()),
+						Villager::Confirmed(confirmed_villager) => (
+							Some((confirmed_villager.instance(), Some(confirmed_villager))),
+							true,
+						),
+					})
+					.enumerate()
+					.map(|(index, (instance_and_confirmed, dead))| {
+						let index = VillagerIndex(index);
 
-								let mut unknown_hidden = false;
-								let instance = match instance_and_confirmed {
-									Some((instance, _)) => instance.clone(),
-									None => {
-										// for our purposes, the instance doesn't matter here
-										unknown_hidden = true;
-										VillagerInstance::new(
-											VillagerArchetype::GoodVillager(
-												GoodVillager::Confessor,
-											),
-											None,
-										)
-									}
-								};
+						if let Some(disguise_index) = disguise_index_combo
+							.iter()
+							.position(|iterated_index| iterated_index == &&index)
+						{
+							let evil_archetype = evil_archetype_combo[disguise_index];
+							let disguised_archetype = (*evil_archetype).clone();
 
-								if !first_desc {
-									desc = format!("{}, ", desc);
-								} else {
-									first_desc = false;
+							let mut unknown_hidden = false;
+							let instance = match instance_and_confirmed {
+								Some((instance, _)) => instance.clone(),
+								None => {
+									// for our purposes, the instance doesn't matter here
+									unknown_hidden = true;
+									VillagerInstance::new(
+										VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+										None,
+									)
 								}
-								desc = format!(
-									"{}{}: {} (actually a {})",
-									desc,
-									index,
-									if unknown_hidden {
-										String::from_str("Unknown").unwrap()
-									} else {
-										format!("{}", instance.archetype())
-									},
-									disguised_archetype
-								);
+							};
 
-								TheoreticalVillager::new(
-									ConfirmedVillager::new(
-										instance.clone(),
-										Some(disguised_archetype),
-										false,
-									),
-									false,
-									!unknown_hidden,
-								)
+							if !first_desc {
+								desc = format!("{}, ", desc);
 							} else {
-								let mut unknown_hidden = false;
-								let theoretical = if let Some((instance, confirmed)) =
-									instance_and_confirmed
-								{
+								first_desc = false;
+							}
+							desc = format!(
+								"{}{}: {} (actually a {})",
+								desc,
+								index,
+								if unknown_hidden {
+									String::from_str("Unknown").unwrap()
+								} else {
+									format!("{}", instance.archetype())
+								},
+								disguised_archetype
+							);
+
+							TheoreticalVillager::new(
+								ConfirmedVillager::new(
+									instance.clone(),
+									Some(disguised_archetype),
+									false,
+								),
+								false,
+								!unknown_hidden,
+							)
+						} else {
+							let mut unknown_hidden = false;
+							let theoretical =
+								if let Some((instance, confirmed)) = instance_and_confirmed {
 									if let Some(confirmed) = confirmed {
 										TheoreticalVillager::new(
 											confirmed.clone(),
@@ -209,8 +204,10 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 									}
 								} else {
 									unknown_hidden = true;
-									let good_archetype = good_archetype_option
-										.expect("No good archetype available to populate!");
+
+									// TODO: generate this properly based on the deck
+									let good_archetype = // good_archetype_option.expect("No good archetype available to populate!");
+									VillagerArchetype::GoodVillager(GoodVillager::Confessor);
 									let corrupt = good_archetype.starts_corrupted();
 									TheoreticalVillager::new(
 										ConfirmedVillager::new(
@@ -223,54 +220,45 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 									)
 								};
 
-								if !first_desc {
-									desc = format!("{}, ", desc);
-								} else {
-									first_desc = false;
-								}
-								desc = format!(
-									"{}{}: {}",
-									desc,
-									index,
-									if unknown_hidden {
-										String::from_str("Unknown").unwrap()
-									} else {
-										format!("{}", theoretical.inner.true_identity())
-									},
-								);
-
-								theoretical
+							if !first_desc {
+								desc = format!("{}, ", desc);
+							} else {
+								first_desc = false;
 							}
-						})
-						.collect();
+							desc = format!(
+								"{}{}: {}",
+								desc,
+								index,
+								if unknown_hidden {
+									String::from_str("Unknown").unwrap()
+								} else {
+									format!("{}", theoretical.inner.true_identity())
+								},
+							);
 
-					let evil_locations = disguise_index_combo
-						.iter()
-						.map(|index| (*index).clone())
-						.collect();
+							theoretical
+						}
+					})
+					.collect();
 
-					// TODO: Test pass order once deck builder mode releases
-					let adjacency_affected_theoreticals = with_adjacent_affects(
-						game_state,
-						confirmeds,
-						extra_outcasts,
-						evil_locations,
-						desc,
-					);
-					// TODO: PlagueDoctor pass
-					// TODO: Shaman (Cloner) pass
-					// TODO: Baker pass
+				let evil_locations = disguise_index_combo
+					.iter()
+					.map(|index| (*index).clone())
+					.collect();
 
-					layouts.extend(adjacency_affected_theoreticals);
-				};
+				// TODO: Test pass order once deck builder mode releases
+				let adjacency_affected_theoreticals = with_adjacent_affects(
+					game_state,
+					confirmeds,
+					extra_outcasts,
+					evil_locations,
+					desc,
+				);
+				// TODO: PlagueDoctor pass
+				// TODO: Shaman (Cloner) pass
+				// TODO: Baker pass
 
-				if good_archetype_combo.is_empty() {
-					build_with_good_archetype(None);
-				} else {
-					for good_archetype in &good_archetype_combo {
-						build_with_good_archetype(Some(*good_archetype));
-					}
-				}
+				layouts.extend(adjacency_affected_theoreticals);
 			}
 		}
 	}

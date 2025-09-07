@@ -393,19 +393,7 @@ fn predict_board_configs(
 					if optimized_expressions[index].variables().len()
 						!= num_used_from_potential_assignment
 					{
-						let mut potential_assignment_has_that_board_expression_doesnt = Vec::new();
-						for (x, _) in potential_assignment {
-							if !optimized_expressions[index]
-								.variables()
-								.iter()
-								.any(|index_testimony| index_testimony == x)
-							{
-								potential_assignment_has_that_board_expression_doesnt
-									.push(x.clone());
-							}
-						}
-
-						breakpoint();
+						panic!("Bad juju");
 					}
 
 					potential_assignment_mappings
@@ -456,7 +444,7 @@ fn predict_board_configs(
 						&potential_assignment_mappings.as_ref().unwrap()[index];
 
 					if *original_slots_used != board_expression.variables().len() {
-						breakpoint();
+						panic!("Bad juju");
 					}
 
 					let mut mapped_assignment_builder = Vec::with_capacity(*original_slots_used);
@@ -894,6 +882,24 @@ fn validate_assignment(
 				}
 
 				*direction == expected_direction
+			}
+			Testimony::Knitter(evil_pairs_claim) => {
+				let mut pairs_count = 0;
+				for i in 0..game_state.total_villagers() {
+					let j = if i == (game_state.total_villagers() - 1) {
+						0
+					} else {
+						i + 1
+					};
+
+					if theoreticals[i].inner.true_identity().appears_evil()
+						&& theoreticals[j].inner.true_identity().appears_evil()
+					{
+						pairs_count += 1;
+					}
+				}
+
+				pairs_count == evil_pairs_claim.pairs()
 			}
 		};
 

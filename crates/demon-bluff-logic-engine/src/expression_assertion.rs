@@ -19,7 +19,10 @@ where
 	let total_potential_assignments: u64 = 1 << num_vars;
 
 	if total_potential_assignments > u32::MAX as u64 {
-		breakpoint();
+		panic!(
+			"We should never have more than 2G potential assignments: {}",
+			total_potential_assignments
+		);
 	}
 
 	let assignments = (0..total_potential_assignments)
