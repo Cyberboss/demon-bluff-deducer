@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::GameState,
-	testimony::Testimony,
+	testimony::{SlayResult, Testimony},
 	villager::{GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
 };
 use itertools::Itertools;
@@ -399,7 +399,58 @@ gen fn theoretical_testimonies(
 					yield (next_layout2, ability_attempt, vec![index_testimony]);
 				}
 			}
-			GoodVillager::Slayer => todo!("Slayer testimony generation"),
+			GoodVillager::Slayer => {
+				for (target_index, target_theoretical) in theoreticals
+					.iter()
+					.enumerate()
+					.filter(move |(index, _)| *index != testifier_index.0)
+				{
+					let mut targets = BTreeSet::new();
+					let target_index = VillagerIndex(target_index);
+					targets.insert(target_index.clone());
+					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
+					if invalid_ability_attempts.contains(&ability_attempt) {
+						continue;
+					}
+
+					let mut next_layout = board_config.clone();
+
+					let slayed;
+					// TODO: The conditions for this may change. See https://discord.com/channels/1148903384968089640/1400926599628460052/1414305682290770012
+					if testifier.inner.will_lie() {
+						next_layout.description = format!(
+							"{} - {} failed to slay {} due to lying",
+							next_layout.description, testifier_index, target_index
+						);
+						slayed = false;
+					} else if !target_theoretical.inner.true_identity().is_evil() {
+						next_layout.description = format!(
+							"{} - {} failed to slay {} due to them not being evil",
+							next_layout.description, testifier_index, target_index
+						);
+						slayed = false;
+					} else {
+						next_layout.description = format!(
+							"{} - {} slayed {}",
+							next_layout.description, testifier_index, target_index
+						);
+						slayed = true;
+						next_layout.villagers[target_index.0].actually_dead = true;
+					}
+
+					let testifier_instance_to_modify = next_layout.villagers[testifier_index.0]
+						.inner
+						.instance_mut();
+					let raw_testimony = Testimony::Slayed(SlayResult::new(target_index, slayed));
+					testifier_instance_to_modify
+						.set_testimony(Expression::Leaf(raw_testimony.clone()));
+
+					let mut testimonies = Vec::with_capacity(1);
+					testimonies.push(IndexTestimony::new(testifier_index.clone(), raw_testimony));
+
+					yield (next_layout, ability_attempt.clone(), testimonies);
+				}
+			}
 			GoodVillager::Oracle => todo!("Oracle testimony generation"),
 			GoodVillager::Poet => todo!("FUCKING POET TESTIMONY GENERATION!!!"),
 			GoodVillager::Knitter => todo!("Knitter testimony generation"),
