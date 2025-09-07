@@ -487,9 +487,11 @@ impl VillagerArchetype {
 				| GoodVillager::Slayer => true,
 			},
 			Self::Outcast(outcast) => match outcast {
-				Outcast::Drunk | Outcast::Wretch | Outcast::Bombardier => false,
-				Outcast::Doppelganger => todo!("Can a Doppleganger be corrupted?"),
-				Outcast::PlagueDoctor => todo!("Can a PlagueDoctor be corrupted?"),
+				Outcast::PlagueDoctor
+				| Outcast::Doppelganger
+				| Outcast::Drunk
+				| Outcast::Wretch
+				| Outcast::Bombardier => false,
 			},
 			Self::Demon(demon) => match demon {
 				Demon::Lilis | Demon::Baa | Demon::Pooka => false,
