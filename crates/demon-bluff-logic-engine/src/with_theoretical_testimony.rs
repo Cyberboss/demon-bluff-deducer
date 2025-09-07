@@ -472,7 +472,85 @@ gen fn theoretical_testimonies(
 			Outcast::Drunk | Outcast::Wretch | Outcast::Bombardier | Outcast::Doppelganger => {
 				panic!("A {} should not have a testimony!", archetype)
 			}
-			Outcast::PlagueDoctor => todo!("PlagueDoctor testimony generation"),
+			Outcast::PlagueDoctor => {
+				for (target_index, target_theoretical) in theoreticals
+					.iter()
+					.enumerate()
+					.filter(move |(index, _)| *index != testifier_index.0)
+				// PD always sees themselves as not corrupt, so this is uselesss
+				{
+					let mut targets = BTreeSet::new();
+					let target_index = VillagerIndex(target_index);
+					targets.insert(target_index.clone());
+					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
+					if invalid_ability_attempts.contains(&ability_attempt) {
+						continue;
+					}
+
+					let mut next_layout = board_config.clone();
+
+					let truly_corrupt = target_theoretical.inner.corrupted();
+
+					let says_corrupt = testifier.inner.will_lie() ^ truly_corrupt;
+					let raw_testimony = Testimony::Corrupt(target_index.clone());
+					if says_corrupt {
+						next_layout.description = format!(
+							"{} - {} {}correctly says: {} is corrupt",
+							next_layout.description,
+							testifier_index,
+							if truly_corrupt { "" } else { "IN" },
+							target_index
+						);
+					} else {
+						next_layout.description = format!(
+							"{} - {} {}correctly says: {} is NOT corrupt",
+							next_layout.description,
+							testifier_index,
+							if truly_corrupt { "IN" } else { "" },
+							target_index
+						);
+					}
+
+					let mut testimonies = Vec::with_capacity(1);
+					testimonies.push(IndexTestimony::new(
+						testifier_index.clone(),
+						raw_testimony.clone(),
+					));
+
+					if !says_corrupt {
+						let testifier_instance_to_modify = next_layout.villagers[testifier_index.0]
+							.inner
+							.instance_mut();
+						testifier_instance_to_modify.set_testimony(Expression::Not(Box::new(
+							Expression::Leaf(raw_testimony),
+						)));
+						yield (next_layout, ability_attempt.clone(), testimonies);
+						return;
+					}
+
+					for (index, _) in next_layout.villagers.into_iter().enumerate().filter(
+						move |(index, villager)| {
+							*index != testifier_index.0
+								&& testifier.inner.will_lie()
+									== !villager.inner.true_identity().appears_evil()
+						},
+					) {
+						let evil_index = VillagerIndex(index);
+						let next_description =
+							format!("{}, {} is evil", next_layout.description, evil_index);
+						let mut next_layout = board_config.clone();
+						next_layout.description = next_description;
+						let testifier_instance_to_modify = next_layout.villagers[testifier_index.0]
+							.inner
+							.instance_mut();
+						testifier_instance_to_modify.set_testimony(Expression::And(
+							Box::new(Expression::Leaf(raw_testimony.clone())),
+							Box::new(Expression::Leaf(Testimony::Evil(evil_index))),
+						));
+						yield (next_layout, ability_attempt.clone(), testimonies.clone());
+					}
+				}
+			}
 		},
 		VillagerArchetype::Minion(_) | VillagerArchetype::Demon(_) => {
 			panic!("A {} should not have a testimony!", archetype)
