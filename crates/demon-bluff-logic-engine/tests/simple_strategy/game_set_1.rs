@@ -382,7 +382,7 @@ fn game_5() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(1)],
+				vec![VillagerIndex::number(0)],
 				AbilityResult::new(
 					VillagerIndex(3),
 					Some(Expression::Not(Box::new(Expression::Leaf(

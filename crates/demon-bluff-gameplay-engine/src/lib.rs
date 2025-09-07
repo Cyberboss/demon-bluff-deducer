@@ -1,4 +1,4 @@
-#![feature(gen_blocks, breakpoint)]
+#![feature(gen_blocks)]
 
 use std::fmt::Display;
 

@@ -1,4 +1,4 @@
-use std::{arch::breakpoint, fmt::Display};
+use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
@@ -132,10 +132,6 @@ impl Display for VillagerIndex {
 
 impl VillagerIndex {
 	pub fn number(villager_number: usize) -> Self {
-		if villager_number == 0 {
-			breakpoint();
-		}
-
 		Self(villager_number - 1)
 	}
 }
