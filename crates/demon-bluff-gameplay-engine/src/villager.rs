@@ -577,10 +577,10 @@ impl VillagerArchetype {
 				| GoodVillager::Medium
 				| GoodVillager::Oracle
 				| GoodVillager::Poet
+				| GoodVillager::Bard
 				| GoodVillager::Scout
 				| GoodVillager::Witness => false,
-				GoodVillager::Bard
-				| GoodVillager::Dreamer
+				GoodVillager::Dreamer
 				| GoodVillager::Druid
 				| GoodVillager::FortuneTeller
 				| GoodVillager::Jester
@@ -669,7 +669,7 @@ impl VillagerArchetype {
 				.map(Affect::Corrupt),
 			},
 			VillagerArchetype::Minion(minion) => match minion {
-				Minion::Counsellor => Some(Affect::Corrupt(Expression::Or(
+				Minion::Poisoner => Some(Affect::Corrupt(Expression::Or(
 					Box::new(Expression::Leaf(VillagerAffect::new(
 						Direction::Clockwise,
 						1,
@@ -691,7 +691,17 @@ impl VillagerArchetype {
 				))),
 				Minion::Shaman => Some(Affect::DupeVillager),
 				Minion::Witch => Some(Affect::BlockLastNReveals(1)),
-				Minion::Minion | Minion::Poisoner | Minion::Twinion | Minion::Puppet => None,
+				Minion::Counsellor => Some(Affect::Outcast(Expression::Or(
+					Box::new(Expression::Leaf(VillagerAffect::new(
+						Direction::Clockwise,
+						1,
+					))),
+					Box::new(Expression::Leaf(VillagerAffect::new(
+						Direction::CounterClockwise,
+						1,
+					))),
+				))),
+				Minion::Minion | Minion::Twinion | Minion::Puppet => None,
 			},
 			VillagerArchetype::Demon(demon) => Some(match demon {
 				Demon::Baa => Affect::FakeOutcast,

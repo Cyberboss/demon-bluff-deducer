@@ -313,7 +313,7 @@ fn with_adjacent_affects(
 					.expect("Affect should be here!")
 				{
 					Affect::Corrupt(_) => {
-						// plague doctor handled in third pass
+						// plague doctor handled in another pass
 						if *affector.inner.true_identity()
 							!= VillagerArchetype::Outcast(Outcast::PlagueDoctor)
 							&& affected_villager.inner.true_identity().can_be_corrupted()

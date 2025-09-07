@@ -33,7 +33,7 @@ use demon_bluff_gameplay_engine::{
 	affect::Affect,
 	game_state::GameState,
 	testimony::{ConfessorClaim, Direction, Testimony, index_offset},
-	villager::{GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
+	villager::{Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
 use itertools::Itertools;
@@ -518,6 +518,10 @@ fn predict_board_configs(
 			}
 		}
 
+		for (index, (matching_layout, _)) in all_matching_layouts.iter().enumerate() {
+			info!(logger: log, "Layout #{}: {}", index + 1, matching_layout.description);
+		}
+
 		if matching_layouts.len() == 1 {
 			let matching_layout = matching_layouts.into_iter().next().unwrap();
 			let matching_configs = potential_board_configurations
@@ -734,21 +738,6 @@ fn validate_assignment(
 	if variables.len() != assignment.len() {
 		panic!("This again");
 	}
-
-	assert_eq!(variables.len(), assignment.len());
-	/*
-	if game_state.reveal_order().len() == 7
-		&& board_config
-			.evil_locations
-			.contains(&VillagerIndex::number(5))
-		&& board_config
-			.evil_locations
-			.contains(&VillagerIndex::number(6))
-	{
-		let json = serde_json::to_string_pretty(board_config).unwrap();
-		std::fs::write("S:/workspace/demon-bluff-deducer/board_config.json", json).unwrap();
-		panic!("Done")
-	}*/
 
 	let theoreticals = &board_config.villagers;
 	for (variable_index, truthful) in assignment.iter().enumerate() {
