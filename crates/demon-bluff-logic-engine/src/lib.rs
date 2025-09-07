@@ -594,8 +594,7 @@ fn predict_board_configs(
 			});
 		}
 
-		if !can_get_more_information
-			&& most_common_evil_index_occurrences.len() == 1
+		if most_common_evil_index_occurrences.len() == 1
 			&& *(evil_index_occurrences_in_matching_layouts
 				.get(&most_common_evil_index_occurrences[0])
 				.unwrap()) == all_matching_layouts.len()
