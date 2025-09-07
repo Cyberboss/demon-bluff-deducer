@@ -241,12 +241,19 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			// TODO: Test pass order once deck builder mode releases
 			let adjacency_affected_theoreticals =
 				with_adjacent_affects(game_state, confirmeds, extra_outcasts, evil_locations, desc);
+			let counsellor_affected_theoreticals = adjacency_affected_theoreticals
+				.into_iter()
+				.flat_map(with_counsellors);
 			// TODO: Shaman (Cloner) pass
 			// TODO: Doppleganger pass
-			let plague_doctor_affected_theoreticals = adjacency_affected_theoreticals
+			let doppleganger_affected_theoreticals = counsellor_affected_theoreticals
+				.into_iter()
+				.flat_map(with_dopplegangers);
+			let plague_doctor_affected_theoreticals = doppleganger_affected_theoreticals
 				.into_iter()
 				.flat_map(with_plague_doctors);
 			// TODO: Alchemist pass
+			// TODO: Drunk pass (alchemist cannot cure)
 			// TODO: Baker pass
 
 			layouts.extend(plague_doctor_affected_theoreticals);
@@ -277,12 +284,13 @@ fn with_adjacent_affects(
 			.affect(game_state.total_villagers(), Some(index.clone()))
 		{
 			match affect {
-				Affect::Corrupt(_) | Affect::Puppet(_) | Affect::Outcast(_) => {
+				Affect::Corrupt(_) | Affect::Puppet(_) => {
 					any_affects_applied = true;
 					affecting_indicies.push(index);
 				}
 				Affect::DupeVillager
 				| Affect::Night(_)
+				| Affect::Outcast(_)
 				| Affect::FakeOutcast
 				| Affect::BlockLastNReveals(_) => {}
 			}
@@ -348,32 +356,7 @@ fn with_adjacent_affects(
 						}
 					}
 					Affect::Outcast(_) => {
-						// TODO: this outcast conversion process sucks, make it better
-						if extra_outcasts == 0
-							&& affected_villager.inner.true_identity().can_be_converted()
-						{
-							mutated_desc = format!(
-								"{} - {} was converted to an outcast",
-								mutated_desc, affected_index
-							);
-							affected_villager.inner = ConfirmedVillager::new(
-								VillagerInstance::new(
-									game_state
-										.deck()
-										.iter()
-										.filter(|archetype| {
-											matches!(archetype, VillagerArchetype::Outcast(_))
-										})
-										.next()
-										.cloned()
-										.expect("There wasn't at least one outcast?"),
-									None,
-								),
-								Some(VillagerArchetype::Minion(Minion::Puppet)),
-								false,
-							);
-							affected_villager.affection = Some(AffectType::Outcasted)
-						}
+						// handled in another pass
 					}
 					Affect::DupeVillager => {
 						// handled in another pass
@@ -420,6 +403,64 @@ fn generate_boolean_permutations(n: usize) -> Vec<Vec<bool>> {
 		permutations.push(current_permutation);
 	}
 	permutations
+}
+
+gen fn with_counsellors(layout: BoardLayout) -> BoardLayout {
+	let mut affectable_indicies = Vec::with_capacity(layout.villagers.len() - 1);
+	for (index, _) in layout.villagers.iter().enumerate().filter(|(_, villager)| {
+		*villager.inner.true_identity() == VillagerArchetype::Minion(Minion::Counsellor)
+	}) {
+		let villager_index = VillagerIndex(index);
+		let consellor_affectable_indicies = [
+			index_offset(&villager_index, layout.villagers.len(), 1, true),
+			index_offset(&villager_index, layout.villagers.len(), 1, false),
+		];
+		affectable_indicies.push((villager_index, consellor_affectable_indicies));
+	}
+
+	if affectable_indicies.len() == 0 {
+		yield layout;
+		return;
+	}
+
+	// true is a left selection
+	for permutation in generate_boolean_permutations(affectable_indicies.len()) {
+		for (affectable_indicies_index, left_pick) in permutation.into_iter().enumerate() {
+			let (source_consellor, affectable_indicies) =
+				&affectable_indicies[affectable_indicies_index];
+			let target_index = &affectable_indicies[if left_pick { 0 } else { 1 }];
+
+			if matches!(
+				layout.villagers[target_index.0].inner.true_identity(),
+				VillagerArchetype::Outcast(_)
+			) {
+				let mut next_layout = layout.clone();
+				next_layout.description = format!(
+					"{} - {} was converted to an outcast by {}",
+					layout.description, target_index, source_consellor
+				);
+				next_layout.villagers[target_index.0].affection = Some(AffectType::Outcasted);
+				yield next_layout;
+			}
+		}
+	}
+}
+
+gen fn with_dopplegangers(layout: BoardLayout) -> BoardLayout {
+	let num_gangers = layout
+		.villagers
+		.iter()
+		.filter(|villager| {
+			*villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::Doppelganger)
+		})
+		.count();
+
+	if num_gangers == 0 {
+		yield layout;
+		return;
+	}
+
+	todo!("Doppleganger cloning");
 }
 
 gen fn with_plague_doctors(layout: BoardLayout) -> BoardLayout {
