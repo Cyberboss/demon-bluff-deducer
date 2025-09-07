@@ -1019,6 +1019,37 @@ fn validate_assignment(
 				pairs_count <= evil_pairs_claim.pairs()
 					&& (pairs_count + theoretical_pairs_count) >= evil_pairs_claim.pairs()
 			}
+			Testimony::Bard(distance_option) => match distance_option {
+				Some(distance) => {
+					let bard_index = &index_testimony.index;
+
+					let matches;
+					let mut i = 0;
+					loop {
+						i += 1;
+						let clockwise_read =
+							index_offset(&bard_index, game_state.total_villagers(), i, true);
+						let counterclockwise_read =
+							index_offset(&bard_index, game_state.total_villagers(), i, false);
+
+						let clockwise_theoretical = &theoreticals[clockwise_read.0];
+						let counterclockwise_theoretical = &theoreticals[counterclockwise_read.0];
+
+						let clockwise_corrupt = clockwise_theoretical.inner.corrupted();
+						let counterclockwise_corrupt =
+							counterclockwise_theoretical.inner.corrupted();
+						if clockwise_corrupt || counterclockwise_corrupt {
+							matches = i == *distance;
+							break;
+						}
+					}
+
+					matches
+				}
+				None => theoreticals
+					.iter()
+					.all(|theoretical| !theoretical.inner.corrupted()),
+			},
 		};
 
 		let full_testimony = board_config.villagers[index_testimony.index.0]
