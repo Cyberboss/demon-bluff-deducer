@@ -300,6 +300,12 @@ impl GameState {
 		})
 	}
 
+	pub fn role_in_play(&self, archetype: VillagerArchetype) -> bool {
+		self.deck
+			.iter()
+			.any(|deck_archetype| *deck_archetype == archetype)
+	}
+
 	pub fn deck(&self) -> &Vec<VillagerArchetype> {
 		&self.deck
 	}

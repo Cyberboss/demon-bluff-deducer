@@ -135,6 +135,12 @@ pub fn with_theoretical_testimony_inner(
 	}
 
 	if any_potential_testimonies_remaining {
+		let wretch_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch));
+		let drunk_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Drunk));
+		let knight_in_play =
+			game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
+		let bombardier_in_play =
+			game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
 		let mut expanded_results = HashMap::new();
 		for (ability_attempt, new_layouts) in results {
 			// to prevent exponential explosion, check layouts are satisfiable before recursing
@@ -167,6 +173,10 @@ pub fn with_theoretical_testimony_inner(
 							optimized_expression.variables(),
 							&board_layout,
 							game_state,
+							wretch_in_play,
+							drunk_in_play,
+							knight_in_play,
+							bombardier_in_play,
 						)
 					});
 

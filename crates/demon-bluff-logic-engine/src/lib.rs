@@ -393,19 +393,7 @@ fn predict_board_configs(
 					if optimized_expressions[index].variables().len()
 						!= num_used_from_potential_assignment
 					{
-						let mut potential_assignment_has_that_board_expression_doesnt = Vec::new();
-						for (x, _) in potential_assignment {
-							if !optimized_expressions[index]
-								.variables()
-								.iter()
-								.any(|index_testimony| index_testimony == x)
-							{
-								potential_assignment_has_that_board_expression_doesnt
-									.push(x.clone());
-							}
-						}
-
-						breakpoint();
+						panic!("Bad juju");
 					}
 
 					potential_assignment_mappings
@@ -445,6 +433,12 @@ fn predict_board_configs(
 				.collect();
 
 		let matching_configs = AtomicI32::new(0);
+		let wretch_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch));
+		let drunk_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Drunk));
+		let knight_in_play =
+			game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
+		let bombardier_in_play =
+			game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
 		let iteration_result: Vec<(usize, HashMap<IndexTestimony, bool>)> = things_to_check
 			.into_par_iter()
 			.filter_map(|(index, board_expression, assignment)| {
@@ -456,7 +450,7 @@ fn predict_board_configs(
 						&potential_assignment_mappings.as_ref().unwrap()[index];
 
 					if *original_slots_used != board_expression.variables().len() {
-						breakpoint();
+						panic!("Bad juju");
 					}
 
 					let mut mapped_assignment_builder = Vec::with_capacity(*original_slots_used);
@@ -478,6 +472,10 @@ fn predict_board_configs(
 						board_expression.variables(),
 						&potential_board_configurations[index].0,
 						game_state,
+						wretch_in_play,
+						drunk_in_play,
+						knight_in_play,
+						bombardier_in_play,
 					) {
 					matching_configs.fetch_add(1, Ordering::Relaxed);
 
@@ -728,6 +726,10 @@ fn validate_assignment(
 	variables: &[IndexTestimony],
 	board_config: &BoardLayout,
 	game_state: &GameState,
+	wretch_in_play: bool,
+	drunk_in_play: bool,
+	knight_in_play: bool,
+	bombardier_in_play: bool,
 ) -> bool {
 	if variables.len() != assignment.len() {
 		panic!("This again");
@@ -756,17 +758,41 @@ fn validate_assignment(
 			continue;
 		}
 
+		let if_unknown_good_use_truthful = |theoretical: &TheoreticalVillager, input, condition| {
+			// if it's an unrevealed good villager, consider this true until proven guilty
+			if theoretical.unknown_unrevealed_good() && condition {
+				*truthful
+			} else {
+				input
+			}
+		};
+
 		let testimony_valid = match &index_testimony.testimony {
-			Testimony::Good(villager_index) => !theoreticals[villager_index.0]
-				.inner
-				.true_identity()
-				.is_evil(),
-			Testimony::Evil(villager_index) => theoreticals[villager_index.0]
-				.inner
-				.true_identity()
-				.appears_evil(),
+			Testimony::Good(villager_index) => {
+				let theoretical = &theoreticals[villager_index.0];
+				if_unknown_good_use_truthful(
+					theoretical,
+					!theoretical.inner.true_identity().is_evil(),
+					wretch_in_play,
+				)
+			}
+			Testimony::Evil(villager_index) => {
+				let theoretical = &theoreticals[villager_index.0];
+				if_unknown_good_use_truthful(
+					theoretical,
+					theoretical.inner.true_identity().appears_evil(),
+					wretch_in_play,
+				)
+			}
 			Testimony::Corrupt(villager_index) => theoreticals[villager_index.0].inner.corrupted(),
-			Testimony::Lying(villager_index) => theoreticals[villager_index.0].inner.will_lie(),
+			Testimony::Lying(villager_index) => {
+				let theoretical = &theoreticals[villager_index.0];
+				if_unknown_good_use_truthful(
+					theoretical,
+					theoretical.inner.will_lie(),
+					drunk_in_play,
+				)
+			}
 			Testimony::Cured(villager_index) => {
 				let theoretical = &theoreticals[villager_index.0];
 				theoretical.was_corrupt && !theoretical.inner.corrupted()
@@ -776,31 +802,59 @@ fn validate_assignment(
 				theoretical.baked_from == *baker_claim.was()
 			}
 			Testimony::Role(role_claim) => {
-				theoreticals[role_claim.index().0].inner.true_identity() == role_claim.role()
+				let theoretical = &theoreticals[role_claim.index().0];
+
+				if_unknown_good_use_truthful(
+					theoretical,
+					theoretical.inner.true_identity() == role_claim.role(),
+					!role_claim.role().is_evil(),
+				)
 			}
 			Testimony::Invincible(villager_index) => {
-				*theoreticals[villager_index.0].inner.true_identity()
-					== VillagerArchetype::GoodVillager(GoodVillager::Knight)
+				let theoretical = &theoreticals[villager_index.0];
+
+				if_unknown_good_use_truthful(
+					theoretical,
+					*theoretical.inner.true_identity()
+						== VillagerArchetype::GoodVillager(GoodVillager::Knight),
+					knight_in_play,
+				)
 			}
 			Testimony::Affected(affected_claim) => {
 				theoreticals[affected_claim.index().0].affection.as_ref()
 					== Some(affected_claim.affect_type())
 			}
 			Testimony::FakeEvil(villager_index) => {
-				*theoreticals[villager_index.0].inner.true_identity()
-					== VillagerArchetype::Outcast(Outcast::Wretch)
+				let theoretical = &theoreticals[villager_index.0];
+
+				if_unknown_good_use_truthful(
+					theoretical,
+					*theoretical.inner.true_identity()
+						== VillagerArchetype::Outcast(Outcast::Wretch),
+					wretch_in_play,
+				)
 			}
 			Testimony::SelfDestruct(villager_index) => {
-				*theoreticals[villager_index.0].inner.true_identity()
-					== VillagerArchetype::Outcast(Outcast::Bombardier)
+				let theoretical = &theoreticals[villager_index.0];
+
+				if_unknown_good_use_truthful(
+					theoretical,
+					*theoretical.inner.true_identity()
+						== VillagerArchetype::Outcast(Outcast::Bombardier),
+					bombardier_in_play,
+				)
 			}
 			Testimony::Slayed(slay_result) => {
 				if slay_result.slayed() {
 					true
 				} else {
 					let confirmed_target = &theoreticals[slay_result.index().0].inner;
-					let confirmed_me = &theoreticals[index_testimony.index.0].inner;
-					!confirmed_target.true_identity().is_evil() || confirmed_me.corrupted()
+					let theoretical = &theoreticals[index_testimony.index.0];
+					if_unknown_good_use_truthful(
+						theoretical,
+						!confirmed_target.true_identity().is_evil(),
+						true,
+					) || theoretical.inner.corrupted()
 				}
 			}
 			Testimony::Confess(confession) => {
@@ -827,27 +881,44 @@ fn validate_assignment(
 						}
 
 						let target_index = VillagerIndex(target_index);
-						let clockwise_read = index_offset(
-							&target_index,
-							game_state.total_villagers(),
-							scout_claim.distance(),
-							true,
-						);
-						let counterclockwise_read = index_offset(
-							&target_index,
-							game_state.total_villagers(),
-							scout_claim.distance(),
-							false,
-						);
 
-						// TODO: Need to check there are no closer eviles in either direction
-						theoreticals[counterclockwise_read.0]
-							.inner
-							.true_identity()
-							.appears_evil() || theoreticals[clockwise_read.0]
-							.inner
-							.true_identity()
-							.appears_evil()
+						let matches;
+						let mut i = 0;
+						loop {
+							i += 1;
+							let clockwise_read =
+								index_offset(&target_index, game_state.total_villagers(), i, true);
+							let counterclockwise_read =
+								index_offset(&target_index, game_state.total_villagers(), i, false);
+
+							let clockwise_theoretical = &theoreticals[clockwise_read.0];
+							let counterclockwise_theoretical =
+								&theoreticals[counterclockwise_read.0];
+
+							let unknown_good_villager_appears_evil =
+								(i == scout_claim.distance()) == *truthful;
+							let clockwise_appears_evil =
+								if clockwise_theoretical.unknown_unrevealed_good() {
+									unknown_good_villager_appears_evil
+								} else {
+									clockwise_theoretical.inner.true_identity().appears_evil()
+								};
+							let counterclockwise_appears_evil =
+								if counterclockwise_theoretical.unknown_unrevealed_good() {
+									unknown_good_villager_appears_evil
+								} else {
+									counterclockwise_theoretical
+										.inner
+										.true_identity()
+										.appears_evil()
+								};
+							if clockwise_appears_evil || counterclockwise_appears_evil {
+								matches = i == scout_claim.distance();
+								break;
+							}
+						}
+
+						matches
 					}
 					None => false,
 				}
@@ -870,30 +941,83 @@ fn validate_assignment(
 						false,
 					);
 
-					let clockwise_appears_evil = theoreticals[clockwise_read.0]
-						.inner
-						.true_identity()
-						.appears_evil();
-					let counterclockwise_appears_evil = theoreticals[counterclockwise_read.0]
-						.inner
-						.true_identity()
-						.appears_evil();
+					let clockwise_theoretical = &theoreticals[clockwise_read.0];
+					let counterclockwise_theoretical = &theoreticals[counterclockwise_read.0];
 
-					let inner_expected_direction =
+					// I fucking hate wretch, they make everything difficult
+					let mut found_unknown_good_clockwise = false;
+					let mut found_unknown_good_counterclockwise = false;
+
+					let mut clockwise_appears_evil =
+						if clockwise_theoretical.unknown_unrevealed_good() {
+							found_unknown_good_clockwise = true;
+							(*direction == Direction::Clockwise) == *truthful
+						} else {
+							clockwise_theoretical.inner.true_identity().appears_evil()
+						};
+					let mut counterclockwise_appears_evil =
+						if counterclockwise_theoretical.unknown_unrevealed_good() {
+							found_unknown_good_counterclockwise = true;
+							(*direction == Direction::CounterClockwise) == *truthful
+						} else {
+							counterclockwise_theoretical
+								.inner
+								.true_identity()
+								.appears_evil()
+						};
+
+					// my head hurts
+					if ((clockwise_appears_evil || found_unknown_good_clockwise)
+						&& (counterclockwise_appears_evil || found_unknown_good_counterclockwise))
+						&& *direction == Direction::Equidistant
+						&& *truthful
+					{
+						clockwise_appears_evil = true;
+						counterclockwise_appears_evil = true
+					}
+
+					if let Some(inner_expected_direction) =
 						match (clockwise_appears_evil, counterclockwise_appears_evil) {
 							(true, true) => Some(Direction::Equidistant),
 							(true, false) => Some(Direction::Clockwise),
 							(false, true) => Some(Direction::CounterClockwise),
 							(false, false) => None,
-						};
-
-					if let Some(inner_expected_direction) = inner_expected_direction {
+						} {
 						expected_direction = inner_expected_direction;
 						break;
 					}
 				}
 
 				*direction == expected_direction
+			}
+			Testimony::Knitter(evil_pairs_claim) => {
+				let mut pairs_count = 0;
+				let mut theoretical_pairs_count = 0;
+				for i in 0..game_state.total_villagers() {
+					let j = if i == (game_state.total_villagers() - 1) {
+						0
+					} else {
+						i + 1
+					};
+
+					let left_theoretical = &theoreticals[i];
+					let right_theoretical = &theoreticals[j];
+
+					if left_theoretical.inner.true_identity().appears_evil()
+						&& right_theoretical.inner.true_identity().appears_evil()
+					{
+						pairs_count += 1;
+					} else if (left_theoretical.unknown_unrevealed_good()
+						|| left_theoretical.inner.true_identity().appears_evil())
+						&& (right_theoretical.unknown_unrevealed_good()
+							|| right_theoretical.inner.true_identity().appears_evil())
+					{
+						theoretical_pairs_count += 1;
+					}
+				}
+
+				pairs_count <= evil_pairs_claim.pairs()
+					&& (pairs_count + theoretical_pairs_count) >= evil_pairs_claim.pairs()
 			}
 		};
 

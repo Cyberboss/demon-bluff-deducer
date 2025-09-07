@@ -87,7 +87,7 @@ impl ScoutClaim {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
-pub struct EvilPairsClaim(u8);
+pub struct EvilPairsClaim(usize);
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, Display)]
 pub enum AffectType {
@@ -145,11 +145,16 @@ pub enum Testimony {
 	// as sane as it'd sound to express this in terms of good/evil it blows up the problem space way too much
 	// handle it at validation time
 	Enlightened(Direction),
+	Knitter(EvilPairsClaim),
 }
 
 impl EvilPairsClaim {
-	pub fn new(pair_count: u8) -> Self {
+	pub fn new(pair_count: usize) -> Self {
 		Self(pair_count)
+	}
+
+	pub fn pairs(&self) -> usize {
+		self.0
 	}
 }
 
@@ -703,6 +708,9 @@ impl Display for Testimony {
 				scout_claim.evil_role, scout_claim.distance
 			),
 			Self::Enlightened(direction) => write!(f, "Closest evil is {}", direction),
+			Self::Knitter(evil_pairs_claim) => {
+				write!(f, "There are {} pair(s) of evils", evil_pairs_claim)
+			}
 		}
 	}
 }
