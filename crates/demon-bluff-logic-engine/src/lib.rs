@@ -655,6 +655,28 @@ fn predict_board_configs(
 				}
 			}
 
+			if allow_retry {
+				// always perfer to kill hidden villagers if necessary to get more info
+				let mut has_hiddens = false;
+				for index in &most_common_evil_index_occurrences {
+					if let Villager::Hidden(_) = game_state.villager(index) {
+						has_hiddens = true;
+						break;
+					}
+				}
+
+				if has_hiddens {
+					info!(logger: log, "One of the choices is a hidden villager. We will aim to kill these for more information.");
+					most_common_evil_index_occurrences.retain(|index| {
+						if let Villager::Hidden(_) = game_state.villager(index) {
+							true
+						} else {
+							false
+						}
+					});
+				}
+			}
+
 			return Ok(PredictionResult3::PredictionResult(PredictionResult {
 				all_matching_layouts,
 				board_layouts_by_similar_configs,
