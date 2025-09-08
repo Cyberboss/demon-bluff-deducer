@@ -519,7 +519,7 @@ fn predict_board_configs(
 		}
 
 		for (index, (matching_layout, _)) in all_matching_layouts.iter().enumerate() {
-			info!(logger: log, "Layout #{}: {}", index + 1, matching_layout.description);
+			info!(logger: log, "Layout {}: {}", index + 1, matching_layout.description);
 		}
 
 		if matching_layouts.len() == 1 {
@@ -600,7 +600,7 @@ fn predict_board_configs(
 				.unwrap()) == all_matching_layouts.len()
 		{
 			let most_common_index = &most_common_evil_index_occurrences[0];
-			warn!(logger: log, "We found the most common evil index ({} @ {} occurrences across {} layouts) but we are uncertain!", most_common_index, highest_count, matching_layouts.len());
+			info!(logger: log, "We found the an evil that all layouts share: {}. BEND HIM!", most_common_index);
 			let mut matching_configs: HashMap<BTreeSet<VillagerIndex>, BTreeSet<BoardLayout>> =
 				HashMap::new();
 			for (config, _) in all_matching_layouts.iter() {
