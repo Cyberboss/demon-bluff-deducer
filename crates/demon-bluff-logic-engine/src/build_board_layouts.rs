@@ -5,7 +5,7 @@ use std::{
 
 use demon_bluff_gameplay_engine::{
 	affect::Affect,
-	game_state::GameState,
+	game_state::{self, GameState},
 	testimony::{AffectType, index_offset},
 	villager::{
 		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
@@ -238,18 +238,18 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			};
 
 			// TODO: Test pass order once deck builder mode releases
-			let adjacency_affected_theoreticals = with_adjacent_affects(game_state, initial_layout);
-			let counsellor_affected_theoreticals = adjacency_affected_theoreticals
-				.into_iter()
-				.flat_map(with_counsellors);
+			let plague_doctor_spawned_theoreticals =
+				with_real_plague_doctor_locations(game_state, initial_layout);
+			let adjacency_affected_theoreticals = plague_doctor_spawned_theoreticals
+				.flat_map(|layout| with_adjacent_affects(game_state, layout));
+			let counsellor_affected_theoreticals =
+				adjacency_affected_theoreticals.flat_map(with_counsellors);
 			// TODO: Shaman (Cloner) pass
 			// TODO: Doppleganger pass
-			let doppleganger_affected_theoreticals = counsellor_affected_theoreticals
-				.into_iter()
-				.flat_map(with_dopplegangers);
-			let plague_doctor_affected_theoreticals = doppleganger_affected_theoreticals
-				.into_iter()
-				.flat_map(|layout| with_plague_doctors(game_state, layout));
+			let doppleganger_affected_theoreticals =
+				counsellor_affected_theoreticals.flat_map(with_dopplegangers);
+			let plague_doctor_affected_theoreticals =
+				doppleganger_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
 			// TODO: Alchemist pass
 			// TODO: Drunk pass (alchemist cannot cure)
 			// TODO: Baker pass
@@ -447,8 +447,11 @@ gen fn with_dopplegangers(layout: BoardLayout) -> BoardLayout {
 	todo!("Doppleganger cloning");
 }
 
-gen fn with_plague_doctors(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
-	if !game_state.role_in_play(VillagerArchetype::Outcast(Outcast::PlagueDoctor)) {
+gen fn with_plague_doctors_corruptions(layout: BoardLayout) -> BoardLayout {
+	// check there actually is a PD in the layout
+	if !layout.villagers.iter().any(|villager| {
+		*villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+	}) {
 		yield layout;
 		return;
 	}
@@ -466,39 +469,36 @@ gen fn with_plague_doctors(game_state: &GameState, layout: BoardLayout) -> Board
 		})
 		.collect();
 
-	for plague_doctor_layout in with_real_plague_doctor_locations(layout) {
-		let mut any_affecteable_indicies = false;
+	let mut any_affecteable_indicies = false;
+	for index in affectable_indicies.into_iter() {
+		any_affecteable_indicies = true;
+		let mut next_layout = layout.clone();
+		let mutated_theoretical = &mut next_layout.villagers[index];
+		mutated_theoretical.was_corrupt = true;
+		mutated_theoretical.inner.set_corrupted(true);
+		next_layout.description = format!(
+			"{} - {} was corrupted by the PD",
+			next_layout.description,
+			VillagerIndex(index),
+		);
 
-		// check there actually is a PD in the layout
-		if plague_doctor_layout.villagers.iter().any(|villager| {
-			*villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::PlagueDoctor)
-		}) {
-			for index in affectable_indicies.clone().into_iter() {
-				any_affecteable_indicies = true;
-				let mut next_layout = plague_doctor_layout.clone();
-				let mutated_theoretical = &mut next_layout.villagers[index];
-				mutated_theoretical.was_corrupt = true;
-				mutated_theoretical.inner.set_corrupted(true);
-				next_layout.description = format!(
-					"{} - {} was corrupted by the PD",
-					next_layout.description,
-					VillagerIndex(index),
-				);
+		yield next_layout;
+	}
 
-				yield next_layout;
-			}
-		}
-
-		if !any_affecteable_indicies {
-			yield plague_doctor_layout;
-		}
+	if !any_affecteable_indicies {
+		yield layout;
 	}
 }
 
-gen fn with_real_plague_doctor_locations(layout: BoardLayout) -> BoardLayout {
-	if layout.villagers.iter().all(|villager| {
-		*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::PlagueDoctor)
-	}) {
+gen fn with_real_plague_doctor_locations(
+	game_state: &GameState,
+	layout: BoardLayout,
+) -> BoardLayout {
+	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::PlagueDoctor))
+		// this check is for if one was revealed
+		&& layout.villagers.iter().all(|villager| {
+			*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+		}) {
 		for (index, theoretical) in layout.villagers.iter().enumerate() {
 			if !theoretical.inner.true_identity().is_evil()
 				&& !theoretical.inner.corrupted()
