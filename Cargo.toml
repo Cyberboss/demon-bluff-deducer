@@ -5,3 +5,8 @@ members = [
     "crates/demon-bluff-gameplay-engine",
     "crates/demon-bluff-logic-engine",
 ]
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = true
