@@ -111,7 +111,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let mut first_desc = true;
 			let mut desc = String::new();
 
-			let confirmeds = game_state
+			let theoreticals = game_state
 				.villagers()
 				.iter()
 				.map(|villager| match villager {
@@ -231,9 +231,14 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				.map(|index| (*index).clone())
 				.collect();
 
+			let initial_layout = BoardLayout {
+				villagers: theoreticals,
+				evil_locations,
+				description: desc,
+			};
+
 			// TODO: Test pass order once deck builder mode releases
-			let adjacency_affected_theoreticals =
-				with_adjacent_affects(game_state, confirmeds, evil_locations, desc);
+			let adjacency_affected_theoreticals = with_adjacent_affects(game_state, initial_layout);
 			let counsellor_affected_theoreticals = adjacency_affected_theoreticals
 				.into_iter()
 				.flat_map(with_counsellors);
@@ -256,19 +261,12 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	layouts
 }
 
-fn with_adjacent_affects(
-	game_state: &GameState,
-	mut initial_theoreticals: Vec<TheoreticalVillager>,
-	evil_locations: BTreeSet<VillagerIndex>,
-	base_desc: String,
-) -> Vec<BoardLayout> {
+gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
 	let mut any_affects_applied = false;
-
-	let mut with_affects = Vec::new();
 
 	let mut affecting_indicies = Vec::new();
 
-	for (index, theoretical) in initial_theoreticals.iter_mut().enumerate() {
+	for (index, theoretical) in layout.villagers.iter().enumerate() {
 		let index = VillagerIndex(index);
 		if let Some(affect) = theoretical
 			.inner
@@ -290,45 +288,47 @@ fn with_adjacent_affects(
 	}
 
 	// because affects can cancel other affects, try in every possible order
+	let affecting_indicies_len = affecting_indicies.len();
 	for affect_permutation in affecting_indicies
-		.iter()
-		.permutations(affecting_indicies.len())
+		.into_iter()
+		.permutations(affecting_indicies_len)
 	{
 		for distribution_permutation in generate_boolean_permutations(affect_permutation.len()) {
-			let mut mutated_confirmeds = initial_theoreticals.clone();
-			let mut mutated_desc = base_desc.clone();
+			let mut next_layout = layout.clone();
 			for i in 0..affect_permutation.len() {
 				let to_the_left = distribution_permutation[i];
-				let affecting_index = affect_permutation[i];
-				let affector = &initial_theoreticals[affecting_index.0];
+				let affecting_index = &affect_permutation[i];
+				let affector_identity = next_layout.villagers[affecting_index.0]
+					.inner
+					.true_identity()
+					.clone();
 				let affected_index = index_offset(
 					affecting_index,
 					game_state.total_villagers(),
 					1,
 					to_the_left,
 				);
-				let affected_villager = &mut mutated_confirmeds[affected_index.0];
-				match affector
-					.inner
-					.true_identity()
+				let affected_villager = &mut next_layout.villagers[affected_index.0];
+				match affector_identity
 					.affect(game_state.total_villagers(), Some(affecting_index.clone()))
 					.expect("Affect should be here!")
 				{
 					Affect::Corrupt(_) => {
 						// plague doctor handled in another pass
-						if *affector.inner.true_identity()
-							!= VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+						if affector_identity != VillagerArchetype::Outcast(Outcast::PlagueDoctor)
 							&& affected_villager.inner.true_identity().can_be_corrupted()
 							&& !affected_villager.inner.corrupted()
 						{
-							mutated_desc =
-								format!("{} - {} was corrupted", mutated_desc, affected_index);
+							next_layout.description = format!(
+								"{} - {} was corrupted",
+								next_layout.description, affected_index
+							);
 							affected_villager.inner = ConfirmedVillager::new(
 								affected_villager.inner.instance().clone(),
 								affected_villager.inner.hidden_identity().clone(),
 								true,
 							);
-							if affector.inner.true_identity().is_evil() {
+							if affector_identity.is_evil() {
 								affected_villager.affection = Some(AffectType::CorruptedByEvil);
 							}
 
@@ -337,8 +337,10 @@ fn with_adjacent_affects(
 					}
 					Affect::Puppet(_) => {
 						if affected_villager.inner.true_identity().can_be_converted() {
-							mutated_desc =
-								format!("{} - {} was puppeted", mutated_desc, affected_index);
+							next_layout.description = format!(
+								"{} - {} was puppeted",
+								next_layout.description, affected_index
+							);
 							affected_villager.inner = ConfirmedVillager::new(
 								affected_villager.inner.instance().clone(),
 								Some(VillagerArchetype::Minion(Minion::Puppet)),
@@ -359,23 +361,13 @@ fn with_adjacent_affects(
 				}
 			}
 
-			with_affects.push(BoardLayout {
-				villagers: mutated_confirmeds,
-				description: mutated_desc,
-				evil_locations: evil_locations.clone(),
-			});
+			yield next_layout;
 		}
 	}
 
 	if !any_affects_applied {
-		with_affects.push(BoardLayout {
-			villagers: initial_theoreticals,
-			description: base_desc,
-			evil_locations: evil_locations,
-		});
+		yield layout;
 	}
-
-	with_affects
 }
 
 fn generate_boolean_permutations(n: usize) -> Vec<Vec<bool>> {
