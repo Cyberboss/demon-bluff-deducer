@@ -192,7 +192,7 @@ impl SlayResult {
 
 impl Testimony {
 	pub fn alchemist(
-		start_index: VillagerIndex,
+		start_index: &VillagerIndex,
 		villagers_cured: usize,
 		total_villagers: usize,
 	) -> Expression<Testimony> {
