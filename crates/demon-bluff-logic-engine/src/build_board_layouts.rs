@@ -1,14 +1,12 @@
 use std::{
-	arch::breakpoint,
 	collections::{BTreeSet, HashSet},
 	str::FromStr,
 };
 
 use demon_bluff_gameplay_engine::{
-	Expression,
 	affect::Affect,
 	game_state::GameState,
-	testimony::{AffectType, ConfessorClaim, Testimony, index_offset},
+	testimony::{AffectType, index_offset},
 	villager::{
 		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
 		VillagerIndex, VillagerInstance,
@@ -41,7 +39,8 @@ impl TheoreticalVillager {
 	}
 
 	pub fn unknown_unrevealed_good(&self) -> bool {
-		!self.revealed && !self.inner.true_identity().is_evil()
+		!self.revealed
+			&& *self.inner.true_identity() == VillagerArchetype::GoodVillager(GoodVillager::Judge)
 	}
 }
 
@@ -99,12 +98,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 		}
 		true
 	});
-
-	let extra_outcasts = if outcast_count > game_state.draw_stats().outcasts() {
-		outcast_count - game_state.draw_stats().outcasts()
-	} else {
-		0
-	};
 
 	// there's probably redundancies in this loop but they will be deduplicated
 	let mut layouts = HashSet::new();
@@ -240,7 +233,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 
 			// TODO: Test pass order once deck builder mode releases
 			let adjacency_affected_theoreticals =
-				with_adjacent_affects(game_state, confirmeds, extra_outcasts, evil_locations, desc);
+				with_adjacent_affects(game_state, confirmeds, evil_locations, desc);
 			let counsellor_affected_theoreticals = adjacency_affected_theoreticals
 				.into_iter()
 				.flat_map(with_counsellors);
@@ -251,7 +244,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				.flat_map(with_dopplegangers);
 			let plague_doctor_affected_theoreticals = doppleganger_affected_theoreticals
 				.into_iter()
-				.flat_map(with_plague_doctors);
+				.flat_map(|layout| with_plague_doctors(game_state, layout));
 			// TODO: Alchemist pass
 			// TODO: Drunk pass (alchemist cannot cure)
 			// TODO: Baker pass
@@ -266,7 +259,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 fn with_adjacent_affects(
 	game_state: &GameState,
 	mut initial_theoreticals: Vec<TheoreticalVillager>,
-	extra_outcasts: u8,
 	evil_locations: BTreeSet<VillagerIndex>,
 	base_desc: String,
 ) -> Vec<BoardLayout> {
@@ -463,44 +455,78 @@ gen fn with_dopplegangers(layout: BoardLayout) -> BoardLayout {
 	todo!("Doppleganger cloning");
 }
 
-gen fn with_plague_doctors(layout: BoardLayout) -> BoardLayout {
-	let mut affectable_indicies = Vec::with_capacity(layout.villagers.len() - 1);
-	let num_plague_doctors = layout
-		.villagers
-		.iter()
-		.enumerate()
-		.filter(|(index, villager)| {
-			if *villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::PlagueDoctor)
-			{
-				true
-			} else {
-				if !villager.inner.corrupted() && villager.inner.true_identity().can_be_corrupted()
-				{
-					affectable_indicies.push(*index);
-				}
-
-				false
-			}
-		})
-		.count();
-
-	if num_plague_doctors == 0 {
+gen fn with_plague_doctors(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
+	if !game_state.role_in_play(VillagerArchetype::Outcast(Outcast::PlagueDoctor)) {
 		yield layout;
 		return;
 	}
 
-	for affected_indices in affectable_indicies
-		.into_iter()
-		.combinations(num_plague_doctors)
-	{
-		let mut next_layout = layout.clone();
+	let affectable_indicies: Vec<usize> = layout
+		.villagers
+		.iter()
+		.enumerate()
+		.filter_map(|(index, villager)| {
+			if !villager.inner.corrupted() && villager.inner.true_identity().can_be_corrupted() {
+				Some(index)
+			} else {
+				None
+			}
+		})
+		.collect();
 
-		for index in affected_indices {
-			let mutated_theoretical = &mut next_layout.villagers[index];
-			mutated_theoretical.was_corrupt = true;
-			mutated_theoretical.inner.set_corrupted(true)
+	for plague_doctor_layout in with_real_plague_doctor_locations(layout) {
+		let mut any_affecteable_indicies = false;
+
+		// check there actually is a PD in the layout
+		if plague_doctor_layout.villagers.iter().any(|villager| {
+			*villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+		}) {
+			for index in affectable_indicies.clone().into_iter() {
+				any_affecteable_indicies = true;
+				let mut next_layout = plague_doctor_layout.clone();
+				let mutated_theoretical = &mut next_layout.villagers[index];
+				mutated_theoretical.was_corrupt = true;
+				mutated_theoretical.inner.set_corrupted(true);
+				next_layout.description = format!(
+					"{} - {} was corrupted by the PD",
+					next_layout.description,
+					VillagerIndex(index),
+				);
+
+				yield next_layout;
+			}
 		}
 
-		yield next_layout;
+		if !any_affecteable_indicies {
+			yield plague_doctor_layout;
+		}
 	}
+}
+
+gen fn with_real_plague_doctor_locations(layout: BoardLayout) -> BoardLayout {
+	if layout.villagers.iter().all(|villager| {
+		*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::PlagueDoctor)
+	}) {
+		for (index, theoretical) in layout.villagers.iter().enumerate() {
+			if !theoretical.inner.true_identity().is_evil()
+				&& !theoretical.inner.corrupted()
+				&& !theoretical.revealed
+			{
+				let mut next_layout = layout.clone();
+				next_layout.description = format!(
+					"{} - {} is PD",
+					next_layout.description,
+					VillagerIndex(index)
+				);
+				next_layout.villagers[index].inner = ConfirmedVillager::new(
+					VillagerInstance::new(VillagerArchetype::Outcast(Outcast::PlagueDoctor), None),
+					None,
+					false,
+				);
+			}
+		}
+	}
+
+	// just in case the PD is fake
+	yield layout;
 }
