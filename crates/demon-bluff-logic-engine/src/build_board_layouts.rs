@@ -240,21 +240,23 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			// TODO: Test pass order once deck builder mode releases
 			let plague_doctor_spawned_theoreticals =
 				with_real_plague_doctor_locations(game_state, initial_layout);
-			let adjacency_affected_theoreticals = plague_doctor_spawned_theoreticals
+			let alchemist_spawned_theoreticals = plague_doctor_spawned_theoreticals
+				.flat_map(|layout| with_real_alchemist_locations(game_state, layout));
+			let adjacency_affected_theoreticals = alchemist_spawned_theoreticals
 				.flat_map(|layout| with_adjacent_affects(game_state, layout));
 			let counsellor_affected_theoreticals =
 				adjacency_affected_theoreticals.flat_map(with_counsellors);
 			// TODO: Shaman (Cloner) pass
-			// TODO: Doppleganger pass
 			let doppleganger_affected_theoreticals =
 				counsellor_affected_theoreticals.flat_map(with_dopplegangers);
 			let plague_doctor_affected_theoreticals =
 				doppleganger_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
-			// TODO: Alchemist pass
+			let alchemist_cured_theoreticals =
+				plague_doctor_affected_theoreticals.map(apply_alchemist_cures);
 			// TODO: Drunk pass (alchemist cannot cure)
 			// TODO: Baker pass
 
-			layouts.extend(plague_doctor_affected_theoreticals);
+			layouts.extend(alchemist_cured_theoreticals);
 		}
 	}
 
@@ -470,7 +472,7 @@ gen fn with_plague_doctors_corruptions(layout: BoardLayout) -> BoardLayout {
 		.collect();
 
 	let mut any_affecteable_indicies = false;
-	for index in affectable_indicies.into_iter() {
+	for index in affectable_indicies {
 		any_affecteable_indicies = true;
 		let mut next_layout = layout.clone();
 		let mutated_theoretical = &mut next_layout.villagers[index];
@@ -495,7 +497,7 @@ gen fn with_real_plague_doctor_locations(
 	layout: BoardLayout,
 ) -> BoardLayout {
 	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::PlagueDoctor))
-		// this check is for if one was revealed
+		// this check is for if one was revealed already. There can only be one real PD
 		&& layout.villagers.iter().all(|villager| {
 			*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::PlagueDoctor)
 		}) {
@@ -506,7 +508,7 @@ gen fn with_real_plague_doctor_locations(
 			{
 				let mut next_layout = layout.clone();
 				next_layout.description = format!(
-					"{} - {} is PD",
+					"{} - {} is unrevealed PD",
 					next_layout.description,
 					VillagerIndex(index)
 				);
@@ -521,4 +523,92 @@ gen fn with_real_plague_doctor_locations(
 
 	// just in case the PD is fake
 	yield layout;
+}
+
+gen fn with_real_alchemist_locations(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
+	if game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Alchemist))
+		// this check is for if one was revealed. There can only be one initial alchemist
+		&& layout.villagers.iter().all(|villager| {
+			*villager.inner.true_identity() != VillagerArchetype::GoodVillager(GoodVillager::Alchemist)
+		}) {
+		for (index, theoretical) in layout.villagers.iter().enumerate() {
+			if !theoretical.inner.true_identity().is_evil()
+				&& !theoretical.inner.corrupted()
+				&& !theoretical.revealed
+			{
+				let mut next_layout = layout.clone();
+				next_layout.description = format!(
+					"{} - {} is unrevealed Alchemist",
+					next_layout.description,
+					VillagerIndex(index)
+				);
+				next_layout.villagers[index].inner = ConfirmedVillager::new(
+					VillagerInstance::new(
+						VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
+						None,
+					),
+					None,
+					false,
+				);
+			}
+		}
+	}
+
+	// just in case the alchemist is not present
+	yield layout;
+}
+
+fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
+	// https://discord.com/channels/1148903384968089640/1400926599628460052/1414747887346389043
+	// "they go reverse numerical order except for doppels which act last"
+	// Cheers Autumn
+	let mut doppled_alch_indicies = Vec::new();
+
+	let total_villagers = layout.villagers.len();
+	let operate_on_index = |index, layout: &mut BoardLayout| {
+		let villager_index = VillagerIndex(index);
+		let curables = [
+			index_offset(&villager_index, total_villagers, 1, true),
+			index_offset(&villager_index, total_villagers, 2, true),
+			index_offset(&villager_index, total_villagers, 1, false),
+			index_offset(&villager_index, total_villagers, 2, false),
+		];
+
+		for curable_index in curables {
+			let curable_theoretical = &mut layout.villagers[curable_index.0];
+
+			// check for drunk who can't be cured
+			if curable_theoretical.inner.corrupted()
+				&& !curable_theoretical.inner.true_identity().starts_corrupted()
+			{
+				curable_theoretical.inner.set_corrupted(false);
+				curable_theoretical.was_corrupt = true;
+				layout.description = format!(
+					"{} - {} was cured by {}",
+					layout.description, curable_index, villager_index
+				);
+			}
+		}
+	};
+
+	for index in (total_villagers - 1)..=0 {
+		let theoretical = &layout.villagers[index];
+		if *theoretical.inner.true_identity()
+			!= VillagerArchetype::GoodVillager(GoodVillager::Alchemist)
+		{
+			continue;
+		}
+
+		if theoretical.affection == Some(AffectType::Cloned) {
+			doppled_alch_indicies.push(index);
+		}
+
+		operate_on_index(index, &mut layout);
+	}
+
+	for index in doppled_alch_indicies {
+		operate_on_index(index, &mut layout);
+	}
+
+	layout
 }
