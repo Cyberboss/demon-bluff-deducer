@@ -404,10 +404,7 @@ gen fn with_counsellors(layout: BoardLayout) -> BoardLayout {
 		affectable_indicies.push((villager_index, consellor_affectable_indicies));
 	}
 
-	if affectable_indicies.len() == 0 {
-		yield layout;
-		return;
-	}
+	let mut any_generated = false;
 
 	// true is a left selection
 	for permutation in generate_boolean_permutations(affectable_indicies.len()) {
@@ -427,8 +424,13 @@ gen fn with_counsellors(layout: BoardLayout) -> BoardLayout {
 				);
 				next_layout.villagers[target_index.0].affection = Some(AffectType::Outcasted);
 				yield next_layout;
+				any_generated = true;
 			}
 		}
+	}
+
+	if !any_generated {
+		yield layout;
 	}
 }
 
