@@ -37,7 +37,7 @@ use demon_bluff_gameplay_engine::{
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
 use itertools::Itertools;
-use log::{Log, debug, info, warn};
+use log::{Level, Log, debug, info, log_enabled, trace, warn};
 use optimized_expression::OptimizedExpression;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use with_theoretical_testimony::with_theoretical_testimony;
@@ -509,17 +509,25 @@ fn predict_board_configs(
 
 		let mut layout_number = 0;
 		let matching_configs = matching_configs.fetch_add(0, Ordering::Acquire);
-		info!(logger: log, "Filtered to {} evil layouts amongst {} configurations", matching_layouts.len(), matching_configs);
-		for layout in &matching_layouts {
-			layout_number += 1;
-			info!(logger: log, "Potential Layout {}", layout_number);
-			for index in layout {
-				info!(logger: log, "- {}", index);
+		if log_enabled!(logger: log, Level::Info) {
+			info!(logger: log, "Filtered to {} evil layouts amongst {} configurations", matching_layouts.len(), matching_configs);
+			for evil_locations in &matching_layouts {
+				layout_number += 1;
+				info!(logger: log, "Potential Evils Layout {}", layout_number);
+				for index in evil_locations {
+					info!(logger: log, "- {}", index);
+				}
+				if log_enabled!(logger: log, Level::Debug) {
+					debug!("Instances:");
+					for (index, (matching_layout, _)) in all_matching_layouts
+						.iter()
+						.enumerate()
+						.filter(|(_, (layout, _))| layout.evil_locations == *evil_locations)
+					{
+						debug!(logger: log, "Layout {}: {}", index + 1, matching_layout.description);
+					}
+				}
 			}
-		}
-
-		for (index, (matching_layout, _)) in all_matching_layouts.iter().enumerate() {
-			info!(logger: log, "Layout {}: {}", index + 1, matching_layout.description);
 		}
 
 		if matching_layouts.len() == 1 {
@@ -1066,12 +1074,12 @@ fn validate_assignment(
 			.unwrap();
 
 		if testimony_valid != *truthful {
-			debug!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
+			trace!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
 			return false;
 		}
 	}
 
-	debug!(logger: log, "Validation passed: {}", board_config.description);
+	trace!(logger: log, "Validation passed: {}", board_config.description);
 
 	true
 }

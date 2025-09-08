@@ -68,7 +68,9 @@ pub fn run_game(
 	let total_actions = expected_actions.len();
 	let mut log = log::logger();
 	if LOGGER_INITIALIZED.try_insert(true).is_ok() {
-		colog::init();
+		colog::default_builder()
+			.filter_level(log::LevelFilter::Debug)
+			.init();
 	}
 
 	for (index, action) in expected_actions.into_iter().enumerate() {
