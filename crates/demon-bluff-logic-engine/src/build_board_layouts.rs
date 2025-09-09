@@ -265,10 +265,8 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let counsellor_affected_theoreticals =
 				adjacency_affected_theoreticals.flat_map(with_counsellors);
 			// TODO: Shaman (Cloner) pass
-			let doppleganger_affected_theoreticals =
-				counsellor_affected_theoreticals.flat_map(with_dopplegangers);
 			let plague_doctor_affected_theoreticals =
-				doppleganger_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
+				counsellor_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
 			let alchemist_cured_theoreticals =
 				plague_doctor_affected_theoreticals.map(apply_alchemist_cures);
 			// TODO: Drunk pass (alchemist cannot cure)
@@ -451,23 +449,6 @@ gen fn with_counsellors(layout: BoardLayout) -> BoardLayout {
 	}
 }
 
-gen fn with_dopplegangers(layout: BoardLayout) -> BoardLayout {
-	let num_gangers = layout
-		.villagers
-		.iter()
-		.filter(|villager| {
-			*villager.inner.true_identity() == VillagerArchetype::Outcast(Outcast::Doppelganger)
-		})
-		.count();
-
-	if num_gangers == 0 {
-		yield layout;
-		return;
-	}
-
-	todo!("Doppleganger cloning");
-}
-
 gen fn with_plague_doctors_corruptions(layout: BoardLayout) -> BoardLayout {
 	// check there actually is a PD in the layout
 	if !layout.villagers.iter().any(|villager| {
@@ -596,7 +577,7 @@ gen fn with_dopple_locations(game_state: &GameState, layout: BoardLayout) -> Boa
 			{
 				let mut next_layout = layout.clone();
 				next_layout.description = format!(
-					"{} - {} is a DoppleGanger",
+					"{} - {} is doppled",
 					next_layout.description,
 					VillagerIndex(index)
 				);
