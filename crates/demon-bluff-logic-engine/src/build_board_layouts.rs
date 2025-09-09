@@ -272,7 +272,10 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			// TODO: Drunk pass (alchemist cannot cure)
 			// TODO: Baker pass
 
-			layouts.extend(alchemist_cured_theoreticals);
+			let valid_boards =
+				alchemist_cured_theoreticals.filter(|layout| validate_board(game_state, layout));
+
+			layouts.extend(valid_boards);
 		}
 	}
 
@@ -628,4 +631,25 @@ fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
 	}
 
 	layout
+}
+
+fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
+	let mut max_outcasts = game_state.draw_stats().outcasts();
+	for _counsellor in layout.villagers.iter().filter(|theoretical| {
+		*theoretical.inner.true_identity() == VillagerArchetype::Minion(Minion::Counsellor)
+	}) {
+		max_outcasts += 1;
+	}
+
+	layout
+		.villagers
+		.iter()
+		.filter(|theoretical| {
+			matches!(
+				theoretical.inner.true_identity(),
+				VillagerArchetype::Outcast(_)
+			)
+		})
+		.count()
+		<= max_outcasts
 }
