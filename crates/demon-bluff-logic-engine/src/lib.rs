@@ -820,7 +820,9 @@ fn validate_assignment(
 
 				if_unknown_good_use_truthful(
 					theoretical,
-					theoretical.inner.true_identity() == role_claim.role(),
+					theoretical.inner.true_identity() == role_claim.role()
+					// WREEEEETTTTCCHHHH
+					|| (role_claim.role().is_evil() && theoretical.inner.true_identity().appears_evil() && !theoretical.inner.true_identity().is_evil()),
 					!role_claim.role().is_evil(),
 				)
 			}
