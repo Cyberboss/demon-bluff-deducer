@@ -1,8 +1,7 @@
 use core::slice;
 use std::{
 	alloc::{Layout, alloc, dealloc},
-	mem::{ManuallyDrop, MaybeUninit, transmute},
-	ptr::drop_in_place,
+	mem::MaybeUninit,
 };
 
 use demon_bluff_gameplay_engine::Expression;
@@ -81,102 +80,151 @@ where
 			// allocation is now safely stored in optimized_expression and will be properly dropped
 		}
 
-		let rightmost_used_index = optimized_expression.build_expression(expression, 0);
+		let rightmost_used_index = optimized_expression.build_expression(expression);
 		assert_eq!(optimized_expression.clauses.len() - 1, rightmost_used_index);
 
 		optimized_expression
 	}
 
-	fn count_clauses_and_gather_variables(
-		expression: &Expression<T>,
-		mut variables: &mut Vec<T>,
-	) -> usize {
-		1 + match expression {
-			Expression::Leaf(variable) => {
-				if None
-					== variables
-						.iter()
-						.position(|existing_variable| existing_variable == variable)
-				{
-					variables.push(variable.clone());
+	fn count_clauses_and_gather_variables(root: &Expression<T>, variables: &mut Vec<T>) -> usize {
+		let mut remaining_visit_stack = Vec::new();
+		remaining_visit_stack.push(root);
+
+		let mut count = 0;
+		while let Some(expression) = remaining_visit_stack.pop() {
+			count += 1;
+			match expression {
+				Expression::Leaf(variable) => {
+					if None
+						== variables
+							.iter()
+							.position(|existing_variable| existing_variable == variable)
+					{
+						variables.push(variable.clone());
+					}
 				}
-
-				0
-			}
-			Expression::Not(expression) => {
-				Self::count_clauses_and_gather_variables(expression, &mut variables)
-			}
-			Expression::And(lhs, rhs) | Expression::Or(lhs, rhs) => {
-				Self::count_clauses_and_gather_variables(lhs, &mut variables)
-					+ Self::count_clauses_and_gather_variables(rhs, &mut variables)
+				Expression::Not(expression) => {
+					remaining_visit_stack.push(expression);
+				}
+				Expression::And(lhs, rhs) | Expression::Or(lhs, rhs) => {
+					remaining_visit_stack.push(rhs);
+					remaining_visit_stack.push(lhs);
+				}
 			}
 		}
+
+		count
 	}
 
-	pub fn satisfies<F>(&self, get_assignment: F) -> bool
+	pub fn satisfies<F>(&self, mut get_assignment: F) -> bool
 	where
 		F: FnMut(usize) -> bool + Copy,
 	{
-		self.clause_satisied(0, get_assignment)
-	}
+		#[derive(Clone, Copy)]
+		enum Frame {
+			Eval(usize),  // Need to evaluate clause at index
+			NotOp,        // Apply NOT to last value
+			AndOp(usize), // After evaluating lhs, evaluate rhs at index
+			OrOp(usize),  // After evaluating lhs, evaluate rhs at index
+		}
 
-	fn clause_satisied<F>(&self, clause_index: usize, mut get_assignment: F) -> bool
-	where
-		F: FnMut(usize) -> bool + Copy,
-	{
-		let next_clause_index = clause_index + 1;
-		match &self.clauses[clause_index] {
-			ExpressionClause::Variable(variable_index) => get_assignment(*variable_index),
-			ExpressionClause::Not => !self.clause_satisied(next_clause_index, get_assignment),
-			ExpressionClause::And(rhs) => {
-				self.clause_satisied(next_clause_index, get_assignment)
-					&& self.clause_satisied(*rhs, get_assignment)
-			}
-			ExpressionClause::Or(rhs) => {
-				self.clause_satisied(next_clause_index, get_assignment)
-					|| self.clause_satisied(*rhs, get_assignment)
+		let expected_max_len = std::cmp::max(4, self.clauses.len() / 2);
+		let mut visit_stack = Vec::with_capacity(expected_max_len);
+		let mut results_stack = Vec::with_capacity(expected_max_len);
+
+		visit_stack.push(Frame::Eval(0));
+
+		while let Some(frame) = visit_stack.pop() {
+			match frame {
+				Frame::Eval(clause_index) => match &self.clauses[clause_index] {
+					ExpressionClause::Variable(variable_index) => {
+						results_stack.push(get_assignment(*variable_index))
+					}
+					ExpressionClause::Not => {
+						visit_stack.push(Frame::NotOp);
+						visit_stack.push(Frame::Eval(clause_index + 1));
+					}
+					ExpressionClause::And(rhs_clause_index) => {
+						visit_stack.push(Frame::AndOp(*rhs_clause_index));
+						visit_stack.push(Frame::Eval(clause_index + 1));
+					}
+					ExpressionClause::Or(rhs_clause_index) => {
+						visit_stack.push(Frame::OrOp(*rhs_clause_index));
+						visit_stack.push(Frame::Eval(clause_index + 1));
+					}
+				},
+				Frame::NotOp => {
+					let result = !results_stack.pop().unwrap();
+					results_stack.push(result)
+				}
+				Frame::AndOp(rhs_clause_index) => {
+					let lhs_result = results_stack.pop().unwrap();
+					if lhs_result {
+						visit_stack.push(Frame::Eval(rhs_clause_index));
+					} else {
+						results_stack.push(false);
+					}
+				}
+				Frame::OrOp(rhs_clause_index) => {
+					let lhs_result = results_stack.pop().unwrap();
+					if lhs_result {
+						results_stack.push(true);
+					} else {
+						visit_stack.push(Frame::Eval(rhs_clause_index));
+					}
+				}
 			}
 		}
+
+		debug_assert_eq!(results_stack.capacity(), expected_max_len);
+		debug_assert_eq!(visit_stack.capacity(), expected_max_len);
+		assert_eq!(results_stack.len(), 1);
+		results_stack.pop().unwrap()
 	}
 
-	fn build_expression(
-		&mut self,
-		expression: &Expression<T>,
-		our_expression_index: usize,
-	) -> usize {
-		let (clause, rightmost_used_index) = match expression {
-			Expression::Leaf(variable) => (
-				ExpressionClause::Variable(
-					self.variables
-						.iter()
-						.position(|existing_variable| variable == existing_variable)
-						.expect("Variable was not registered!"),
-				),
-				our_expression_index,
-			),
-			Expression::Not(expression) => {
-				let not_index = our_expression_index + 1;
-				let rightmost_used_index = self.build_expression(expression, not_index);
-				(ExpressionClause::Not, rightmost_used_index)
-			}
-			Expression::And(lhs, rhs) => {
-				let left_index = our_expression_index + 1;
-				let left_rightmost_used_index = self.build_expression(lhs, left_index);
-				let right_index = left_rightmost_used_index + 1;
-				let rightmost_used_index = self.build_expression(rhs, right_index);
-				(ExpressionClause::And(right_index), rightmost_used_index)
-			}
-			Expression::Or(lhs, rhs) => {
-				let left_index = our_expression_index + 1;
-				let left_rightmost_used_index = self.build_expression(lhs, left_index);
-				let right_index = left_rightmost_used_index + 1;
-				let rightmost_used_index = self.build_expression(rhs, right_index);
-				(ExpressionClause::Or(right_index), rightmost_used_index)
-			}
-		};
+	fn build_expression(&mut self, root: &Expression<T>) -> usize {
+		let expected_max_len = std::cmp::max(4, self.clauses.len() / 2);
+		let mut visit_stack = Vec::with_capacity(expected_max_len);
 
-		self.clauses[our_expression_index] = clause;
-		rightmost_used_index
+		let root_index = 0;
+		visit_stack.push((root, root_index, false));
+
+		let mut last_used_index = root_index;
+
+		while let Some((expression, our_expression_index, visited)) = visit_stack.pop() {
+			match (expression, visited) {
+				(Expression::Leaf(variable), _) => {
+					self.clauses[our_expression_index] = ExpressionClause::Variable(
+						self.variables
+							.iter()
+							.position(|existing_variable| variable == existing_variable)
+							.expect("Variable was not registered!"),
+					);
+
+					last_used_index = our_expression_index
+				}
+				(Expression::Not(inner), _) => {
+					self.clauses[our_expression_index] = ExpressionClause::Not;
+					visit_stack.push((inner, our_expression_index + 1, false));
+				}
+				(Expression::And(lhs, _) | Expression::Or(lhs, _), false) => {
+					visit_stack.push((expression, our_expression_index, true));
+					visit_stack.push((lhs, our_expression_index + 1, false));
+				}
+				(Expression::And(_, rhs), true) => {
+					visit_stack.push((rhs, last_used_index + 1, false));
+					self.clauses[our_expression_index] = ExpressionClause::And(last_used_index);
+				}
+				(Expression::Or(_, rhs), true) => {
+					visit_stack.push((rhs, last_used_index + 1, false));
+					self.clauses[our_expression_index] = ExpressionClause::Or(last_used_index);
+				}
+			}
+		}
+
+		debug_assert_eq!(visit_stack.capacity(), expected_max_len);
+
+		last_used_index
 	}
 
 	pub fn variables(&self) -> &[T] {
