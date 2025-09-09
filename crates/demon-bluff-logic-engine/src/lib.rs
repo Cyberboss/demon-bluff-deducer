@@ -605,7 +605,7 @@ fn predict_board_configs(
 		if most_common_evil_index_occurrences.len() == 1
 			&& *(evil_index_occurrences_in_matching_layouts
 				.get(&most_common_evil_index_occurrences[0])
-				.unwrap()) == all_matching_layouts.len()
+				.unwrap()) == matching_layouts.len()
 		{
 			let most_common_index = &most_common_evil_index_occurrences[0];
 			info!(logger: log, "We found the an evil that all layouts share: {}. BEND HIM!", most_common_index);

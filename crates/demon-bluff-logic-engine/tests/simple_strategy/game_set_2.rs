@@ -360,6 +360,12 @@ fn game_14() {
 					))),
 				)),
 			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(4),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false).unwrap(),
+				)),
+			)),
 			TestAction::TryReveal(RevealResult::new(
 				VillagerIndex::number(7),
 				Some(VillagerInstance::new(
@@ -371,12 +377,6 @@ fn game_14() {
 				VillagerIndex::number(3),
 				Some(KillResult::Revealed(
 					KillData::new(Some(VillagerArchetype::Demon(Demon::Baa)), false).unwrap(),
-				)),
-			)),
-			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(4),
-				Some(KillResult::Revealed(
-					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false).unwrap(),
 				)),
 			)),
 		],
