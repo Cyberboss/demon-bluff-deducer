@@ -258,7 +258,9 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				with_real_plague_doctor_locations(game_state, initial_layout);
 			let alchemist_spawned_theoreticals = plague_doctor_spawned_theoreticals
 				.flat_map(|layout| with_real_alchemist_locations(game_state, layout));
-			let adjacency_affected_theoreticals = alchemist_spawned_theoreticals
+			let dopple_spawned_theoreticals = alchemist_spawned_theoreticals
+				.flat_map(|layout| with_dopple_locations(game_state, layout));
+			let adjacency_affected_theoreticals = dopple_spawned_theoreticals
 				.flat_map(|layout| with_adjacent_affects(game_state, layout));
 			let counsellor_affected_theoreticals =
 				adjacency_affected_theoreticals.flat_map(with_counsellors);
@@ -551,7 +553,8 @@ gen fn with_real_alchemist_locations(game_state: &GameState, layout: BoardLayout
 		&& layout.villagers.iter().all(|villager| {
 			*villager.inner.true_identity() != VillagerArchetype::GoodVillager(GoodVillager::Alchemist)
 		}) {
-		for (index, theoretical) in layout.villagers.iter().enumerate() {
+		for index in 0..layout.villagers.len() {
+			let theoretical = &layout.villagers[index];
 			if !theoretical.inner.true_identity().is_evil()
 				&& !theoretical.inner.corrupted()
 				&& !theoretical.revealed
@@ -570,6 +573,42 @@ gen fn with_real_alchemist_locations(game_state: &GameState, layout: BoardLayout
 					None,
 					false,
 				);
+
+				yield next_layout;
+			}
+		}
+	}
+
+	// just in case the alchemist is not present
+	yield layout;
+}
+
+gen fn with_dopple_locations(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
+	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Doppelganger))
+		// this check is for if one was revealed. There can only be one initial dop
+		&& layout.villagers.iter().all(|villager| {
+			*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::Doppelganger)
+		}) {
+		for index in 0..layout.villagers.len() {
+			let theoretical = &layout.villagers[index];
+			if matches!(theoretical.inner.true_identity(), VillagerArchetype::GoodVillager(_)) // dopple can't be outcast
+				&& !theoretical.inner.corrupted()
+			{
+				let mut next_layout = layout.clone();
+				next_layout.description = format!(
+					"{} - {} is a DoppleGanger",
+					next_layout.description,
+					VillagerIndex(index)
+				);
+
+				let modified_villager = &mut next_layout.villagers[index];
+				modified_villager.inner = ConfirmedVillager::new(
+					modified_villager.inner.instance().clone(),
+					Some(VillagerArchetype::Outcast(Outcast::Doppelganger)),
+					false,
+				);
+
+				yield next_layout;
 			}
 		}
 	}
