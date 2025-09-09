@@ -305,6 +305,57 @@ impl VillagerArchetype {
 		}
 	}
 
+	pub fn can_be_disguised_as(&self) -> bool {
+		match self {
+			Self::GoodVillager(good_villager) => match good_villager {
+				GoodVillager::Alchemist
+				| GoodVillager::Architect
+				| GoodVillager::Baker
+				| GoodVillager::Bishop
+				| GoodVillager::Confessor
+				| GoodVillager::Empress
+				| GoodVillager::Enlightened
+				| GoodVillager::Gemcrafter
+				| GoodVillager::Hunter
+				| GoodVillager::Knight
+				| GoodVillager::Knitter
+				| GoodVillager::Lover
+				| GoodVillager::Medium
+				| GoodVillager::Oracle
+				| GoodVillager::Poet
+				| GoodVillager::Scout
+				| GoodVillager::Witness
+				| GoodVillager::Bard
+				| GoodVillager::Dreamer
+				| GoodVillager::Druid
+				| GoodVillager::FortuneTeller
+				| GoodVillager::Jester
+				| GoodVillager::Judge
+				| GoodVillager::Slayer => true,
+			},
+			Self::Outcast(outcast) => match outcast {
+				Outcast::Wretch => false,
+				Outcast::Drunk
+				| Outcast::Bombardier
+				| Outcast::Doppelganger
+				| Outcast::PlagueDoctor => true,
+			},
+			Self::Minion(minion) => match minion {
+				Minion::Counsellor
+				| Minion::Witch
+				| Minion::Minion
+				| Minion::Poisoner
+				| Minion::Twinion
+				| Minion::Shaman
+				| Minion::Puppeteer
+				| Minion::Puppet => false,
+			},
+			Self::Demon(demon) => match demon {
+				Demon::Baa | Demon::Pooka | Demon::Lilis => false,
+			},
+		}
+	}
+
 	pub fn disguises(&self) -> bool {
 		match self {
 			Self::GoodVillager(good_villager) => match good_villager {

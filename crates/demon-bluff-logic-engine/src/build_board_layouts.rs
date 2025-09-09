@@ -111,7 +111,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let mut first_desc = true;
 			let mut desc = String::new();
 
-			let theoreticals = game_state
+			let theoreticals: Vec<TheoreticalVillager> = game_state
 				.villagers()
 				.iter()
 				.map(|villager| match villager {
@@ -125,106 +125,122 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 					),
 				})
 				.enumerate()
-				.map(|(index, (instance_and_confirmed, dead))| {
+				.filter_map(|(index, (instance_and_confirmed, dead))| {
 					let index = VillagerIndex(index);
 
-					if let Some(disguise_index) = disguise_index_combo
-						.iter()
-						.position(|iterated_index| iterated_index == &&index)
-					{
-						let evil_archetype = evil_archetype_combo[disguise_index];
-						let disguised_archetype = (*evil_archetype).clone();
-
-						let mut unknown_hidden = false;
-						let instance = match instance_and_confirmed {
-							Some((instance, _)) => instance.clone(),
-							None => {
-								// for our purposes, the instance doesn't matter here
-								unknown_hidden = true;
-								VillagerInstance::new(
-									VillagerArchetype::GoodVillager(GoodVillager::Confessor),
-									None,
-								)
-							}
-						};
-
-						if !first_desc {
-							desc = format!("{}, ", desc);
-						} else {
-							first_desc = false;
-						}
-						desc = format!(
-							"{}{}: {} (actually a {})",
-							desc,
-							index,
-							if unknown_hidden {
-								String::from_str("Unknown").unwrap()
-							} else {
-								format!("{}", instance.archetype())
-							},
-							disguised_archetype
-						);
-
-						TheoreticalVillager::new(
-							ConfirmedVillager::new(
-								instance.clone(),
-								Some(disguised_archetype),
-								false,
-							),
-							false,
-							!unknown_hidden,
-						)
-					} else {
-						let mut unknown_hidden = false;
-						let theoretical = if let Some((instance, confirmed)) =
-							instance_and_confirmed
+					Some(
+						if let Some(disguise_index) = disguise_index_combo
+							.iter()
+							.position(|iterated_index| iterated_index == &&index)
 						{
-							if let Some(confirmed) = confirmed {
-								TheoreticalVillager::new(confirmed.clone(), dead, !unknown_hidden)
+							let evil_archetype = evil_archetype_combo[disguise_index];
+							let disguised_archetype = (*evil_archetype).clone();
+
+							let mut unknown_hidden = false;
+							let instance = match instance_and_confirmed {
+								Some((instance, _)) => {
+									if !instance.archetype().can_be_disguised_as() {
+										return None;
+									}
+
+									instance.clone()
+								}
+								None => {
+									// for our purposes, the instance doesn't matter here
+									unknown_hidden = true;
+									VillagerInstance::new(
+										VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+										None,
+									)
+								}
+							};
+
+							if !first_desc {
+								desc = format!("{}, ", desc);
 							} else {
-								let corrupt = instance.archetype().starts_corrupted();
-								TheoreticalVillager::new(
-									ConfirmedVillager::new(instance.clone(), None, corrupt),
-									dead,
-									!unknown_hidden,
-								)
+								first_desc = false;
 							}
-						} else {
-							unknown_hidden = true;
-							let good_archetype =
-								VillagerArchetype::GoodVillager(GoodVillager::Judge);
-							let corrupt = good_archetype.starts_corrupted();
+							desc = format!(
+								"{}{}: {} (actually a {})",
+								desc,
+								index,
+								if unknown_hidden {
+									String::from_str("Unknown").unwrap()
+								} else {
+									format!("{}", instance.archetype())
+								},
+								disguised_archetype
+							);
+
 							TheoreticalVillager::new(
 								ConfirmedVillager::new(
-									VillagerInstance::new(good_archetype.clone(), None),
-									None,
-									corrupt,
+									instance.clone(),
+									Some(disguised_archetype),
+									false,
 								),
-								dead,
+								false,
 								!unknown_hidden,
 							)
-						};
-
-						if !first_desc {
-							desc = format!("{}, ", desc);
 						} else {
-							first_desc = false;
-						}
-						desc = format!(
-							"{}{}: {}",
-							desc,
-							index,
-							if unknown_hidden {
-								String::from_str("Unknown").unwrap()
-							} else {
-								format!("{}", theoretical.inner.true_identity())
-							},
-						);
+							let mut unknown_hidden = false;
+							let theoretical =
+								if let Some((instance, confirmed)) = instance_and_confirmed {
+									if let Some(confirmed) = confirmed {
+										TheoreticalVillager::new(
+											confirmed.clone(),
+											dead,
+											!unknown_hidden,
+										)
+									} else {
+										let corrupt = instance.archetype().starts_corrupted();
+										TheoreticalVillager::new(
+											ConfirmedVillager::new(instance.clone(), None, corrupt),
+											dead,
+											!unknown_hidden,
+										)
+									}
+								} else {
+									unknown_hidden = true;
+									let good_archetype =
+										VillagerArchetype::GoodVillager(GoodVillager::Judge);
+									let corrupt = good_archetype.starts_corrupted();
+									TheoreticalVillager::new(
+										ConfirmedVillager::new(
+											VillagerInstance::new(good_archetype.clone(), None),
+											None,
+											corrupt,
+										),
+										dead,
+										!unknown_hidden,
+									)
+								};
 
-						theoretical
-					}
+							if !first_desc {
+								desc = format!("{}, ", desc);
+							} else {
+								first_desc = false;
+							}
+							desc = format!(
+								"{}{}: {}",
+								desc,
+								index,
+								if unknown_hidden {
+									String::from_str("Unknown").unwrap()
+								} else {
+									format!("{}", theoretical.inner.true_identity())
+								},
+							);
+
+							theoretical
+						},
+					)
 				})
 				.collect();
+
+			if theoreticals.len() != game_state.total_villagers() {
+				// tried to disguise as something undisguisable
+				continue;
+			}
 
 			let evil_locations = disguise_index_combo
 				.iter()
