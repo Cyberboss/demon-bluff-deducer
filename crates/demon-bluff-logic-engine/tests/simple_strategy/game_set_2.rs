@@ -667,3 +667,134 @@ fn game_17() {
 		None,
 	);
 }
+
+// https://cdn.discordapp.com/attachments/1145879778457550850/1414751041878229054/image.png
+// https://cdn.discordapp.com/attachments/1145879778457550850/1414775977908768798/image.png
+#[test]
+fn game_18() {
+	let game_state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
+			VillagerArchetype::GoodVillager(GoodVillager::Oracle),
+			VillagerArchetype::GoodVillager(GoodVillager::Judge),
+			VillagerArchetype::GoodVillager(GoodVillager::Lover),
+			VillagerArchetype::GoodVillager(GoodVillager::FortuneTeller),
+			VillagerArchetype::GoodVillager(GoodVillager::Empress),
+			VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+			VillagerArchetype::Outcast(Outcast::PlagueDoctor),
+			VillagerArchetype::Outcast(Outcast::Bombardier),
+			VillagerArchetype::Outcast(Outcast::Wretch),
+			VillagerArchetype::Minion(Minion::Counsellor),
+			VillagerArchetype::Demon(Demon::Baa),
+		],
+		DrawStats::new(6, 1, 1, 1),
+		2,
+		false,
+	);
+
+	run_game(
+		&game_state,
+		vec![
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(1),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Empress),
+					Some(Testimony::empress(&[
+						VillagerIndex::number(3),
+						VillagerIndex::number(9),
+						VillagerIndex::number(6),
+					])),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(2),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Lover),
+					Some(Testimony::lover(
+						&VillagerIndex::number(2),
+						2,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(3),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::FortuneTeller),
+					None,
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(4),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Hunter),
+					Some(Testimony::hunter(
+						&VillagerIndex::number(4),
+						2,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(5),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Oracle),
+					Some(Testimony::oracle(
+						&[VillagerIndex::number(1), VillagerIndex::number(8)],
+						VillagerArchetype::Minion(Minion::Counsellor),
+					)),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(6),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Alchemist),
+					Some(Testimony::alchemist(
+						&VillagerIndex::number(6),
+						2,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(7),
+				Some(VillagerInstance::new(
+					VillagerArchetype::Outcast(Outcast::Bombardier),
+					Some(Expression::Leaf(Testimony::SelfDestruct(
+						VillagerIndex::number(7),
+					))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(8),
+				Some(VillagerInstance::new(
+					VillagerArchetype::Outcast(Outcast::Wretch),
+					Some(Expression::Leaf(Testimony::FakeEvil(
+						VillagerIndex::number(8),
+					))),
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(6),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Demon(Demon::Baa)), false).unwrap(),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(9),
+				Some(VillagerInstance::new(
+					VillagerArchetype::Outcast(Outcast::PlagueDoctor),
+					None,
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(7),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Counsellor)), false)
+						.unwrap(),
+				)),
+			)),
+		],
+		None,
+	);
+}
