@@ -299,20 +299,16 @@ gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> Boa
 			let mut next_layout = layout.clone();
 			for i in 0..affect_permutation.len() {
 				let to_the_left = distribution_permutation[i];
-				let affecting_index = &affect_permutation[i];
-				let affector_identity = next_layout.villagers[affecting_index.0]
+				let affector_index = &affect_permutation[i];
+				let affector_identity = next_layout.villagers[affector_index.0]
 					.inner
 					.true_identity()
 					.clone();
-				let affected_index = index_offset(
-					affecting_index,
-					game_state.total_villagers(),
-					1,
-					to_the_left,
-				);
+				let affected_index =
+					index_offset(affector_index, game_state.total_villagers(), 1, to_the_left);
 				let affected_villager = &mut next_layout.villagers[affected_index.0];
 				match affector_identity
-					.affect(game_state.total_villagers(), Some(affecting_index.clone()))
+					.affect(game_state.total_villagers(), Some(affector_index.clone()))
 					.expect("Affect should be here!")
 				{
 					Affect::Corrupt(_) => {
@@ -322,8 +318,8 @@ gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> Boa
 							&& !affected_villager.inner.corrupted()
 						{
 							next_layout.description = format!(
-								"{} - {} was corrupted",
-								next_layout.description, affected_index
+								"{} - {} was corrupted by {}",
+								next_layout.description, affected_index, affector_index
 							);
 							affected_villager.inner = ConfirmedVillager::new(
 								affected_villager.inner.instance().clone(),
@@ -340,8 +336,8 @@ gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> Boa
 					Affect::Puppet(_) => {
 						if affected_villager.inner.true_identity().can_be_converted() {
 							next_layout.description = format!(
-								"{} - {} was puppeted",
-								next_layout.description, affected_index
+								"{} - {} was puppeted by {}",
+								next_layout.description, affected_index, affector_index
 							);
 							affected_villager.inner = ConfirmedVillager::new(
 								affected_villager.inner.instance().clone(),
