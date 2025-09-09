@@ -499,24 +499,25 @@ fn predict_board_configs(
 			}
 		}
 
-		let mut layout_number = 0;
-		let matching_configs = matching_configs.fetch_add(0, Ordering::Acquire);
 		if log_enabled!(logger: log, Level::Info) {
+			let mut evil_layout_count = 0;
+			let mut layout_count = 0;
+			let matching_configs = matching_configs.fetch_add(0, Ordering::Acquire);
 			info!(logger: log, "Filtered to {} evil layouts amongst {} configurations", matching_layouts.len(), matching_configs);
 			for evil_locations in &matching_layouts {
-				layout_number += 1;
-				info!(logger: log, "Potential Evils Layout {}", layout_number);
+				evil_layout_count += 1;
+				info!(logger: log, "Potential Evils Layout {}", evil_layout_count);
 				for index in evil_locations {
 					info!(logger: log, "- {}", index);
 				}
 				if log_enabled!(logger: log, Level::Debug) {
 					debug!("Instances:");
-					for (index, (matching_layout, _)) in all_matching_layouts
+					for (matching_layout, _) in all_matching_layouts
 						.iter()
-						.enumerate()
-						.filter(|(_, (layout, _))| layout.evil_locations == *evil_locations)
+						.filter(|(layout, _)| layout.evil_locations == *evil_locations)
 					{
-						debug!(logger: log, "Layout {}: {}", index + 1, matching_layout.description);
+						layout_count += 1;
+						debug!(logger: log, "Layout {}: {}", layout_count, matching_layout.description);
 					}
 				}
 			}
