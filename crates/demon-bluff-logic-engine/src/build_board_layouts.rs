@@ -503,7 +503,8 @@ gen fn with_real_plague_doctor_locations(
 		&& layout.villagers.iter().all(|villager| {
 			*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::PlagueDoctor)
 		}) {
-		for (index, theoretical) in layout.villagers.iter().enumerate() {
+		for index in 0..layout.villagers.len() {
+			let theoretical = &layout.villagers[index];
 			if !theoretical.inner.true_identity().is_evil()
 				&& !theoretical.inner.corrupted()
 				&& !theoretical.revealed
@@ -519,6 +520,8 @@ gen fn with_real_plague_doctor_locations(
 					None,
 					false,
 				);
+
+				yield next_layout;
 			}
 		}
 	}
