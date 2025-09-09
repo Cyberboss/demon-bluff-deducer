@@ -5,7 +5,7 @@ use std::{
 
 use demon_bluff_gameplay_engine::{
 	affect::Affect,
-	game_state::{self, GameState},
+	game_state::GameState,
 	testimony::{AffectType, index_offset},
 	villager::{
 		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
@@ -13,7 +13,7 @@ use demon_bluff_gameplay_engine::{
 	},
 };
 use itertools::Itertools;
-use serde::{Deserialize, Serialize, de};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TheoreticalVillager {
@@ -588,6 +588,7 @@ gen fn with_dopple_locations(game_state: &GameState, layout: BoardLayout) -> Boa
 					Some(VillagerArchetype::Outcast(Outcast::Doppelganger)),
 					false,
 				);
+				modified_villager.affection = Some(AffectType::Cloned);
 
 				yield next_layout;
 			}
@@ -622,7 +623,6 @@ fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
 				&& !curable_theoretical.inner.true_identity().starts_corrupted()
 			{
 				curable_theoretical.inner.set_corrupted(false);
-				curable_theoretical.was_corrupt = true;
 				layout.description = format!(
 					"{} - {} was cured by {}",
 					layout.description, curable_index, villager_index
@@ -631,16 +631,18 @@ fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
 		}
 	};
 
-	for index in (total_villagers - 1)..=0 {
+	for index in (0..total_villagers).rev() {
 		let theoretical = &layout.villagers[index];
-		if *theoretical.inner.true_identity()
+		if *theoretical.inner.instance().archetype()
 			!= VillagerArchetype::GoodVillager(GoodVillager::Alchemist)
+			|| theoretical.inner.will_lie()
 		{
 			continue;
 		}
 
 		if theoretical.affection == Some(AffectType::Cloned) {
 			doppled_alch_indicies.push(index);
+			continue;
 		}
 
 		operate_on_index(index, &mut layout);
@@ -661,7 +663,7 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 		max_outcasts += 1;
 	}
 
-	layout
+	let valid = layout
 		.villagers
 		.iter()
 		.filter(|theoretical| {
@@ -671,5 +673,7 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 			)
 		})
 		.count()
-		<= max_outcasts
+		<= max_outcasts;
+
+	valid
 }

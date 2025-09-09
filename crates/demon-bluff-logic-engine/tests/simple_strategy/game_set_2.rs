@@ -800,10 +800,9 @@ fn game_18() {
 }
 
 // https://cdn.discordapp.com/attachments/1145879778457550850/1414786071186771979/image.png
-//
+// https://cdn.discordapp.com/attachments/1400926599628460052/1414826218020409405/image.png
 #[test]
 fn game_19() {
-	return;
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Knitter),
@@ -898,26 +897,19 @@ fn game_19() {
 				)),
 			)),
 			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(6),
-				Some(KillResult::Revealed(
-					KillData::new(Some(VillagerArchetype::Demon(Demon::Baa)), false).unwrap(),
-				)),
-			)),
-			TestAction::TryReveal(RevealResult::new(
-				VillagerIndex::number(9),
-				Some(VillagerInstance::new(
-					VillagerArchetype::Outcast(Outcast::PlagueDoctor),
-					None,
-				)),
-			)),
-			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(7),
+				VillagerIndex::number(4),
 				Some(KillResult::Revealed(
 					KillData::new(Some(VillagerArchetype::Minion(Minion::Counsellor)), false)
 						.unwrap(),
 				)),
 			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(8),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Demon(Demon::Baa)), false).unwrap(),
+				)),
+			)),
 		],
-		Some(6),
+		None,
 	);
 }
