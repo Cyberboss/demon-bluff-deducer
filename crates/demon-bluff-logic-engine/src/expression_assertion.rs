@@ -70,6 +70,11 @@ where
 			collect_variables_helper(left, vars);
 			collect_variables_helper(right, vars);
 		}
+		Expression::MajorOr(expressions) => {
+			for expression in expressions {
+				collect_variables_helper(expression, vars);
+			}
+		}
 	}
 }
 
@@ -91,6 +96,15 @@ where
 		}
 		Expression::Or(lhs, rhs) => {
 			evaluate_with_assignment(lhs, assignment) || evaluate_with_assignment(rhs, assignment)
+		}
+		Expression::MajorOr(expressions) => {
+			for expression in expressions {
+				if evaluate_with_assignment(expression, assignment) {
+					return true;
+				}
+			}
+
+			false
 		}
 	}
 }

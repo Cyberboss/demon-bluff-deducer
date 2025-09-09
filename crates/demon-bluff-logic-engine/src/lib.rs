@@ -318,7 +318,6 @@ fn predict_board_configs(
 
 	let mut potential_board_expressions = Vec::with_capacity(potential_board_configurations.len());
 
-	let mut master_expression = None;
 	for config_expression in
 		potential_board_configurations
 			.iter()
@@ -330,24 +329,17 @@ fn predict_board_configs(
 						.map(|theoretical_villager| &theoretical_villager.inner),
 				)
 			}) {
-		master_expression = Some(match master_expression {
-			Some(previous_expression) => Expression::Or(
-				Box::new(previous_expression),
-				Box::new(config_expression.clone()),
-			),
-			None => config_expression.clone(),
-		});
 		potential_board_expressions.push(config_expression);
 	}
 
-	if let Some(master_expression) = master_expression {
-		let optimized_master_expression = OptimizedExpression::new(&master_expression);
-
+	if potential_board_expressions.iter().next().is_some() {
 		let optimized_expressions: Vec<OptimizedExpression<IndexTestimony>> =
 			potential_board_expressions
 				.iter()
 				.map(|board_expression| OptimizedExpression::new(&board_expression))
 				.collect();
+		let master_expression = Expression::MajorOr(potential_board_expressions);
+		let optimized_master_expression = OptimizedExpression::new(&master_expression);
 
 		let mut potential_assignment_mappings = if !allow_retry {
 			Some(Vec::with_capacity(potential_board_configurations.len()))
@@ -1103,6 +1095,15 @@ fn testimony_exists_in_expression(
 		Expression::And(lhs, rhs) | Expression::Or(lhs, rhs) => {
 			testimony_exists_in_expression(lhs, testimony)
 				|| testimony_exists_in_expression(rhs, testimony)
+		}
+		Expression::MajorOr(expressions) => {
+			for expression in expressions {
+				if testimony_exists_in_expression(expression, testimony) {
+					return true;
+				}
+			}
+
+			false
 		}
 	}
 }

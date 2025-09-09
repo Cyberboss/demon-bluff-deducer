@@ -21,6 +21,7 @@ pub enum Expression<Type> {
 	Not(Box<Expression<Type>>),
 	And(Box<Expression<Type>>, Box<Expression<Type>>),
 	Or(Box<Expression<Type>>, Box<Expression<Type>>),
+	MajorOr(Vec<Expression<Type>>),
 }
 
 impl<Type> Display for Expression<Type>
@@ -33,6 +34,19 @@ where
 			Self::Not(item) => write!(f, "!({item})"),
 			Self::And(lhs, rhs) => write!(f, "({lhs}) && ({rhs})"),
 			Self::Or(lhs, rhs) => write!(f, "({lhs}) || ({rhs})"),
+			Self::MajorOr(expressions) => {
+				let mut first = true;
+				for expression in expressions {
+					if !first {
+						write!(f, " || ")?;
+						first = false;
+					}
+
+					write!(f, "({})", expression)?
+				}
+
+				Ok(())
+			}
 		}
 	}
 }

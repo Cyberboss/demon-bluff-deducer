@@ -21,6 +21,7 @@ enum ExpressionClause {
 	Not,
 	And(usize),
 	Or(usize),
+	MajorOr(Vec<usize>),
 }
 
 impl<'a, T> OptimizedExpression<'a, T>
@@ -110,6 +111,14 @@ where
 				Self::count_clauses_and_gather_variables(lhs, &mut variables)
 					+ Self::count_clauses_and_gather_variables(rhs, &mut variables)
 			}
+			Expression::MajorOr(expressions) => {
+				let mut running_count = 0;
+				for expression in expressions {
+					running_count += Self::count_clauses_and_gather_variables(expression, variables)
+				}
+
+				running_count
+			}
 		}
 	}
 
@@ -135,6 +144,19 @@ where
 			ExpressionClause::Or(rhs) => {
 				self.clause_satisied(next_clause_index, get_assignment)
 					|| self.clause_satisied(*rhs, get_assignment)
+			}
+			ExpressionClause::MajorOr(clause_indicies) => {
+				if self.clause_satisied(next_clause_index, get_assignment) {
+					return true;
+				}
+
+				for clause_index in clause_indicies {
+					if self.clause_satisied(*clause_index, get_assignment) {
+						return true;
+					}
+				}
+
+				false
 			}
 		}
 	}
@@ -172,6 +194,26 @@ where
 				let right_index = left_rightmost_used_index + 1;
 				let rightmost_used_index = self.build_expression(rhs, right_index);
 				(ExpressionClause::Or(right_index), rightmost_used_index)
+			}
+			Expression::MajorOr(expressions) => {
+				let mut rightmost_used_index = our_expression_index;
+				let mut optimized_vec = Vec::with_capacity(expressions.len() - 1);
+				let mut first = true;
+				for expression in expressions {
+					let next_expression_index = rightmost_used_index + 1;
+					if first {
+						first = false;
+					} else {
+						optimized_vec.push(next_expression_index);
+					}
+
+					rightmost_used_index = self.build_expression(expression, next_expression_index);
+				}
+
+				(
+					ExpressionClause::MajorOr(optimized_vec),
+					rightmost_used_index,
+				)
 			}
 		};
 

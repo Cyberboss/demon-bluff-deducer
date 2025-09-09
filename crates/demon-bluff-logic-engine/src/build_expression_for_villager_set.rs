@@ -74,5 +74,11 @@ fn map_testimony(
 			Box::new(map_testimony(lhs, index)),
 			Box::new(map_testimony(rhs, index)),
 		),
+		Expression::MajorOr(expressions) => Expression::MajorOr(
+			expressions
+				.iter()
+				.map(|expression| map_testimony(expression, index))
+				.collect(),
+		),
 	}
 }
