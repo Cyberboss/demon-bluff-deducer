@@ -346,6 +346,19 @@ impl Testimony {
 		expression
 	}
 
+	pub fn fortune_teller(targets: &[VillagerIndex; 2], evil: bool) -> Expression<Testimony> {
+		let base_expression = Expression::Or(
+			Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
+			Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
+		);
+
+		if evil {
+			base_expression
+		} else {
+			Expression::Not(Box::new(base_expression))
+		}
+	}
+
 	pub fn lover(
 		start_index: &VillagerIndex,
 		amount: usize,
