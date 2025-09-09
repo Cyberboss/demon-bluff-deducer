@@ -24,10 +24,10 @@ pub enum DayCycle {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DrawStats {
-	villagers: u8,
-	outcasts: u8,
-	minions: u8,
-	demons: u8,
+	villagers: usize,
+	outcasts: usize,
+	minions: usize,
+	demons: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -232,7 +232,7 @@ impl RevealResult {
 }
 
 impl DrawStats {
-	pub fn new(villagers: u8, outcasts: u8, minions: u8, demons: u8) -> DrawStats {
+	pub fn new(villagers: usize, outcasts: usize, minions: usize, demons: usize) -> DrawStats {
 		Self {
 			villagers,
 			outcasts,
@@ -245,19 +245,19 @@ impl DrawStats {
 		(self.villagers + self.outcasts + self.minions + self.demons) as usize
 	}
 
-	pub fn villagers(&self) -> u8 {
+	pub fn villagers(&self) -> usize {
 		self.villagers
 	}
 
-	pub fn outcasts(&self) -> u8 {
+	pub fn outcasts(&self) -> usize {
 		self.outcasts
 	}
 
-	pub fn minions(&self) -> u8 {
+	pub fn minions(&self) -> usize {
 		self.minions
 	}
 
-	pub fn demons(&self) -> u8 {
+	pub fn demons(&self) -> usize {
 		self.demons
 	}
 }
