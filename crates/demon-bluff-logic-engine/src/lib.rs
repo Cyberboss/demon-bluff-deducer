@@ -822,7 +822,7 @@ fn validate_assignment(
 					theoretical,
 					theoretical.inner.true_identity() == role_claim.role()
 					// WREEEEETTTTCCHHHH
-					|| (role_claim.role().is_evil() && theoretical.inner.true_identity().appears_evil() && !theoretical.inner.true_identity().is_evil()),
+					|| (matches!(role_claim.role(), VillagerArchetype::Minion(_)) && theoretical.inner.true_identity().appears_evil() && !theoretical.inner.true_identity().is_evil()),
 					!role_claim.role().is_evil(),
 				)
 			}
