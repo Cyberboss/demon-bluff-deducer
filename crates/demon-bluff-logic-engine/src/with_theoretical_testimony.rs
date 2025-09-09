@@ -286,7 +286,53 @@ gen fn theoretical_testimonies(
 			GoodVillager::Bishop => todo!("Bishop testimony generation"),
 			GoodVillager::Dreamer => todo!("Dreamer testimony generation"),
 			GoodVillager::Druid => todo!("Druid testimony generation"),
-			GoodVillager::FortuneTeller => todo!("FortuneTeller testimony generation"),
+			GoodVillager::FortuneTeller => {
+				for index_combo in theoreticals
+					.iter()
+					.enumerate()
+					.map(|(index, _)| VillagerIndex(index))
+					.combinations(2)
+				{
+					let mut targets = BTreeSet::new();
+					targets.extend(index_combo.iter().cloned());
+					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
+					if invalid_ability_attempts.contains(&ability_attempt) {
+						continue;
+					}
+
+					for expression in fortune_teller_expression(&index_combo) {
+						let mut next_layout = board_config.clone();
+						next_layout.description = format!(
+							"{} - {} says {} or {} is{} evil",
+							next_layout.description,
+							testifier_index,
+							index_combo[0],
+							index_combo[1],
+							if matches!(expression, Expression::Not(_)) {
+								" NOT"
+							} else {
+								""
+							}
+						);
+
+						let instance_to_modify = next_layout.villagers[testifier_index.0]
+							.inner
+							.instance_mut();
+
+						instance_to_modify.set_testimony(expression);
+
+						let mut testimonies = Vec::with_capacity(2);
+						testimonies.extend(index_combo.iter().map(|index| {
+							IndexTestimony::new(
+								testifier_index.clone(),
+								Testimony::Evil(index.clone()),
+							)
+						}));
+
+						yield (next_layout, ability_attempt.clone(), testimonies);
+					}
+				}
+			}
 			GoodVillager::Jester => {
 				for index_combo in theoreticals
 					.iter()
@@ -570,5 +616,18 @@ fn jester_expression(indexes: &Vec<VillagerIndex>) -> [Expression<Testimony>; 4]
 		Testimony::jester(indexes.as_slice().try_into().unwrap(), 1),
 		Testimony::jester(indexes.as_slice().try_into().unwrap(), 2),
 		Testimony::jester(indexes.as_slice().try_into().unwrap(), 3),
+	]
+}
+
+fn fortune_teller_expression(indexes: &Vec<VillagerIndex>) -> [Expression<Testimony>; 2] {
+	[
+		Testimony::fortune_teller(
+			indexes
+				.as_slice()
+				.try_into()
+				.expect("Invalid number of indexes for a jester expression"),
+			false,
+		),
+		Testimony::fortune_teller(indexes.as_slice().try_into().unwrap(), true),
 	]
 }
