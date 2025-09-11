@@ -277,11 +277,26 @@ fn predict_core(
 	}
 }
 
+struct PreviousAssignments<'a> {
+	matching_board_index: usize,
+	previous_assignments: &'a Vec<HashMap<IndexTestimony, bool>>,
+}
+
+enum AssignmentsType<'a> {
+	All(Vec<bool>),
+	Previous(PreviousAssignments<'a>),
+}
+
+enum ExpandedAssignmentsType<'a> {
+	All(&'a Vec<bool>),
+	Previous(&'a HashMap<IndexTestimony, bool>),
+}
+
 fn predict_board_configs(
 	log: &impl Log,
 	game_state: &GameState,
 	configs: impl Iterator<Item = (BoardLayout, Option<Vec<HashMap<IndexTestimony, bool>>>)>,
-	allow_retry: bool,
+	non_hypothetical_pass: bool,
 ) -> Result<PredictionResult3, PredictionError> {
 	let potential_board_configurations: Vec<(
 		BoardLayout,
@@ -341,88 +356,87 @@ fn predict_board_configs(
 		let master_expression = Expression::MajorOr(potential_board_expressions);
 		let optimized_master_expression = OptimizedExpression::new(&master_expression);
 
-		let mut potential_assignment_mappings = if !allow_retry {
-			Some(Vec::with_capacity(potential_board_configurations.len()))
-		} else {
-			None
-		};
+		let master_expression_satisfying_assignments: Vec<AssignmentsType> =
+			if non_hypothetical_pass {
+				collect_satisfying_assignments(&optimized_master_expression)
+					.into_iter()
+					.map(|assignment| AssignmentsType::All(assignment))
+					.collect()
+			} else {
+				// all board configurations should have potential assignments alongside them and they should NOT overlap
+				// convert them to optimized form
+				potential_board_configurations
+					.iter()
+					.enumerate()
+					.map(|(board_index, (_, previously_satisfying_assignments))| {
+						AssignmentsType::Previous(PreviousAssignments {
+							matching_board_index: board_index,
+							previous_assignments: previously_satisfying_assignments
+								.as_ref()
+								.expect("We should have potential assignments predicted!"),
+						})
+					})
+					.collect()
+			};
 
-		let potential_assignments = if allow_retry {
-			collect_satisfying_assignments(&optimized_master_expression)
-		} else {
-			// all board configurations should have potential assignments alongside them and they should NOT overlap
-			// convert them to optimized form
-			potential_board_configurations
-				.iter()
-				.enumerate()
-				.flat_map(|(index, (_, potential_assignments))| {
-					potential_assignments
-						.as_ref()
-						.expect("We should have potential assignments predicted!")
-						.iter()
-						.map(move |potential_assignment| (index, potential_assignment))
-				})
-				.map(|(index, potential_assignment)| {
-					let mut assignment_vec =
-						Vec::with_capacity(optimized_master_expression.variables().len());
-					let mut mapping_vec: Vec<bool> = Vec::with_capacity(assignment_vec.len());
-					let mut num_used_from_potential_assignment = 0;
-
-					for variable in optimized_master_expression.variables().iter() {
-						assignment_vec.push(match potential_assignment.get(&variable) {
-							Some(testimony_trutfulness) => {
-								num_used_from_potential_assignment += 1;
-								mapping_vec.push(true);
-								*testimony_trutfulness
-							}
-							None => {
-								mapping_vec.push(false);
-								false // shouldn't matter the value here, but definitely reconsider if predictions get weird
-							}
-						});
-					}
-
-					if optimized_expressions[index].variables().len()
-						!= num_used_from_potential_assignment
-					{
-						panic!("Bad juju");
-					}
-
-					potential_assignment_mappings
-						.as_mut()
-						.unwrap()
-						.push((mapping_vec, num_used_from_potential_assignment));
-
-					assignment_vec
-				})
-				.collect()
-		};
-		if potential_assignments.is_empty() {
+		if master_expression_satisfying_assignments.is_empty() {
 			return Err(PredictionError::GameUnsolvable);
 		}
 
 		info!(
 			logger: log,
 			"{} potential assignments to evaluate",
-			potential_assignments.len()
+			master_expression_satisfying_assignments.len()
 		);
 		let mut all_matching_layouts: HashMap<BoardLayout, Vec<HashMap<IndexTestimony, bool>>> =
 			HashMap::new();
 		let mut matching_layouts = HashSet::new();
 
-		let things_to_check: Vec<(usize, &OptimizedExpression<IndexTestimony>, &Vec<bool>)> =
-			optimized_expressions
-				.iter()
-				.enumerate()
-				.flat_map(|(index, board_expression)| {
-					let vec: Vec<(usize, &OptimizedExpression<IndexTestimony>, &Vec<bool>)> =
-						potential_assignments
-							.iter()
-							.map(|assignment| (index, board_expression, assignment))
-							.collect();
-					vec
-				})
-				.collect();
+		let assignments_to_iterate: Vec<(usize, ExpandedAssignmentsType)> =
+			match &master_expression_satisfying_assignments[0] {
+				// check every assignment against every board
+				AssignmentsType::All(_) => optimized_expressions
+					.iter()
+					.enumerate()
+					.flat_map(|(board_index, _)| {
+						master_expression_satisfying_assignments.iter().map(
+							move |satisfying_assignment| {
+								(
+									board_index,
+									match satisfying_assignment {
+										AssignmentsType::All(items) => {
+											ExpandedAssignmentsType::All(items)
+										}
+										AssignmentsType::Previous(_) => {
+											unreachable!(
+												"Index 0 was AssignmentsType::All but another index was AssignmentsType::Previous??"
+											)
+										}
+									},
+								)
+							},
+						)
+					})
+					.collect(),
+				// check only previously satisfying assignments against their source boards
+				AssignmentsType::Previous(_) => master_expression_satisfying_assignments
+					.into_iter()
+					.flat_map(|assignment_type| match assignment_type {
+						AssignmentsType::All(_) => unreachable!(
+							"Index 0 was AssignmentsType::Previous but another index was AssignmentsType::All??"
+						),
+						AssignmentsType::Previous(previous_assignments) => previous_assignments
+							.previous_assignments
+							.into_iter()
+							.map(move |assignment_map| {
+								(
+									previous_assignments.matching_board_index,
+									ExpandedAssignmentsType::Previous(assignment_map),
+								)
+							}),
+					})
+					.collect(),
+			};
 
 		let matching_configs = AtomicI32::new(0);
 		let wretch_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch));
@@ -431,60 +445,61 @@ fn predict_board_configs(
 			game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
 		let bombardier_in_play =
 			game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
-		let iteration_result: Vec<(usize, HashMap<IndexTestimony, bool>)> = things_to_check
-			.into_par_iter()
-			.filter_map(|(index, board_expression, assignment)| {
-				let mapped_assignment;
-				let assignment = if allow_retry {
-					assignment
-				} else {
-					let (mapping, original_slots_used) =
-						&potential_assignment_mappings.as_ref().unwrap()[index];
+		let board_index_satisfying_assignments: Vec<(usize, HashMap<IndexTestimony, bool>)> =
+			assignments_to_iterate
+				.into_par_iter()
+				.filter_map(|(board_index, assignment_type)| {
+					let mapped_assignment;
+					let assignment = match assignment_type {
+						ExpandedAssignmentsType::All(items) => items,
+						ExpandedAssignmentsType::Previous(previous_assignments) => {
+							let mut assignment_vec =
+								Vec::with_capacity(optimized_master_expression.variables().len());
 
-					if *original_slots_used != board_expression.variables().len() {
-						panic!("Bad juju");
-					}
+							for variable in optimized_master_expression.variables().iter() {
+								if let Some(testimony_trutfulness) =
+									previous_assignments.get(variable)
+								{
+									assignment_vec.push(*testimony_trutfulness)
+								}
+							}
 
-					let mut mapped_assignment_builder = Vec::with_capacity(*original_slots_used);
-
-					for i in 0..mapping.len() {
-						if mapping[i] {
-							mapped_assignment_builder.push(assignment[i]);
+							mapped_assignment = assignment_vec;
+							&mapped_assignment
 						}
+					};
+
+					let board_expression = &optimized_expressions[board_index];
+					if board_expression.satisfies(|variable_index| assignment[variable_index])
+						&& validate_assignment(
+							log,
+							&assignment,
+							board_expression.variables(),
+							&potential_board_configurations[board_index].0,
+							game_state,
+							wretch_in_play,
+							drunk_in_play,
+							knight_in_play,
+							bombardier_in_play,
+						) {
+						matching_configs.fetch_add(1, Ordering::Relaxed);
+
+						let mut satisfying_assignment =
+							HashMap::with_capacity(board_expression.variables().len());
+						for (index, variable) in board_expression.variables().iter().enumerate() {
+							satisfying_assignment.insert(variable.clone(), assignment[index]);
+						}
+
+						Some((board_index, satisfying_assignment))
+					} else {
+						None
 					}
+				})
+				.collect();
 
-					mapped_assignment = Some(mapped_assignment_builder);
-					mapped_assignment.as_ref().unwrap()
-				};
-
-				if board_expression.satisfies(|variable_index| assignment[variable_index])
-					&& validate_assignment(
-						log,
-						assignment,
-						board_expression.variables(),
-						&potential_board_configurations[index].0,
-						game_state,
-						wretch_in_play,
-						drunk_in_play,
-						knight_in_play,
-						bombardier_in_play,
-					) {
-					matching_configs.fetch_add(1, Ordering::Relaxed);
-
-					let mut satisfying_assignment =
-						HashMap::with_capacity(board_expression.variables().len());
-					for (index, variable) in board_expression.variables().iter().enumerate() {
-						satisfying_assignment.insert(variable.clone(), assignment[index]);
-					}
-
-					Some((index, satisfying_assignment))
-				} else {
-					None
-				}
-			})
-			.collect();
-
-		for (matching_board_config_index, satisfying_assignment) in iteration_result {
+		for (matching_board_config_index, satisfying_assignment) in
+			board_index_satisfying_assignments
+		{
 			let (matching_board_config, _) =
 				&potential_board_configurations[matching_board_config_index];
 			if all_matching_layouts.contains_key(matching_board_config) {
@@ -574,7 +589,7 @@ fn predict_board_configs(
 
 		let mut can_get_more_information = false;
 
-		if allow_retry {
+		if non_hypothetical_pass {
 			game_state.iter_villagers(|_, villager| {
 				// is there a villager without a testimony or hidden?
 				can_get_more_information |= match villager {
@@ -632,7 +647,7 @@ fn predict_board_configs(
 			Ok(PredictionResult3::NeedMoreInfoResult(all_matching_layouts))
 		} else {
 			// best guess
-			if allow_retry {
+			if non_hypothetical_pass {
 				warn!(
 					logger: log,
 					"{} different evil layouts exist and no more information can be gathered. Providing the {} most common evil indexes with {} matches each. God help you",
@@ -657,7 +672,7 @@ fn predict_board_configs(
 				}
 			}
 
-			if allow_retry {
+			if non_hypothetical_pass {
 				// always perfer to kill hidden villagers if necessary to get more info
 				let mut has_hiddens = false;
 				let mut has_knights = false;
