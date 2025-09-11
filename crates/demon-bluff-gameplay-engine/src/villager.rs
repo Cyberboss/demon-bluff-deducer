@@ -132,10 +132,6 @@ impl Display for VillagerIndex {
 
 impl VillagerIndex {
 	pub fn number(villager_number: usize) -> Self {
-		if villager_number == 0 {
-			breakpoint();
-		}
-
 		Self(villager_number - 1)
 	}
 }
