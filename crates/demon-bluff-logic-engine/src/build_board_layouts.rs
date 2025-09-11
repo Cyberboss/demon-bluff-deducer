@@ -254,8 +254,9 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			};
 
 			// TODO: Test pass order once deck builder mode releases
-			let plague_doctor_spawned_theoreticals =
-				with_real_plague_doctor_locations(game_state, initial_layout);
+			let wretch_spawned_theoreticals = with_wretch_locations(game_state, initial_layout);
+			let plague_doctor_spawned_theoreticals = wretch_spawned_theoreticals
+				.flat_map(|layout| with_real_plague_doctor_locations(game_state, layout));
 			let alchemist_spawned_theoreticals = plague_doctor_spawned_theoreticals
 				.flat_map(|layout| with_real_alchemist_locations(game_state, layout));
 			let dopple_spawned_theoreticals = alchemist_spawned_theoreticals
@@ -525,6 +526,39 @@ gen fn with_real_plague_doctor_locations(
 	}
 
 	// just in case the PD is fake
+	yield layout;
+}
+
+gen fn with_wretch_locations(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
+	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch))
+		// this check is for if one was revealed already. There can only be one real PD
+		&& layout.villagers.iter().all(|villager| {
+			*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::Wretch)
+		}) {
+		for index in 0..layout.villagers.len() {
+			let theoretical = &layout.villagers[index];
+			if !theoretical.inner.true_identity().is_evil()
+				&& !theoretical.inner.corrupted()
+				&& !theoretical.revealed
+			{
+				let mut next_layout = layout.clone();
+				next_layout.description = format!(
+					"{} - {} is unrevealed Wretch",
+					next_layout.description,
+					VillagerIndex(index)
+				);
+				next_layout.villagers[index].inner = ConfirmedVillager::new(
+					VillagerInstance::new(VillagerArchetype::Outcast(Outcast::Wretch), None),
+					None,
+					false,
+				);
+
+				yield next_layout;
+			}
+		}
+	}
+
+	// just in case the wretch wasn't drawn or whatever
 	yield layout;
 }
 
