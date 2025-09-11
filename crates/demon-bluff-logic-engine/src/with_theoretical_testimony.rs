@@ -22,55 +22,13 @@ pub fn with_theoretical_testimony(
 	game_state: &GameState,
 	board_configs: impl IntoIterator<Item = (BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
 ) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
-	let mut seen_ability_combinations = Vec::new();
-	let mut current_ability_combination = HashSet::new();
-	with_theoretical_testimony_inner(
-		log,
-		game_state,
-		board_configs,
-		&mut seen_ability_combinations,
-		&mut current_ability_combination,
-	)
+	with_theoretical_testimony_inner(log, game_state, board_configs)
 }
 pub fn with_theoretical_testimony_inner(
 	log: &impl Log,
 	game_state: &GameState,
 	board_configs: impl IntoIterator<Item = (BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-	seen_ability_combinations: &mut Vec<HashSet<AbilityAttempt>>,
-	current_ability_combination: &mut HashSet<AbilityAttempt>,
 ) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
-	let invalid_ability_attempts = seen_ability_combinations
-		.iter()
-		.filter_map(|attempt_set| {
-			if attempt_set.len() != (current_ability_combination.len() + 1) {
-				None
-			} else {
-				let mut the_one_we_dont_have = None;
-				let missing_multiple =
-					!current_ability_combination
-						.iter()
-						.all(|current_ability_attempt| {
-							let contained = attempt_set.contains(current_ability_attempt);
-							if contained {
-								true
-							} else if the_one_we_dont_have.is_some() {
-								false
-							} else {
-								the_one_we_dont_have = Some(current_ability_attempt);
-								true
-							}
-						});
-
-				if missing_multiple {
-					None
-				} else {
-					the_one_we_dont_have
-				}
-			}
-		})
-		.cloned()
-		.collect();
-
 	let board_configs_and_satisfying_assignments: Vec<(
 		BoardLayout,
 		Vec<HashMap<IndexTestimony, bool>>,
@@ -85,7 +43,6 @@ pub fn with_theoretical_testimony_inner(
 				generate_theoreticals_for_first_villager_with_ability(
 					initial_board_config,
 					valid_assignments,
-					&invalid_ability_attempts,
 				)
 			},
 		) {
@@ -168,21 +125,15 @@ pub fn with_theoretical_testimony_inner(
 				.collect();
 
 			if !valid_layouts_and_assignments.is_empty() {
-				current_ability_combination.insert(ability_attempt.clone());
-
 				let expanded_layouts = with_theoretical_testimony_inner(
 					log,
 					game_state,
 					valid_layouts_and_assignments,
-					seen_ability_combinations,
-					current_ability_combination,
 				);
 				let total_expanded_layouts = expanded_layouts
 					.into_iter()
 					.flat_map(|(_, expanded_layouts)| expanded_layouts.into_iter())
 					.collect();
-
-				current_ability_combination.remove(&ability_attempt);
 
 				expanded_results.insert(ability_attempt, total_expanded_layouts);
 			}
@@ -190,13 +141,6 @@ pub fn with_theoretical_testimony_inner(
 
 		expanded_results
 	} else {
-		for (ability_attempt, _) in &results {
-			let mut seen_combination = current_ability_combination.clone();
-			seen_combination.reserve(1);
-			seen_combination.insert(ability_attempt.clone());
-			seen_ability_combinations.push(seen_combination);
-		}
-
 		results
 	}
 }
@@ -204,7 +148,6 @@ pub fn with_theoretical_testimony_inner(
 gen fn generate_theoreticals_for_first_villager_with_ability(
 	inital_board_config: &BoardLayout,
 	potential_assignments: &Vec<HashMap<IndexTestimony, bool>>,
-	invalid_ability_attempts: &HashSet<AbilityAttempt>,
 ) -> (
 	BoardLayout,
 	AbilityAttempt,
@@ -214,11 +157,9 @@ gen fn generate_theoreticals_for_first_villager_with_ability(
 		if theoretical.revealed
 			&& let None = theoretical.inner.instance().testimony()
 		{
-			for (board_layout, ability_attempt, generated_testimonies) in theoretical_testimonies(
-				&inital_board_config,
-				VillagerIndex(index),
-				invalid_ability_attempts,
-			) {
+			for (board_layout, ability_attempt, generated_testimonies) in
+				theoretical_testimonies(&inital_board_config, VillagerIndex(index))
+			{
 				let mut potential_assignments = potential_assignments.clone();
 
 				for generated_testimony in generated_testimonies {
@@ -248,7 +189,6 @@ gen fn generate_theoreticals_for_first_villager_with_ability(
 gen fn theoretical_testimonies(
 	board_config: &BoardLayout,
 	testifier_index: VillagerIndex,
-	invalid_ability_attempts: &HashSet<AbilityAttempt>,
 ) -> (BoardLayout, AbilityAttempt, Vec<IndexTestimony>) {
 	let theoreticals = &board_config.villagers;
 	let testifier = &theoreticals[testifier_index.0];
@@ -271,9 +211,6 @@ gen fn theoretical_testimonies(
 					let mut targets = BTreeSet::new();
 					targets.extend(index_combo.iter().cloned());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
-					if invalid_ability_attempts.contains(&ability_attempt) {
-						continue;
-					}
 
 					for expression in fortune_teller_expression(&index_combo) {
 						let mut next_layout = board_config.clone();
@@ -318,9 +255,6 @@ gen fn theoretical_testimonies(
 					let mut targets = BTreeSet::new();
 					targets.extend(index_combo.iter().cloned());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
-					if invalid_ability_attempts.contains(&ability_attempt) {
-						continue;
-					}
 
 					for expression in jester_expression(&index_combo) {
 						let mut next_layout = board_config.clone();
@@ -354,10 +288,6 @@ gen fn theoretical_testimonies(
 					let mut targets = BTreeSet::new();
 					targets.insert(target_index.clone());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
-
-					if invalid_ability_attempts.contains(&ability_attempt) {
-						continue;
-					}
 
 					let raw_testimony = Testimony::Lying(target_index.clone());
 					let base_expr = Expression::Leaf(raw_testimony.clone());
@@ -430,9 +360,6 @@ gen fn theoretical_testimonies(
 					let target_index = VillagerIndex(target_index);
 					targets.insert(target_index.clone());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
-					if invalid_ability_attempts.contains(&ability_attempt) {
-						continue;
-					}
 
 					let mut next_layout = board_config.clone();
 
@@ -504,9 +431,6 @@ gen fn theoretical_testimonies(
 					let target_index = VillagerIndex(target_index);
 					targets.insert(target_index.clone());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
-					if invalid_ability_attempts.contains(&ability_attempt) {
-						continue;
-					}
 
 					let truly_corrupt = target_theoretical.inner.corrupted();
 
