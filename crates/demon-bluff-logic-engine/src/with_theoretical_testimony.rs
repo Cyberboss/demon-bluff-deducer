@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque, hash_map::Entry};
 
 use demon_bluff_gameplay_engine::{
 	Expression,
@@ -75,49 +75,27 @@ pub fn with_theoretical_testimony_inner(
 		BoardLayout,
 		Vec<HashMap<IndexTestimony, bool>>,
 	)> = board_configs.into_iter().collect();
-	let mut iterators = Vec::new();
-	for (initial_board_config, valid_assignments) in board_configs_and_satisfying_assignments {
-		iterators.push(iter_board_villagers_once(
-			&initial_board_config,
-			valid_assignments,
-			&invalid_ability_attempts,
-		));
-	}
-
 	let mut results: HashMap<
 		AbilityAttempt,
 		Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-	> = HashMap::with_capacity(iterators[0].len());
-	loop {
-		let mut group: Vec<(
-			BoardLayout,
-			AbilityAttempt,
-			Vec<HashMap<IndexTestimony, bool>>,
-		)> = Vec::new();
-		for iterator in &mut iterators {
-			if let Some(next_value) = iterator.pop_front() {
-				if group.len() > 0 {
-					assert_eq!(group[0].1, next_value.1);
-				}
-
-				group.push(next_value);
+	> = HashMap::new();
+	for (theoretical_layout, ability_attempt, generated_testimonies) in
+		board_configs_and_satisfying_assignments.iter().flat_map(
+			|(initial_board_config, valid_assignments)| {
+				generate_theoreticals_for_first_villager_with_ability(
+					initial_board_config,
+					valid_assignments,
+					&invalid_ability_attempts,
+				)
+			},
+		) {
+		let entry_value = (theoretical_layout, generated_testimonies);
+		match results.entry(ability_attempt) {
+			Entry::Occupied(mut occupied_entry) => occupied_entry.get_mut().push(entry_value),
+			Entry::Vacant(vacant_entry) => {
+				vacant_entry.insert(vec![entry_value]);
 			}
 		}
-
-		if group.len() == 0 {
-			break;
-		}
-
-		// the length of each iterator should be the same
-		assert_eq!(group.len(), iterators.len());
-
-		results.insert(
-			group[0].1.clone(),
-			group
-				.into_iter()
-				.map(|(layout, _, potential_assignments)| (layout, potential_assignments))
-				.collect(),
-		);
 	}
 
 	// recursively expand every solution until all testimonies are acquired
@@ -164,6 +142,7 @@ pub fn with_theoretical_testimony_inner(
 						let mut assignment =
 							Vec::with_capacity(optimized_expression.variables().len());
 						for variable in optimized_expression.variables() {
+							// error here means testimonies from theoretical weren't generated properly
 							assignment.push(map_assignment[&variable]);
 						}
 
@@ -222,16 +201,15 @@ pub fn with_theoretical_testimony_inner(
 	}
 }
 
-fn iter_board_villagers_once(
+gen fn generate_theoreticals_for_first_villager_with_ability(
 	inital_board_config: &BoardLayout,
-	potential_assignments: Vec<HashMap<IndexTestimony, bool>>,
+	potential_assignments: &Vec<HashMap<IndexTestimony, bool>>,
 	invalid_ability_attempts: &HashSet<AbilityAttempt>,
-) -> VecDeque<(
+) -> (
 	BoardLayout,
 	AbilityAttempt,
 	Vec<HashMap<IndexTestimony, bool>>,
-)> {
-	let mut results = VecDeque::new();
+) {
 	for (index, theoretical) in inital_board_config.villagers.iter().enumerate() {
 		if theoretical.revealed
 			&& let None = theoretical.inner.instance().testimony()
@@ -241,7 +219,6 @@ fn iter_board_villagers_once(
 				VillagerIndex(index),
 				invalid_ability_attempts,
 			) {
-				// TODO: avoid this clone on the last iteration somehow
 				let mut potential_assignments = potential_assignments.clone();
 
 				for generated_testimony in generated_testimonies {
@@ -260,14 +237,12 @@ fn iter_board_villagers_once(
 					}
 				}
 
-				results.push_back((board_layout, ability_attempt, potential_assignments));
+				yield (board_layout, ability_attempt, potential_assignments);
 			}
 
 			break;
 		}
 	}
-
-	results
 }
 
 gen fn theoretical_testimonies(
@@ -469,9 +444,9 @@ gen fn theoretical_testimonies(
 							next_layout.description, testifier_index, target_index
 						);
 						slayed = false;
-					} else if !target_theoretical.inner.true_identity().is_evil() {
+					} else if !target_theoretical.inner.true_identity().appears_evil() {
 						next_layout.description = format!(
-							"{} - {} failed to slay {} due to them not being evil",
+							"{} - {} failed to slay {} due to them not appearing evil",
 							next_layout.description, testifier_index, target_index
 						);
 						slayed = false;
@@ -533,67 +508,83 @@ gen fn theoretical_testimonies(
 						continue;
 					}
 
-					let mut next_layout = board_config.clone();
-
 					let truly_corrupt = target_theoretical.inner.corrupted();
 
 					let says_corrupt = testifier.inner.will_lie() ^ truly_corrupt;
 					let raw_testimony = Testimony::Corrupt(target_index.clone());
+
+					let mut testimonies;
+					let next_description;
 					if says_corrupt {
-						next_layout.description = format!(
+						next_description = format!(
 							"{} - {} {}correctly says: {} is corrupt",
-							next_layout.description,
+							board_config.description,
 							testifier_index,
 							if truly_corrupt { "" } else { "IN" },
 							target_index
 						);
+						testimonies = Vec::with_capacity(2);
 					} else {
-						next_layout.description = format!(
+						next_description = format!(
 							"{} - {} {}correctly says: {} is NOT corrupt",
-							next_layout.description,
+							board_config.description,
 							testifier_index,
 							if truly_corrupt { "IN" } else { "" },
 							target_index
 						);
+						testimonies = Vec::with_capacity(1);
 					}
 
-					let mut testimonies = Vec::with_capacity(1);
 					testimonies.push(IndexTestimony::new(
 						testifier_index.clone(),
 						raw_testimony.clone(),
 					));
 
 					if !says_corrupt {
+						let mut next_layout = board_config.clone();
+						next_layout.description = next_description;
 						let testifier_instance_to_modify = next_layout.villagers[testifier_index.0]
 							.inner
 							.instance_mut();
 						testifier_instance_to_modify.set_testimony(Expression::Not(Box::new(
 							Expression::Leaf(raw_testimony),
 						)));
-						yield (next_layout, ability_attempt.clone(), testimonies);
-						return;
+						yield (next_layout, ability_attempt, testimonies);
+						continue;
 					}
 
-					for (index, _) in next_layout.villagers.into_iter().enumerate().filter(
+					// if they appear evil and we won't lie we say evil
+
+					for (index, _) in board_config.villagers.iter().enumerate().filter(
 						move |(index, villager)| {
-							*index != testifier_index.0
-								&& testifier.inner.will_lie()
-									== !villager.inner.true_identity().appears_evil()
+							if *index == testifier_index.0 || *index == target_index.0 {
+								false
+							} else {
+								testifier.inner.will_lie()
+									^ villager.inner.true_identity().appears_evil()
+							}
 						},
 					) {
 						let evil_index = VillagerIndex(index);
 						let next_description =
-							format!("{}, {} is evil", next_layout.description, evil_index);
+							format!("{}, {} is evil", next_description, evil_index);
 						let mut next_layout = board_config.clone();
 						next_layout.description = next_description;
 						let testifier_instance_to_modify = next_layout.villagers[testifier_index.0]
 							.inner
 							.instance_mut();
+						let evil_testimony = IndexTestimony {
+							index: testifier_index.clone(),
+							testimony: Testimony::Evil(evil_index),
+						};
 						testifier_instance_to_modify.set_testimony(Expression::And(
 							Box::new(Expression::Leaf(raw_testimony.clone())),
-							Box::new(Expression::Leaf(Testimony::Evil(evil_index))),
+							Box::new(Expression::Leaf(evil_testimony.testimony.clone())),
 						));
-						yield (next_layout, ability_attempt.clone(), testimonies.clone());
+
+						let mut testimonies: Vec<IndexTestimony> = testimonies.clone();
+						testimonies.push(evil_testimony);
+						yield (next_layout, ability_attempt.clone(), testimonies);
 					}
 				}
 			}
