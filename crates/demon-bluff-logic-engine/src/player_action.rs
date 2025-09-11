@@ -32,6 +32,25 @@ impl AbilityAttempt {
 	}
 }
 
+impl Display for AbilityAttempt {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Use {}'s ability on ", self.source)?;
+
+		let mut first = true;
+		for target in self.targets.iter() {
+			if first {
+				first = false;
+			} else {
+				write!(f, ", ")?
+			}
+
+			write!(f, "{}", target)?
+		}
+
+		Ok(())
+	}
+}
+
 impl PartialEq for AbilityAttempt {
 	fn eq(&self, other: &Self) -> bool {
 		self.source == other.source
