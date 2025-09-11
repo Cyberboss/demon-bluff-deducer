@@ -87,7 +87,9 @@ pub fn predict(
 			PredictionResult2::NeedMoreInfoResult(hash_set) => {
 				need_more_info_result = Some(hash_set)
 			}
-			PredictionResult2::ConfigCountsAfterAbility(_) => panic!("Incorrect return type!"),
+			PredictionResult2::ConfigCountsAfterAbility(_) => {
+				unreachable!("Incorrect return type!")
+			}
 		}
 	}
 
@@ -150,16 +152,35 @@ pub fn predict(
 			for ability_attempt in attempt_order {
 				let (_, predicted_layouts) =
 					layouts.remove_entry(&ability_attempt).expect("Impossble");
+				info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", predicted_layouts.len(), ability_attempt, predicted_layouts[0].0.description);
+
 				if let PredictionResult2::ConfigCountsAfterAbility(result) = predict_core(
 					log,
 					state,
-					predicted_layouts
-						.into_iter()
-						.map(|(board_config, potential_assignments)| {
+					predicted_layouts.iter().cloned().map(
+						|(board_config, potential_assignments)| {
 							(board_config, Some(potential_assignments))
-						}),
+						},
+					),
 					true,
 				) {
+					if let PredictionResult2::ConfigCountsAfterAbility(result2) = predict_core(
+						log,
+						state,
+						predicted_layouts.iter().cloned().map(
+							|(board_config, potential_assignments)| {
+								(board_config, Some(potential_assignments))
+							},
+						),
+						true,
+					) {
+						assert_eq!(result, result2)
+					} else {
+						unreachable!()
+					}
+
+					info!("Theory resulted in {} possible evil configurations", result);
+
 					let (ability_uses, potential_evil_location_configurations) = match least_options
 					{
 						Some((mut old_least_options, count)) => {
@@ -188,16 +209,20 @@ pub fn predict(
 					least_options = Some((ability_uses, potential_evil_location_configurations));
 
 					if this_one_works {
+						info!(logger: log, "Found an ability path that leads to a single evil configuration taking it and earlying out on theorizing");
 						break;
 					}
 				} else {
-					panic!("Prediction was not allowed to return non and it did it anyway");
+					unreachable!("Prediction was not allowed to return non and it did it anyway");
 				}
 			}
 
-			Ok(least_options
-				.expect("No value ability usages found??")
-				.0
+			let (ability_attempts, least_execute_options) =
+				least_options.expect("No value ability usages found??");
+
+			info!(logger: log, "Selecting the path of \"{}\" which could lead to one of {} different evil layouts", ability_attempts.iter().map(|attempt| format!("{}", attempt)).join("|"), least_execute_options);
+
+			Ok(ability_attempts
 				.into_iter()
 				.map(|ability_attempt| PlayerAction::Ability(ability_attempt))
 				.collect())
@@ -238,9 +263,7 @@ fn predict_core(
 						return result;
 					}
 
-					if let Some((most_common_indicies, appear_in_layouts)) =
-						valid_prediction.most_common_indicies
-					{
+					if let Some((most_common_indicies, _)) = valid_prediction.most_common_indicies {
 						let mut actions: HashSet<PlayerAction> =
 							HashSet::with_capacity(most_common_indicies.len());
 						// select the most common indicies
@@ -249,12 +272,12 @@ fn predict_core(
 							actions.insert(PlayerAction::TryExecute(index));
 						}
 
-						assert_ne!(0, actions.len());
+						debug_assert_ne!(0, actions.len());
 
 						return PredictionResult2::KillResult(Ok(actions));
 					}
 
-					assert_eq!(
+					debug_assert_eq!(
 						1,
 						valid_prediction.board_layouts_by_similar_configs.len(),
 						"More than 1 board layout is killable and most_common_indicies wasn't set!"
@@ -369,11 +392,16 @@ fn predict_board_configs(
 					.iter()
 					.enumerate()
 					.map(|(board_index, (_, previously_satisfying_assignments))| {
+						let assignment =
+							previously_satisfying_assignments
+								.as_ref()
+								.unwrap_or_else(|| {
+									unreachable!("We should have potential assignments predicted!")
+								});
+
 						AssignmentsType::Previous(PreviousAssignments {
 							matching_board_index: board_index,
-							previous_assignments: previously_satisfying_assignments
-								.as_ref()
-								.expect("We should have potential assignments predicted!"),
+							previous_assignments: assignment,
 						})
 					})
 					.collect()
@@ -445,18 +473,20 @@ fn predict_board_configs(
 			game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
 		let bombardier_in_play =
 			game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
+
 		let board_index_satisfying_assignments: Vec<(usize, HashMap<IndexTestimony, bool>)> =
 			assignments_to_iterate
 				.into_par_iter()
 				.filter_map(|(board_index, assignment_type)| {
 					let mapped_assignment;
+					let board_expression = &optimized_expressions[board_index];
 					let assignment = match assignment_type {
 						ExpandedAssignmentsType::All(items) => items,
 						ExpandedAssignmentsType::Previous(previous_assignments) => {
 							let mut assignment_vec =
-								Vec::with_capacity(optimized_master_expression.variables().len());
+								Vec::with_capacity(board_expression.variables().len());
 
-							for variable in optimized_master_expression.variables().iter() {
+							for variable in board_expression.variables().iter() {
 								if let Some(testimony_trutfulness) =
 									previous_assignments.get(variable)
 								{
@@ -469,13 +499,14 @@ fn predict_board_configs(
 						}
 					};
 
-					let board_expression = &optimized_expressions[board_index];
+					let (layout, _) = &potential_board_configurations[board_index];
+
 					if board_expression.satisfies(|variable_index| assignment[variable_index])
 						&& validate_assignment(
 							log,
 							&assignment,
 							board_expression.variables(),
-							&potential_board_configurations[board_index].0,
+							layout,
 							game_state,
 							wretch_in_play,
 							drunk_in_play,
@@ -484,12 +515,23 @@ fn predict_board_configs(
 						) {
 						matching_configs.fetch_add(1, Ordering::Relaxed);
 
-						let mut satisfying_assignment =
-							HashMap::with_capacity(board_expression.variables().len());
-						for (index, variable) in board_expression.variables().iter().enumerate() {
-							satisfying_assignment.insert(variable.clone(), assignment[index]);
-						}
+						let satisfying_assignment = match assignment_type {
+							ExpandedAssignmentsType::All(_) => {
+								let mut satisfying_assignment_builder =
+									HashMap::with_capacity(board_expression.variables().len());
+								for (index, variable) in
+									board_expression.variables().iter().enumerate()
+								{
+									satisfying_assignment_builder
+										.insert(variable.clone(), assignment[index]);
+								}
 
+								satisfying_assignment_builder
+							}
+							ExpandedAssignmentsType::Previous(previous_assignments) => {
+								previous_assignments.clone()
+							}
+						};
 						Some((board_index, satisfying_assignment))
 					} else {
 						None
@@ -768,9 +810,7 @@ fn validate_assignment(
 	knight_in_play: bool,
 	bombardier_in_play: bool,
 ) -> bool {
-	if variables.len() != assignment.len() {
-		panic!("This again");
-	}
+	debug_assert_eq!(variables.len(), assignment.len());
 
 	let theoreticals = &board_config.villagers;
 	for (variable_index, truthful) in assignment.iter().enumerate() {
