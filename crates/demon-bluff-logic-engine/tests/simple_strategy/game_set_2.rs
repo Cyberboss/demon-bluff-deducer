@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::{
@@ -152,7 +154,9 @@ fn game_12() {
 				VillagerIndex::number(6),
 				Some(VillagerInstance::new(
 					VillagerArchetype::GoodVillager(GoodVillager::Bard),
-					Some(Expression::Leaf(Testimony::Bard(Some(3)))),
+					Some(Expression::Leaf(Testimony::Bard(Some(
+						NonZeroUsize::new(3).unwrap(),
+					)))),
 				)),
 			)),
 			TestAction::TryReveal(RevealResult::new(

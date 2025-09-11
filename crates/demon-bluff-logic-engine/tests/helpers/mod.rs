@@ -56,8 +56,6 @@ pub enum TestAction {
 	Ability(Vec<VillagerIndex>, AbilityResult),
 }
 
-static LOGGER_INITIALIZED: OnceLock<bool> = OnceLock::new();
-
 pub fn run_game(
 	game_state: &GameState,
 	expected_actions: Vec<TestAction>,
@@ -67,16 +65,12 @@ pub fn run_game(
 	let mut game_state = game_state.clone();
 	let total_actions = expected_actions.len();
 	let mut log = log::logger();
-	if LOGGER_INITIALIZED.try_insert(true).is_ok() {
-		colog::default_builder()
-			.filter_level(log::LevelFilter::Debug)
-			.init();
-	}
 
 	for (index, action) in expected_actions.into_iter().enumerate() {
 		if let Some(log_after) = log_after
 			&& log_after == index
 		{
+			colog::init();
 			log = log::logger();
 		}
 

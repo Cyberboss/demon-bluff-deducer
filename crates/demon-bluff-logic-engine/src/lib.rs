@@ -1063,7 +1063,7 @@ fn validate_assignment(
 						let counterclockwise_corrupt =
 							counterclockwise_theoretical.inner.corrupted();
 						if clockwise_corrupt || counterclockwise_corrupt {
-							matches = i == *distance;
+							matches = i == distance.get();
 							break;
 						}
 					}

@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+	fmt::Display,
+	num::{NonZero, NonZeroU8, NonZeroUsize},
+};
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -146,7 +149,7 @@ pub enum Testimony {
 	// handle it at validation time
 	Enlightened(Direction),
 	Knitter(EvilPairsClaim),
-	Bard(Option<usize>),
+	Bard(Option<NonZeroUsize>),
 }
 
 impl EvilPairsClaim {
