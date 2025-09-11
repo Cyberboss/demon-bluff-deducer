@@ -876,7 +876,7 @@ fn validate_assignment(
 					let theoretical = &theoreticals[index_testimony.index.0];
 					if_unknown_good_use_truthful(
 						theoretical,
-						!confirmed_target.true_identity().is_evil(),
+						!confirmed_target.true_identity().appears_evil(),
 						true,
 					) || theoretical.inner.corrupted()
 				}
