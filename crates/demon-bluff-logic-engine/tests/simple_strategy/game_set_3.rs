@@ -245,12 +245,12 @@ fn game_22() {
 			)),
 			TestAction::TryReveal(RevealResult::new(VillagerIndex::number(9), None)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(8)],
+				vec![VillagerIndex::number(2)],
 				AbilityResult::new(
 					VillagerIndex::number(4),
 					Some(Testimony::slayer(
 						VillagerIndex::number(4),
-						VillagerIndex::number(8),
+						VillagerIndex::number(2),
 						false,
 					)),
 					None,

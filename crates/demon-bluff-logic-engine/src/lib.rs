@@ -190,7 +190,7 @@ pub fn predict(
 					let (ability_uses, evil_location_configurations_reduction) =
 						match most_board_config_reductions {
 							Some((mut old_most_reductions, old_layouts_reduced)) => {
-								if old_layouts_reduced > total_layouts_reduction_from_attempt {
+								if old_layouts_reduced < total_layouts_reduction_from_attempt {
 									let mut new_most_reductions = HashSet::new();
 									new_most_reductions.insert(ability_attempt);
 									(new_most_reductions, total_layouts_reduction_from_attempt)
