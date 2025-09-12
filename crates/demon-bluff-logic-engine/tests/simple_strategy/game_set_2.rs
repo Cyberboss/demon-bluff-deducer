@@ -494,9 +494,11 @@ fn game_15() {
 				vec![VillagerIndex::number(5)],
 				AbilityResult::new(
 					VillagerIndex::number(4),
-					Some(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Evil(VillagerIndex::number(5)),
-					)))),
+					Some(Testimony::slayer(
+						VillagerIndex::number(4),
+						VillagerIndex::number(5),
+						false,
+					)),
 					None,
 				),
 			),

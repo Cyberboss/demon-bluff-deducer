@@ -148,10 +148,12 @@ pub fn predict(
 			// order here wants to be deterministic for testing purposes, so collect and sort the keys
 
 			// for each theoretical testimony find the group of
-			let mut least_options: Option<(HashSet<AbilityAttempt>, usize)> = None;
+			let mut most_board_config_reductions: Option<(HashSet<AbilityAttempt>, usize)> = None;
 			for ability_attempt in attempt_order {
-				let (_, predicted_layouts) =
-					layouts.remove_entry(&ability_attempt).expect("Impossble");
+				let (
+					_,
+					(predicted_layouts, number_of_evil_layouts, initial_evil_layouts_reduction),
+				) = layouts.remove_entry(&ability_attempt).expect("Impossble");
 				info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", predicted_layouts.len(), ability_attempt, predicted_layouts[0].0.description);
 
 				if let PredictionResult2::ConfigCountsAfterAbility(result) = predict_core(
@@ -181,32 +183,37 @@ pub fn predict(
 
 					info!("Theory resulted in {} possible evil configurations", result);
 
-					let (ability_uses, potential_evil_location_configurations) = match least_options
-					{
-						Some((mut old_least_options, count)) => {
-							if count > result {
-								let mut new_least_options = HashSet::new();
-								new_least_options.insert(ability_attempt);
-								(new_least_options, result)
-							} else {
-								if count == result {
-									old_least_options.insert(ability_attempt);
+					let evil_layouts_reduction = number_of_evil_layouts - result;
+					let total_layouts_reduction_from_attempt =
+						initial_evil_layouts_reduction + evil_layouts_reduction;
+
+					let (ability_uses, evil_location_configurations_reduction) =
+						match most_board_config_reductions {
+							Some((mut old_most_reductions, old_layouts_reduced)) => {
+								if old_layouts_reduced > total_layouts_reduction_from_attempt {
+									let mut new_most_reductions = HashSet::new();
+									new_most_reductions.insert(ability_attempt);
+									(new_most_reductions, total_layouts_reduction_from_attempt)
+								} else {
+									if old_layouts_reduced == total_layouts_reduction_from_attempt {
+										old_most_reductions.insert(ability_attempt);
+									}
+
+									(old_most_reductions, old_layouts_reduced)
 								}
-
-								(old_least_options, count)
 							}
-						}
-						None => {
-							let mut new_least_options = HashSet::new();
-							new_least_options.insert(ability_attempt);
-							(new_least_options, result)
-						}
-					};
+							None => {
+								let mut new_most_reductions = HashSet::new();
+								new_most_reductions.insert(ability_attempt);
+								(new_most_reductions, total_layouts_reduction_from_attempt)
+							}
+						};
 
-					// optimization, take the first result that gives us all remaining evils
-					let this_one_works = potential_evil_location_configurations == 1;
+					// optimization, take the first result that gives us one layout
+					let this_one_works = evil_location_configurations_reduction == 1;
 
-					least_options = Some((ability_uses, potential_evil_location_configurations));
+					most_board_config_reductions =
+						Some((ability_uses, evil_location_configurations_reduction));
 
 					if this_one_works {
 						info!(logger: log, "Found an ability path that leads to a single evil configuration taking it and earlying out on theorizing");
@@ -217,10 +224,10 @@ pub fn predict(
 				}
 			}
 
-			let (ability_attempts, least_execute_options) =
-				least_options.expect("No value ability usages found??");
+			let (ability_attempts, evil_location_configurations_reduction) =
+				most_board_config_reductions.expect("No value ability usages found??");
 
-			info!(logger: log, "Selecting the path of \"{}\" which could lead to one of {} different evil layouts", ability_attempts.iter().map(|attempt| format!("{}", attempt)).join("|"), least_execute_options);
+			info!(logger: log, "Selecting the path of \"{}\" which could lead to a reduction of {} evil layouts", ability_attempts.iter().map(|attempt| format!("{}", attempt)).join("|"), evil_location_configurations_reduction);
 
 			Ok(ability_attempts
 				.into_iter()
@@ -880,7 +887,8 @@ fn validate_assignment(
 				if_unknown_good_use_truthful(
 					theoretical,
 					*theoretical.inner.true_identity()
-						== VillagerArchetype::GoodVillager(GoodVillager::Knight),
+						== VillagerArchetype::GoodVillager(GoodVillager::Knight)
+						&& !theoretical.inner.will_lie(),
 					knight_in_play,
 				)
 			}
@@ -1125,12 +1133,12 @@ fn validate_assignment(
 
 		if testimony_valid != *truthful {
 			trace!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
+
 			return false;
 		}
 	}
 
 	trace!(logger: log, "Validation passed: {}", board_config.description);
-
 	true
 }
 

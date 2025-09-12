@@ -70,7 +70,9 @@ pub fn run_game(
 		if let Some(log_after) = log_after
 			&& log_after == index
 		{
-			colog::init();
+			colog::default_builder()
+				//.filter_level(log::LevelFilter::Debug)
+				.init();
 			log = log::logger();
 		}
 

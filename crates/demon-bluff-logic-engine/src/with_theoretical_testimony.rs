@@ -1,4 +1,7 @@
-use std::collections::{BTreeSet, HashMap, HashSet, VecDeque, hash_map::Entry};
+use std::{
+	backtrace,
+	collections::{BTreeSet, HashMap, HashSet, VecDeque, hash_map::Entry},
+};
 
 use demon_bluff_gameplay_engine::{
 	Expression,
@@ -21,18 +24,52 @@ pub fn with_theoretical_testimony(
 	log: &impl Log,
 	game_state: &GameState,
 	board_configs: impl IntoIterator<Item = (BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
-	with_theoretical_testimony_inner(log, game_state, board_configs)
-}
-pub fn with_theoretical_testimony_inner(
-	log: &impl Log,
-	game_state: &GameState,
-	board_configs: impl IntoIterator<Item = (BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
-) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
+) -> HashMap<
+	AbilityAttempt,
+	(
+		Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,
+		usize,
+		usize,
+	),
+> {
 	let board_configs_and_satisfying_assignments: Vec<(
 		BoardLayout,
 		Vec<HashMap<IndexTestimony, bool>>,
 	)> = board_configs.into_iter().collect();
+
+	let calc_evil_layouts =
+		|board_configs: &Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>| {
+			let mut evil_layouts: HashSet<BTreeSet<VillagerIndex>> = HashSet::new();
+			for (board_layout, _) in board_configs {
+				evil_layouts.get_or_insert_with(&board_layout.evil_locations, |locations| {
+					locations.clone()
+				});
+			}
+
+			evil_layouts.len()
+		};
+
+	let initial_evil_layouts = calc_evil_layouts(&board_configs_and_satisfying_assignments);
+
+	let results =
+		with_theoretical_testimony_inner(log, game_state, board_configs_and_satisfying_assignments);
+	results
+		.into_iter()
+		.map(|(ability_attempt, layouts)| {
+			let new_num_layouts = calc_evil_layouts(&layouts);
+			let reduction = new_num_layouts - initial_evil_layouts;
+			(ability_attempt, (layouts, new_num_layouts, reduction))
+		})
+		.collect()
+}
+pub fn with_theoretical_testimony_inner(
+	log: &impl Log,
+	game_state: &GameState,
+	board_configs_and_satisfying_assignments: Vec<(
+		BoardLayout,
+		Vec<HashMap<IndexTestimony, bool>>,
+	)>,
+) -> HashMap<AbilityAttempt, Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>> {
 	let mut results: HashMap<
 		AbilityAttempt,
 		Vec<(BoardLayout, Vec<HashMap<IndexTestimony, bool>>)>,

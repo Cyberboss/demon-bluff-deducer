@@ -553,6 +553,25 @@ impl Testimony {
 		}
 	}
 
+	pub fn slayer(
+		slayer: VillagerIndex,
+		target: VillagerIndex,
+		slayed: bool,
+	) -> Expression<Testimony> {
+		if slayed {
+			Expression::Leaf(Testimony::Evil(target))
+		} else {
+			// kinda complicated because if a corrupt slayer fails to kill a good villager, we need to "explain" ourselves throughly so the engine doesn't erroneously label us exclusively good
+			Expression::And(
+				Box::new(Expression::Leaf(Testimony::Good(slayer.clone()))),
+				Box::new(Expression::Not(Box::new(Expression::Or(
+					Box::new(Expression::Leaf(Testimony::Evil(target))),
+					Box::new(Expression::Leaf(Testimony::Corrupt(slayer))),
+				)))),
+			)
+		}
+	}
+
 	pub fn architect(claim: ArchitectClaim, total_villagers: usize) -> Expression<Testimony> {
 		todo!("Architect claim")
 	}

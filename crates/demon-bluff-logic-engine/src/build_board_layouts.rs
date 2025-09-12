@@ -8,7 +8,7 @@ use demon_bluff_gameplay_engine::{
 	game_state::GameState,
 	testimony::{AffectType, index_offset},
 	villager::{
-		ConfirmedVillager, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
+		ConfirmedVillager, Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
 		VillagerIndex, VillagerInstance,
 	},
 };
@@ -261,10 +261,12 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				.flat_map(|layout| with_real_alchemist_locations(game_state, layout));
 			let dopple_spawned_theoreticals = alchemist_spawned_theoreticals
 				.flat_map(|layout| with_dopple_locations(game_state, layout));
-			let adjacency_affected_theoreticals = dopple_spawned_theoreticals
-				.flat_map(|layout| with_adjacent_affects(game_state, layout));
+			let adjacency_affected_theoreticals =
+				dopple_spawned_theoreticals.flat_map(with_adjacent_affects);
+			let pooka_affected_theoreticals =
+				adjacency_affected_theoreticals.flat_map(with_pooka_corruptions);
 			let counsellor_affected_theoreticals =
-				adjacency_affected_theoreticals.flat_map(with_counsellors);
+				pooka_affected_theoreticals.flat_map(with_counsellors);
 			// TODO: Shaman (Cloner) pass
 			let plague_doctor_affected_theoreticals =
 				counsellor_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
@@ -283,7 +285,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	layouts
 }
 
-gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
+gen fn with_adjacent_affects(layout: BoardLayout) -> BoardLayout {
 	let mut any_affects_applied = false;
 
 	let mut affecting_indicies = Vec::new();
@@ -293,7 +295,7 @@ gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> Boa
 		if let Some(affect) = theoretical
 			.inner
 			.true_identity()
-			.affect(game_state.total_villagers(), Some(index.clone()))
+			.affect(layout.villagers.len(), Some(index.clone()))
 		{
 			match affect {
 				Affect::Corrupt(_) | Affect::Puppet(_) => {
@@ -324,11 +326,16 @@ gen fn with_adjacent_affects(game_state: &GameState, layout: BoardLayout) -> Boa
 					.inner
 					.true_identity()
 					.clone();
+
+				if affector_identity == VillagerArchetype::Demon(Demon::Pooka) {
+					continue; // handled in another pass
+				}
+
 				let affected_index =
-					index_offset(affector_index, game_state.total_villagers(), 1, to_the_left);
+					index_offset(affector_index, layout.villagers.len(), 1, to_the_left);
 				let affected_villager = &mut next_layout.villagers[affected_index.0];
 				match affector_identity
-					.affect(game_state.total_villagers(), Some(affector_index.clone()))
+					.affect(layout.villagers.len(), Some(affector_index.clone()))
 					.expect("Affect should be here!")
 				{
 					Affect::Corrupt(_) => {
@@ -448,6 +455,40 @@ gen fn with_counsellors(layout: BoardLayout) -> BoardLayout {
 	if !any_generated {
 		yield layout;
 	}
+}
+
+gen fn with_pooka_corruptions(mut layout: BoardLayout) -> BoardLayout {
+	let mut affectable_indicies = Vec::with_capacity(1);
+	for (index, _) in layout.villagers.iter().enumerate().filter(|(_, villager)| {
+		*villager.inner.true_identity() == VillagerArchetype::Demon(Demon::Pooka)
+	}) {
+		let villager_index = VillagerIndex(index);
+		let pooka_affectable_indicies = [
+			index_offset(&villager_index, layout.villagers.len(), 1, true),
+			index_offset(&villager_index, layout.villagers.len(), 1, false),
+		];
+		affectable_indicies.push((villager_index, pooka_affectable_indicies));
+	}
+
+	// true is a left selection
+	for (pooka_index, neighbor_indicies) in affectable_indicies {
+		for affectable_index in neighbor_indicies {
+			let target_theoretical = &mut layout.villagers[affectable_index.0];
+			if !target_theoretical.inner.corrupted()
+				&& target_theoretical.inner.true_identity().can_be_corrupted()
+			{
+				target_theoretical.affection = Some(AffectType::CorruptedByEvil);
+				target_theoretical.inner.set_corrupted(true);
+				target_theoretical.was_corrupt = true;
+				layout.description = format!(
+					"{} - {} was corrupted by {}",
+					layout.description, affectable_index, pooka_index
+				);
+			}
+		}
+	}
+
+	yield layout;
 }
 
 gen fn with_plague_doctors_corruptions(layout: BoardLayout) -> BoardLayout {
