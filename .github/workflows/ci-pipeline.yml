@@ -63,7 +63,7 @@ jobs:
           key: ${{ runner.os }}-cargo-windows-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Test
-        run: cargo test --release --test-threads=1
+        run: cargo test --release -- --test-threads=1
 
   clippy:
     name: Clippy
