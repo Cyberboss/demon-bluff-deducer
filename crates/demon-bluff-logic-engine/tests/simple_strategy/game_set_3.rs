@@ -19,6 +19,7 @@ use crate::helpers::TestAction;
 // https://cdn.discordapp.com/attachments/1145879778457550850/1415496362002354247/image.png
 #[test]
 fn game_21() {
+	// TODO: This test is SLOW profile it!
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Empress),
