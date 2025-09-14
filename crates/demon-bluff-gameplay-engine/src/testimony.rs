@@ -349,17 +349,27 @@ impl Testimony {
 		expression
 	}
 
-	pub fn fortune_teller(targets: &[VillagerIndex; 2], evil: bool) -> Expression<Testimony> {
+	pub fn fortune_teller(
+		fortune_teller: VillagerIndex,
+		targets: &[VillagerIndex; 2],
+		evil: bool,
+	) -> Expression<Testimony> {
 		let base_expression = Expression::Or(
 			Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
 			Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
 		);
 
-		if evil {
+		let main_expression = if evil {
 			base_expression
 		} else {
 			Expression::Not(Box::new(base_expression))
-		}
+		};
+
+		// this additional clause is necessary because if you ask an evil fortune teller to check herself and a good villager she will say not evil
+		Expression::And(
+			Box::new(main_expression),
+			Box::new(Expression::Leaf(Testimony::Good(fortune_teller))),
+		)
 	}
 
 	pub fn lover(

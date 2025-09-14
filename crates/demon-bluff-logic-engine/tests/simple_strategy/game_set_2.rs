@@ -171,12 +171,6 @@ fn game_12() {
 				)),
 			)),
 			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(6),
-				Some(KillResult::Revealed(
-					KillData::new(None, true).expect("Bad kill data?"),
-				)),
-			)),
-			TestAction::TryExecute(KillAttempt::new(
 				VillagerIndex::number(5),
 				Some(KillResult::Revealed(
 					KillData::new(Some(VillagerArchetype::Minion(Minion::Poisoner)), false)
@@ -344,6 +338,12 @@ fn game_14() {
 					Some(Expression::Leaf(Testimony::Knitter(EvilPairsClaim::new(0)))),
 				)),
 			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(4),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false).unwrap(),
+				)),
+			)),
 			TestAction::TryReveal(RevealResult::new(
 				VillagerIndex::number(5),
 				Some(VillagerInstance::new(
@@ -362,12 +362,6 @@ fn game_14() {
 					Some(Expression::Leaf(Testimony::FakeEvil(
 						VillagerIndex::number(6),
 					))),
-				)),
-			)),
-			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(4),
-				Some(KillResult::Revealed(
-					KillData::new(Some(VillagerArchetype::Minion(Minion::Minion)), false).unwrap(),
 				)),
 			)),
 			TestAction::TryReveal(RevealResult::new(
@@ -473,35 +467,6 @@ fn game_15() {
 					KillData::new(Some(VillagerArchetype::Minion(Minion::Witch)), false).unwrap(),
 				)),
 			)),
-			TestAction::TryReveal(RevealResult::new(
-				VillagerIndex::number(7),
-				Some(VillagerInstance::new(
-					VillagerArchetype::Outcast(Outcast::PlagueDoctor),
-					None,
-				)),
-			)),
-			TestAction::TryReveal(RevealResult::new(
-				VillagerIndex::number(8),
-				Some(VillagerInstance::new(
-					VillagerArchetype::GoodVillager(GoodVillager::Oracle),
-					Some(Testimony::oracle(
-						&[VillagerIndex::number(1), VillagerIndex::number(2)],
-						VillagerArchetype::Minion(Minion::Witch),
-					)),
-				)),
-			)),
-			TestAction::Ability(
-				vec![VillagerIndex::number(5)],
-				AbilityResult::new(
-					VillagerIndex::number(4),
-					Some(Testimony::slayer(
-						VillagerIndex::number(4),
-						VillagerIndex::number(5),
-						false,
-					)),
-					None,
-				),
-			),
 			TestAction::TryExecute(KillAttempt::new(
 				VillagerIndex::number(6),
 				Some(KillResult::Revealed(

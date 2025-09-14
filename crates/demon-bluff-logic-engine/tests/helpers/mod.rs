@@ -83,12 +83,15 @@ pub fn run_game(
 		let end_time = Instant::now();
 
 		if index == total_actions - 1 && player_actions.len() > 1 {
+			let mut action_strings: Vec<String> = player_actions
+				.iter()
+				.map(|action| format!("{}", action))
+				.collect();
+			action_strings.sort();
 			panic!(
-				"Last prediction should always be decisive! Got: {}",
-				player_actions
-					.iter()
-					.map(|action| format!("{}", action))
-					.join("|")
+				"Last prediction (#{}) should always be decisive! Got:\n - {}",
+				index + 1,
+				action_strings.join("\n - ")
 			);
 		}
 

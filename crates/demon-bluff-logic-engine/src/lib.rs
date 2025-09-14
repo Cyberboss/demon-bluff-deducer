@@ -40,7 +40,7 @@ use itertools::Itertools;
 use log::{Level, Log, debug, info, log_enabled, trace, warn};
 use optimized_expression::OptimizedExpression;
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
-use with_theoretical_testimony::with_theoretical_testimony;
+use with_theoretical_testimony::{LayoutWithTestimonyAssigments, with_theoretical_testimony};
 
 pub use self::{
 	player_action::{AbilityAttempt, PlayerAction},
@@ -84,8 +84,8 @@ pub fn predict(
 			PredictionResult2::KillResult(hash_set) => {
 				return hash_set;
 			}
-			PredictionResult2::NeedMoreInfoResult(hash_set) => {
-				need_more_info_result = Some(hash_set)
+			PredictionResult2::NeedMoreInfoResult(layouts_with_assignments) => {
+				need_more_info_result = Some(layouts_with_assignments)
 			}
 			PredictionResult2::ConfigCountsAfterAbility(_) => {
 				unreachable!("Incorrect return type!")
@@ -135,9 +135,10 @@ pub fn predict(
 
 			let mut layouts = with_theoretical_testimony(log, state, initial_layouts);
 
-			let mut attempt_order = Vec::with_capacity(layouts.len());
+			let mut attempt_order = Vec::with_capacity(layouts.attempt_predictions.len());
 			attempt_order.extend(
 				layouts
+					.attempt_predictions
 					.iter()
 					.map(|(ability_attempt, _)| ability_attempt)
 					.cloned(),
@@ -148,86 +149,162 @@ pub fn predict(
 			// order here wants to be deterministic for testing purposes, so collect and sort the keys
 
 			// for each theoretical testimony find the group of
-			let mut most_board_config_reductions: Option<(HashSet<AbilityAttempt>, usize)> = None;
-			for ability_attempt in attempt_order {
-				let (
-					_,
-					(predicted_layouts, number_of_evil_layouts, initial_evil_layouts_reduction),
-				) = layouts.remove_entry(&ability_attempt).expect("Impossble");
-				info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", predicted_layouts.len(), ability_attempt, predicted_layouts[0].0.description);
+			let mut abilities_with_highest_factor_of_single_evil_layout: Option<(
+				HashSet<AbilityAttempt>,
+				HashSet<BTreeSet<VillagerIndex>>,
+				f64,
+			)> = None;
+			let mut invalidated_evil_layouts = HashSet::new();
+			'outer: loop {
+				for ability_attempt in &attempt_order {
+					let (_, mutation) = layouts
+						.attempt_predictions
+						.remove_entry(&ability_attempt)
+						.expect("Impossble");
 
-				if let PredictionResult2::ConfigCountsAfterAbility(result) = predict_core(
-					log,
-					state,
-					predicted_layouts.iter().cloned().map(
-						|(board_config, potential_assignments)| {
-							(board_config, Some(potential_assignments))
-						},
-					),
-					true,
-				) {
-					if let PredictionResult2::ConfigCountsAfterAbility(result2) = predict_core(
+					info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", mutation.potential_layouts.len(), ability_attempt, mutation.potential_layouts[0].layout.description);
+
+					if let PredictionResult2::ConfigCountsAfterAbility(layout_counts) = predict_core(
 						log,
 						state,
-						predicted_layouts.iter().cloned().map(
-							|(board_config, potential_assignments)| {
-								(board_config, Some(potential_assignments))
-							},
-						),
+						mutation
+							.potential_layouts
+							.iter()
+							.cloned()
+							.map(|potential_layout| {
+								(
+									potential_layout.layout,
+									Some(potential_layout.satisfying_assignments),
+								)
+							}),
 						true,
 					) {
-						assert_eq!(result, result2)
-					} else {
-						unreachable!()
-					}
+						let mut highest_entry = 0;
+						let mut total_board_layouts = 0;
+						let mut highest_evils_layout = None;
 
-					info!("Theory resulted in {} possible evil configurations", result);
+						let layout_counts_len = layout_counts.len();
+						for (layout_count, evils_layout) in layout_counts {
+							if invalidated_evil_layouts.contains(&evils_layout) {
+								continue;
+							}
 
-					let evil_layouts_reduction = number_of_evil_layouts - result;
-					let total_layouts_reduction_from_attempt =
-						initial_evil_layouts_reduction + evil_layouts_reduction;
+							if layout_count == 0 {
+								if let Some((_, contributing_evil_layouts, _)) =
+									abilities_with_highest_factor_of_single_evil_layout.as_mut()
+									&& contributing_evil_layouts.contains(&evils_layout)
+								{
+									// need to recalculate everything now since we could have just invalidated the best factor
+									abilities_with_highest_factor_of_single_evil_layout = None;
+									invalidated_evil_layouts.insert(evils_layout);
+									continue 'outer;
+								}
 
-					let (ability_uses, evil_location_configurations_reduction) =
-						match most_board_config_reductions {
-							Some((mut old_most_reductions, old_layouts_reduced)) => {
-								if old_layouts_reduced < total_layouts_reduction_from_attempt {
-									let mut new_most_reductions = HashSet::new();
-									new_most_reductions.insert(ability_attempt);
-									(new_most_reductions, total_layouts_reduction_from_attempt)
+								invalidated_evil_layouts.insert(evils_layout);
+								continue;
+							}
+
+							if layout_count > highest_entry {
+								highest_entry = layout_count;
+								highest_evils_layout = Some(evils_layout);
+							}
+
+							total_board_layouts += layout_count;
+						}
+
+						let factor = highest_entry as f64 / total_board_layouts as f64;
+						let highest_evils_layout = highest_evils_layout.expect("sign bruh");
+
+						info!(
+							"Theory resulted in {} possible evil configurations factor: {} ({} ({}) / {})",
+							layout_counts_len,
+							factor,
+							highest_entry,
+							highest_evils_layout
+								.iter()
+								.map(|index| format!("{}", index))
+								.join("|"),
+							total_board_layouts
+						);
+
+						let (
+							ability_uses,
+							new_contributing_evil_layouts,
+							evil_location_configurations_reduction,
+						) = match abilities_with_highest_factor_of_single_evil_layout {
+							Some((
+								mut old_highest_factor_abilities,
+								mut contributing_evil_layouts,
+								old_highest_factor,
+							)) => {
+								if old_highest_factor < factor {
+									let mut new_highest_factor_abilities = HashSet::new();
+									new_highest_factor_abilities.insert(ability_attempt.clone());
+									contributing_evil_layouts.insert(highest_evils_layout);
+									(
+										new_highest_factor_abilities,
+										contributing_evil_layouts,
+										factor,
+									)
 								} else {
-									if old_layouts_reduced == total_layouts_reduction_from_attempt {
-										old_most_reductions.insert(ability_attempt);
+									if old_highest_factor == factor {
+										old_highest_factor_abilities
+											.insert(ability_attempt.clone());
+										contributing_evil_layouts.insert(highest_evils_layout);
 									}
 
-									(old_most_reductions, old_layouts_reduced)
+									(
+										old_highest_factor_abilities,
+										contributing_evil_layouts,
+										old_highest_factor,
+									)
 								}
 							}
 							None => {
-								let mut new_most_reductions = HashSet::new();
-								new_most_reductions.insert(ability_attempt);
-								(new_most_reductions, total_layouts_reduction_from_attempt)
+								let mut new_highest_factor_abilities = HashSet::new();
+								let mut new_contributing_evil_layouts = HashSet::new();
+								new_highest_factor_abilities.insert(ability_attempt.clone());
+								new_contributing_evil_layouts.insert(highest_evils_layout);
+								(
+									new_highest_factor_abilities,
+									new_contributing_evil_layouts,
+									factor,
+								)
 							}
 						};
 
-					// optimization, take the first result that gives us one layout
-					let this_one_works = evil_location_configurations_reduction == 1;
+						// optimization, take the first result that gives us one layout
+						let this_one_works = factor == 1.0;
 
-					most_board_config_reductions =
-						Some((ability_uses, evil_location_configurations_reduction));
+						abilities_with_highest_factor_of_single_evil_layout = Some((
+							ability_uses,
+							new_contributing_evil_layouts,
+							evil_location_configurations_reduction,
+						));
 
-					if this_one_works {
-						info!(logger: log, "Found an ability path that leads to a single evil configuration taking it and earlying out on theorizing");
-						break;
+						if this_one_works {
+							info!(logger: log, "Found an ability path that leads to a single evil configuration taking it and earlying out on theorizing");
+							break;
+						}
+					} else {
+						unreachable!(
+							"Prediction was not allowed to return non and it did it anyway"
+						);
 					}
-				} else {
-					unreachable!("Prediction was not allowed to return non and it did it anyway");
 				}
+
+				break;
 			}
 
-			let (ability_attempts, evil_location_configurations_reduction) =
-				most_board_config_reductions.expect("No value ability usages found??");
+			let (ability_attempts, _, factor) = abilities_with_highest_factor_of_single_evil_layout
+				.expect("No value ability usages found??");
 
-			info!(logger: log, "Selecting the path of \"{}\" which could lead to a reduction of {} evil layouts", ability_attempts.iter().map(|attempt| format!("{}", attempt)).join("|"), evil_location_configurations_reduction);
+			let mut attempt_strings: Vec<String> = ability_attempts
+				.iter()
+				.map(|attempt| format!("{}", attempt))
+				.collect();
+			attempt_strings.sort();
+			info!(logger: log, "Selecting the path of \"{}\" which has a factor of {} of layouts being equivalent to one evil layout. {} invalid layouts were eliminated", attempt_strings.join("|"), factor, invalidated_evil_layouts.len());
 
 			Ok(ability_attempts
 				.into_iter()
@@ -239,8 +316,8 @@ pub fn predict(
 
 enum PredictionResult2 {
 	KillResult(Result<HashSet<PlayerAction>, PredictionError>),
-	ConfigCountsAfterAbility(usize),
-	NeedMoreInfoResult(HashMap<BoardLayout, Vec<HashMap<IndexTestimony, bool>>>),
+	ConfigCountsAfterAbility(Vec<(usize, BTreeSet<VillagerIndex>)>),
+	NeedMoreInfoResult(Vec<LayoutWithTestimonyAssigments>),
 }
 
 enum PredictionResult3 {
@@ -255,7 +332,16 @@ fn predict_core(
 	count_configs: bool,
 ) -> PredictionResult2 {
 	// Step one, build possible board layouts as an ExpressionWithTag HashMap<Vec<VillagerArchetype, ExpressionWithTag<Testimony>>>
-	let prediction_result = predict_board_configs(log, state, layouts, !count_configs);
+	let mut initial_evil_layouts = HashSet::new();
+	let prediction_result = predict_board_configs(
+		log,
+		state,
+		layouts.map(|(layout, testimonies)| {
+			initial_evil_layouts.insert(layout.evil_locations.clone());
+			(layout, testimonies)
+		}),
+		!count_configs,
+	);
 	match prediction_result {
 		Ok(valid_prediction) => {
 			match valid_prediction {
@@ -264,7 +350,17 @@ fn predict_core(
 						// we actually want to eliminate board layouts that have narrowed things down to the remaining evils
 
 						let result = PredictionResult2::ConfigCountsAfterAbility(
-							valid_prediction.board_layouts_by_similar_configs.len(),
+							initial_evil_layouts
+								.into_iter()
+								.map(|evils_layout| {
+									let board_layouts_len = valid_prediction
+										.board_layouts_by_similar_configs
+										.get(&evils_layout)
+										.map(|layouts| layouts.len())
+										.unwrap_or(0);
+									(board_layouts_len, evils_layout)
+								})
+								.collect(),
 						);
 
 						return result;
@@ -299,7 +395,17 @@ fn predict_core(
 					)))
 				}
 				PredictionResult3::NeedMoreInfoResult(hash_set) => {
-					PredictionResult2::NeedMoreInfoResult(hash_set)
+					PredictionResult2::NeedMoreInfoResult(
+						hash_set
+							.into_iter()
+							.map(
+								|(layout, satisfying_assignments)| LayoutWithTestimonyAssigments {
+									layout,
+									satisfying_assignments,
+								},
+							)
+							.collect(),
+					)
 				}
 			}
 		}
@@ -574,15 +680,17 @@ fn predict_board_configs(
 				for index in evil_locations {
 					info!(logger: log, "- {}", index);
 				}
+				let mut iterator = all_matching_layouts
+					.iter()
+					.filter(|(layout, _)| layout.evil_locations == *evil_locations);
 				if log_enabled!(logger: log, Level::Debug) {
 					debug!("Instances:");
-					for (matching_layout, _) in all_matching_layouts
-						.iter()
-						.filter(|(layout, _)| layout.evil_locations == *evil_locations)
-					{
+					for (matching_layout, _) in iterator {
 						layout_count += 1;
 						debug!(logger: log, "Layout {}: {}", layout_count, matching_layout.description);
 					}
+				} else {
+					info!("EX: {}", iterator.next().unwrap().0.description);
 				}
 			}
 		}
@@ -1133,12 +1241,12 @@ fn validate_assignment(
 
 		if testimony_valid != *truthful {
 			trace!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
-
 			return false;
 		}
 	}
 
 	trace!(logger: log, "Validation passed: {}", board_config.description);
+
 	true
 }
 

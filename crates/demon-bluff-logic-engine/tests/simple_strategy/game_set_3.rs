@@ -256,16 +256,6 @@ fn game_22() {
 					None,
 				),
 			),
-			TestAction::Ability(
-				vec![VillagerIndex::number(4)],
-				AbilityResult::new(
-					VillagerIndex::number(8),
-					Some(Expression::Not(Box::new(Expression::Leaf(
-						Testimony::Corrupt(VillagerIndex::number(4)),
-					)))),
-					None,
-				),
-			),
 			TestAction::TryExecute(KillAttempt::new(
 				VillagerIndex::number(7),
 				Some(KillResult::Revealed(
@@ -281,13 +271,12 @@ fn game_22() {
 				)),
 			)),
 			TestAction::Ability(
-				vec![VillagerIndex::number(4), VillagerIndex::number(5)],
+				vec![VillagerIndex::number(6)],
 				AbilityResult::new(
-					VillagerIndex::number(9),
-					Some(Testimony::fortune_teller(
-						&[VillagerIndex::number(4), VillagerIndex::number(5)],
-						true,
-					)),
+					VillagerIndex::number(8),
+					Some(Expression::Not(Box::new(Expression::Leaf(
+						Testimony::Corrupt(VillagerIndex::number(6)),
+					)))),
 					None,
 				),
 			),
@@ -295,13 +284,6 @@ fn game_22() {
 				VillagerIndex::number(9),
 				Some(KillResult::Revealed(
 					KillData::new(None, false).expect("Bad kill data?"),
-				)),
-			)),
-			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(4),
-				Some(KillResult::Revealed(
-					KillData::new(Some(VillagerArchetype::Demon(Demon::Pooka)), false)
-						.expect("Bad kill data?"),
 				)),
 			)),
 		],

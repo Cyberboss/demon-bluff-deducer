@@ -1,5 +1,6 @@
 use std::{
-	collections::{BTreeSet, HashSet},
+	arch::breakpoint,
+	collections::{BTreeSet, HashMap, HashSet, hash_map::Entry},
 	str::FromStr,
 };
 
@@ -8,7 +9,7 @@ use demon_bluff_gameplay_engine::{
 	game_state::GameState,
 	testimony::{AffectType, index_offset},
 	villager::{
-		ConfirmedVillager, Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
+		self, ConfirmedVillager, Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
 		VillagerIndex, VillagerInstance,
 	},
 };
@@ -139,8 +140,46 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 							let mut unknown_hidden = false;
 							let instance = match instance_and_confirmed {
 								Some((instance, _)) => {
-									if !instance.archetype().can_be_disguised_as() {
+									let instance_archetype = instance.archetype();
+									if !instance_archetype.can_be_disguised_as() {
 										return None;
+									}
+
+									// Demons must be a unique good villager not already in play
+									if let VillagerArchetype::Demon(_) = evil_archetype {
+										if !matches!(
+											instance_archetype,
+											VillagerArchetype::GoodVillager(_)
+										) {
+											return None;
+										}
+
+										let mut found_dupe = false;
+										game_state.iter_villagers(|villager_index, villager| {
+											if !disguise_index_combo.iter().any(|disguise_index| {
+												**disguise_index == villager_index
+											}) {
+												let archetype = match villager {
+													Villager::Active(active_villager) => {
+														active_villager.instance().archetype()
+													}
+													Villager::Hidden(_) => {
+														return true;
+													}
+													Villager::Confirmed(confirmed_villager) => {
+														confirmed_villager.true_identity()
+													}
+												};
+
+												found_dupe = archetype == instance_archetype;
+											}
+
+											!found_dupe
+										});
+
+										if found_dupe {
+											return None;
+										}
 									}
 
 									instance.clone()
@@ -738,7 +777,7 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 		max_outcasts += 1;
 	}
 
-	let valid = layout
+	if layout
 		.villagers
 		.iter()
 		.filter(|theoretical| {
@@ -748,7 +787,43 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 			)
 		})
 		.count()
-		<= max_outcasts;
+		> max_outcasts
+	{
+		return false;
+	}
 
-	valid
+	let mut max_good_villager_copies = 1;
+	if game_state.role_in_play(VillagerArchetype::Minion(Minion::Shaman)) {
+		max_good_villager_copies += 1;
+	}
+
+	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Doppelganger)) {
+		max_good_villager_copies += 1;
+	}
+
+	let mut good_villager_counts = HashMap::new();
+	for theoretical in layout.villagers.iter() {
+		if !theoretical.revealed {
+			continue;
+		}
+
+		if let VillagerArchetype::GoodVillager(good_villager) = theoretical.inner.true_identity() {
+			match good_villager_counts.entry(good_villager) {
+				Entry::Occupied(mut occupied_entry) => {
+					let old_value = occupied_entry.get();
+					let new_value = old_value + 1;
+					if new_value > max_good_villager_copies {
+						return false;
+					}
+
+					occupied_entry.insert(new_value);
+				}
+				Entry::Vacant(vacant_entry) => {
+					vacant_entry.insert(1);
+				}
+			}
+		}
+	}
+
+	true
 }
