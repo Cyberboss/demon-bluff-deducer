@@ -792,35 +792,29 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 		return false;
 	}
 
-	let mut max_good_villager_copies = 1;
-	if game_state.role_in_play(VillagerArchetype::Minion(Minion::Shaman)) {
-		max_good_villager_copies += 1;
-	}
-
-	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Doppelganger)) {
-		max_good_villager_copies += 1;
-	}
-
-	let mut good_villager_counts = HashMap::new();
+	let mut seen_good_villagers = HashSet::new();
 	for theoretical in layout.villagers.iter() {
 		if !theoretical.revealed {
 			continue;
 		}
 
-		if let VillagerArchetype::GoodVillager(good_villager) = theoretical.inner.true_identity() {
-			match good_villager_counts.entry(good_villager) {
-				Entry::Occupied(mut occupied_entry) => {
-					let old_value = occupied_entry.get();
-					let new_value = old_value + 1;
-					if new_value > max_good_villager_copies {
-						return false;
-					}
+		if let Some(AffectType::Cloned) = &theoretical.affection {
+			continue;
+		}
 
-					occupied_entry.insert(new_value);
-				}
-				Entry::Vacant(vacant_entry) => {
-					vacant_entry.insert(1);
-				}
+		if *theoretical.inner.true_identity() == VillagerArchetype::Outcast(Outcast::Doppelganger) {
+			continue;
+		}
+
+		if let VillagerArchetype::GoodVillager(good_villager) = theoretical.inner.true_identity() {
+			let mut seen_already = true;
+			seen_good_villagers.get_or_insert_with(good_villager, |good_villager| {
+				seen_already = false;
+				good_villager.clone()
+			});
+
+			if seen_already {
+				return false;
 			}
 		}
 	}
