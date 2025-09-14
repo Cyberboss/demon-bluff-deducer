@@ -149,6 +149,7 @@ fn game_21() {
 
 // https://cdn.discordapp.com/attachments/1145879778457550850/1415498314673160292/image.png
 // https://cdn.discordapp.com/attachments/1145879778457550850/1415501038366101535/image.png
+// This game didn't seem solvable...
 #[test]
 fn game_22() {
 	let game_state = new_game(
@@ -281,10 +282,28 @@ fn game_22() {
 					None,
 				),
 			),
+			TestAction::Ability(
+				vec![VillagerIndex::number(9), VillagerIndex::number(7)],
+				AbilityResult::new(
+					VillagerIndex::number(9),
+					Some(Testimony::fortune_teller(
+						&[VillagerIndex::number(9), VillagerIndex::number(7)],
+						true,
+					)),
+					None,
+				),
+			),
 			TestAction::TryExecute(KillAttempt::new(
-				VillagerIndex::number(9),
+				VillagerIndex::number(3),
 				Some(KillResult::Revealed(
 					KillData::new(None, false).expect("Bad kill data?"),
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(4),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Demon(Demon::Pooka)), false)
+						.expect("Bad kill data?"),
 				)),
 			)),
 		],

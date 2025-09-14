@@ -1,5 +1,5 @@
 use std::{
-	fmt::Display,
+	fmt::{Display, write},
 	num::{NonZero, NonZeroU8, NonZeroUsize},
 };
 
@@ -121,6 +121,29 @@ impl AffectedClaim {
 	}
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub struct FortuneTellerClaim {
+	targets: [VillagerIndex; 2],
+	evil: bool,
+}
+
+impl FortuneTellerClaim {
+	pub fn new(targets: &[VillagerIndex; 2], evil: bool) -> Self {
+		Self {
+			targets: targets.clone(),
+			evil,
+		}
+	}
+
+	pub fn targets(&self) -> &[VillagerIndex; 2] {
+		&self.targets
+	}
+
+	pub fn evil(&self) -> bool {
+		self.evil
+	}
+}
+
 impl Display for EvilPairsClaim {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "{} pairs of adjacent evils", self.0)
@@ -150,6 +173,7 @@ pub enum Testimony {
 	Enlightened(Direction),
 	Knitter(EvilPairsClaim),
 	Bard(Option<NonZeroUsize>),
+	FortuneTeller(FortuneTellerClaim),
 }
 
 impl EvilPairsClaim {
@@ -349,27 +373,10 @@ impl Testimony {
 		expression
 	}
 
-	pub fn fortune_teller(
-		fortune_teller: VillagerIndex,
-		targets: &[VillagerIndex; 2],
-		evil: bool,
-	) -> Expression<Testimony> {
-		let base_expression = Expression::Or(
-			Box::new(Expression::Leaf(Testimony::Evil(targets[0].clone()))),
-			Box::new(Expression::Leaf(Testimony::Evil(targets[1].clone()))),
-		);
-
-		let main_expression = if evil {
-			base_expression
-		} else {
-			Expression::Not(Box::new(base_expression))
-		};
-
-		// this additional clause is necessary because if you ask an evil fortune teller to check herself and a good villager she will say not evil
-		Expression::And(
-			Box::new(main_expression),
-			Box::new(Expression::Leaf(Testimony::Good(fortune_teller))),
-		)
+	pub fn fortune_teller(targets: &[VillagerIndex; 2], evil: bool) -> Expression<Testimony> {
+		Expression::Leaf(Testimony::FortuneTeller(FortuneTellerClaim::new(
+			targets, evil,
+		)))
 	}
 
 	pub fn lover(
@@ -633,6 +640,17 @@ impl Display for Testimony {
 				),
 				None => write!(f, "There are no corrupted characters"),
 			},
+			Self::FortuneTeller(fortune_teller_claim) => write!(
+				f,
+				"Is {} or {} evil? {}",
+				fortune_teller_claim.targets[0],
+				fortune_teller_claim.targets[1],
+				if fortune_teller_claim.evil {
+					"TRUE"
+				} else {
+					"FALSE"
+				}
+			),
 		}
 	}
 }

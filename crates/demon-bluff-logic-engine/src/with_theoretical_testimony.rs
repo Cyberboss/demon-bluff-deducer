@@ -1,12 +1,9 @@
-use std::{
-	backtrace,
-	collections::{BTreeSet, HashMap, HashSet, VecDeque, hash_map::Entry},
-};
+use std::collections::{BTreeSet, HashMap, hash_map::Entry};
 
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::GameState,
-	testimony::{SlayResult, Testimony},
+	testimony::{FortuneTellerClaim, SlayResult, Testimony},
 	villager::{GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
 };
 use itertools::Itertools;
@@ -46,7 +43,7 @@ So Ab2 in this case for the 2/3 chance for D
 */
 
 pub struct AbilityPrediction {
-	pub attempt_predictions: HashMap<AbilityAttempt, PostAbilityBoardMutation>,
+	pub attempt_predictions: HashMap<AbilityAttempt, Vec<PostAbilityBoardMutation>>,
 }
 
 pub struct PostAbilityBoardMutation {
@@ -63,32 +60,52 @@ pub struct LayoutWithTestimonyAssigments {
 pub fn with_theoretical_testimony(
 	log: &impl Log,
 	game_state: &GameState,
-	board_configs_and_satisfying_assignments: Vec<LayoutWithTestimonyAssigments>,
+	board_configs_and_satisfying_assignments: &Vec<LayoutWithTestimonyAssigments>,
 ) -> AbilityPrediction {
-	let mut results: HashMap<AbilityAttempt, PostAbilityBoardMutation> = HashMap::new();
+	let mut results: HashMap<AbilityAttempt, Vec<PostAbilityBoardMutation>> = HashMap::new();
 
-	for (initial_board_config, ability_results) in board_configs_and_satisfying_assignments
-		.iter()
-		.map(|layout_with_testimony_assigments| {
-			let local_results = generate_theoreticals_for_first_villager_with_ability(
-				&layout_with_testimony_assigments,
-			);
-			(&layout_with_testimony_assigments.layout, local_results)
-		}) {
-		for (theoretical_layout, ability_attempt, generated_testimonies) in ability_results {
-			let entry_value = LayoutWithTestimonyAssigments {
-				layout: theoretical_layout,
-				satisfying_assignments: generated_testimonies,
-			};
+	for (original_layout, mutation_vec) in
+		board_configs_and_satisfying_assignments
+			.iter()
+			.map(|layout_with_testimony_assigments| {
+				let local_results: Vec<(AbilityAttempt, LayoutWithTestimonyAssigments)> =
+					generate_theoreticals_for_first_villager_with_ability(
+						layout_with_testimony_assigments,
+					)
+					.collect();
+				(&layout_with_testimony_assigments.layout, local_results)
+			}) {
+		for (ability_attempt, theoretical_layout) in mutation_vec {
 			match results.entry(ability_attempt) {
 				Entry::Occupied(mut occupied_entry) => {
-					occupied_entry.get_mut().potential_layouts.push(entry_value)
+					let mutations_vec: &mut Vec<PostAbilityBoardMutation> =
+						occupied_entry.get_mut();
+					let matching_mutation = mutations_vec
+						.iter_mut()
+						.filter(|existing_mutation| {
+							existing_mutation.original_layout == *original_layout
+						})
+						.next();
+
+					match matching_mutation {
+						Some(existing_mutation) => {
+							existing_mutation.potential_layouts.push(theoretical_layout);
+						}
+						None => {
+							let mutation = PostAbilityBoardMutation {
+								original_layout: original_layout.clone(),
+								potential_layouts: vec![theoretical_layout],
+							};
+							mutations_vec.push(mutation);
+						}
+					}
 				}
 				Entry::Vacant(vacant_entry) => {
-					vacant_entry.insert(PostAbilityBoardMutation {
-						original_layout: initial_board_config.clone(),
-						potential_layouts: vec![entry_value],
-					});
+					let mutation = PostAbilityBoardMutation {
+						original_layout: original_layout.clone(),
+						potential_layouts: vec![theoretical_layout],
+					};
+					vacant_entry.insert(vec![mutation]);
 				}
 			}
 		}
@@ -96,11 +113,11 @@ pub fn with_theoretical_testimony(
 
 	// recursively expand every solution until all testimonies are acquired
 	let mut any_potential_testimonies_remaining = false;
-	'outer: for potential_layout in results
+	'outer: for potential_mutation in results
 		.iter()
-		.flat_map(|(_, potential_layouts)| potential_layouts.potential_layouts.iter())
+		.flat_map(|(_, potential_mutations)| potential_mutations.iter())
 	{
-		for theoretical in &potential_layout.layout.villagers {
+		for theoretical in &potential_mutation.potential_layouts[0].layout.villagers {
 			if theoretical.revealed && theoretical.inner.instance().testimony().is_none() {
 				any_potential_testimonies_remaining = true;
 				break 'outer;
@@ -115,72 +132,80 @@ pub fn with_theoretical_testimony(
 			game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
 		let bombardier_in_play =
 			game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
-		let mut expanded_results = HashMap::new();
-		for (ability_attempt, original_mutation) in results {
-			// to prevent exponential explosion, check layouts are satisfiable before recursing
-			let valid_layouts_and_assignments: Vec<LayoutWithTestimonyAssigments> =
-				original_mutation
-					.potential_layouts
-					.into_iter()
-					.filter_map(|mut new_layout| {
-						let expression = build_expression_for_villager_set(
-							new_layout
-								.layout
-								.villagers
-								.iter()
-								.map(|theoretical_villager| &theoretical_villager.inner),
-						)
-						.expect("There should be at least one testimony that we just built");
-
-						let optimized_expression = OptimizedExpression::new(&expression);
-
-						new_layout.satisfying_assignments.retain(|map_assignment| {
-							let mut assignment =
-								Vec::with_capacity(optimized_expression.variables().len());
-							for variable in optimized_expression.variables() {
-								// error here means testimonies from theoretical weren't generated properly
-								assignment.push(map_assignment[&variable]);
-							}
-
-							validate_assignment(
-								log,
-								&assignment,
-								optimized_expression.variables(),
-								&new_layout.layout,
-								game_state,
-								wretch_in_play,
-								drunk_in_play,
-								knight_in_play,
-								bombardier_in_play,
+		let mut expanded_results: HashMap<AbilityAttempt, Vec<PostAbilityBoardMutation>> =
+			HashMap::new();
+		for (ability_attempt, original_mutations) in results {
+			for original_mutation in original_mutations {
+				// to prevent exponential explosion, check layouts are satisfiable before recursing
+				let valid_layouts_and_assignments: Vec<LayoutWithTestimonyAssigments> =
+					original_mutation
+						.potential_layouts
+						.into_iter()
+						.filter_map(|mut new_layout| {
+							let expression = build_expression_for_villager_set(
+								new_layout
+									.layout
+									.villagers
+									.iter()
+									.map(|theoretical_villager| &theoretical_villager.inner),
 							)
-						});
+							.expect("There should be at least one testimony that we just built");
 
-						if new_layout.satisfying_assignments.is_empty() {
-							None
-						} else {
-							Some(new_layout)
-						}
-					})
-					.collect();
+							let optimized_expression = OptimizedExpression::new(&expression);
 
-			if !valid_layouts_and_assignments.is_empty() {
-				let expanded_layouts =
-					with_theoretical_testimony(log, game_state, valid_layouts_and_assignments);
-				let total_expanded_layouts = expanded_layouts
-					.attempt_predictions
-					.into_iter()
-					.flat_map(|(_, expanded_layouts)| {
-						expanded_layouts.potential_layouts.into_iter()
-					})
-					.collect();
+							new_layout.satisfying_assignments.retain(|map_assignment| {
+								let mut assignment =
+									Vec::with_capacity(optimized_expression.variables().len());
+								for variable in optimized_expression.variables() {
+									// error here means testimonies from theoretical weren't generated properly
+									assignment.push(map_assignment[&variable]);
+								}
 
-				expanded_results.insert(
-					ability_attempt,
-					PostAbilityBoardMutation {
+								validate_assignment(
+									log,
+									&assignment,
+									optimized_expression.variables(),
+									&new_layout.layout,
+									game_state,
+									wretch_in_play,
+									drunk_in_play,
+									knight_in_play,
+									bombardier_in_play,
+								)
+							});
+
+							if new_layout.satisfying_assignments.is_empty() {
+								None
+							} else {
+								Some(new_layout)
+							}
+						})
+						.collect();
+
+				if !valid_layouts_and_assignments.is_empty() {
+					let expanded_theoreticals =
+						with_theoretical_testimony(log, game_state, &valid_layouts_and_assignments);
+					let total_expanded_layouts = expanded_theoreticals
+						.attempt_predictions
+						.into_iter()
+						.flat_map(|(_, expanded_mutations)| expanded_mutations)
+						.flat_map(|expanded_mutation| expanded_mutation.potential_layouts)
+						.collect();
+
+					let new_mutation = PostAbilityBoardMutation {
 						original_layout: original_mutation.original_layout,
 						potential_layouts: total_expanded_layouts,
-					},
-				);
+					};
+
+					match expanded_results.entry(ability_attempt.clone()) {
+						Entry::Occupied(mut occupied_entry) => {
+							occupied_entry.get_mut().push(new_mutation)
+						}
+						Entry::Vacant(vacant_entry) => {
+							vacant_entry.insert(vec![new_mutation]);
+						}
+					}
+				}
 			}
 		}
 
@@ -196,11 +221,7 @@ pub fn with_theoretical_testimony(
 
 gen fn generate_theoreticals_for_first_villager_with_ability(
 	original_layout_with_testimonies: &LayoutWithTestimonyAssigments,
-) -> (
-	BoardLayout,
-	AbilityAttempt,
-	Vec<HashMap<IndexTestimony, bool>>,
-) {
+) -> (AbilityAttempt, LayoutWithTestimonyAssigments) {
 	for (index, theoretical) in original_layout_with_testimonies
 		.layout
 		.villagers
@@ -234,7 +255,13 @@ gen fn generate_theoreticals_for_first_villager_with_ability(
 					}
 				}
 
-				yield (board_layout, ability_attempt, potential_assignments);
+				yield (
+					ability_attempt,
+					LayoutWithTestimonyAssigments {
+						layout: board_layout,
+						satisfying_assignments: potential_assignments,
+					},
+				);
 			}
 
 			break;
@@ -268,9 +295,7 @@ gen fn theoretical_testimonies(
 					targets.extend(index_combo.iter().cloned());
 					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
 
-					for expression in
-						fortune_teller_expression(testifier_index.clone(), &index_combo)
-					{
+					for (expression, evil) in fortune_teller_expression(&index_combo) {
 						let mut next_layout = board_config.clone();
 						next_layout.description = format!(
 							"{} - {} says {} or {} is{} evil",
@@ -278,11 +303,7 @@ gen fn theoretical_testimonies(
 							testifier_index,
 							index_combo[0],
 							index_combo[1],
-							if matches!(expression, Expression::Not(_)) {
-								" NOT"
-							} else {
-								""
-							}
+							if !evil { " NOT" } else { "" }
 						);
 
 						let instance_to_modify = next_layout.villagers[testifier_index.0]
@@ -291,17 +312,13 @@ gen fn theoretical_testimonies(
 
 						instance_to_modify.set_testimony(expression);
 
-						let mut testimonies = Vec::with_capacity(3);
-						testimonies.extend(index_combo.iter().map(|index| {
-							IndexTestimony::new(
-								testifier_index.clone(),
-								Testimony::Evil(index.clone()),
-							)
-						}));
-						testimonies.push(IndexTestimony {
-							index: testifier_index.clone(),
-							testimony: Testimony::Good(testifier_index.clone()),
-						});
+						let mut testimonies = vec![IndexTestimony::new(
+							testifier_index.clone(),
+							Testimony::FortuneTeller(FortuneTellerClaim::new(
+								index_combo.as_slice().try_into().unwrap(),
+								evil,
+							)),
+						)];
 
 						yield (next_layout, ability_attempt.clone(), testimonies);
 					}
@@ -600,19 +617,21 @@ fn jester_expression(indexes: &Vec<VillagerIndex>) -> [Expression<Testimony>; 4]
 	]
 }
 
-fn fortune_teller_expression(
-	fortune_teller: VillagerIndex,
-	indexes: &Vec<VillagerIndex>,
-) -> [Expression<Testimony>; 2] {
+fn fortune_teller_expression(indexes: &Vec<VillagerIndex>) -> [(Expression<Testimony>, bool); 2] {
 	[
-		Testimony::fortune_teller(
-			fortune_teller.clone(),
-			indexes
-				.as_slice()
-				.try_into()
-				.expect("Invalid number of indexes for a jester expression"),
+		(
+			Testimony::fortune_teller(
+				indexes
+					.as_slice()
+					.try_into()
+					.expect("Invalid number of indexes for a jester expression"),
+				false,
+			),
 			false,
 		),
-		Testimony::fortune_teller(fortune_teller, indexes.as_slice().try_into().unwrap(), true),
+		(
+			Testimony::fortune_teller(indexes.as_slice().try_into().unwrap(), true),
+			true,
+		),
 	]
 }

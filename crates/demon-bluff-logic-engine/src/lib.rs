@@ -20,8 +20,10 @@ mod with_theoretical_testimony;
 use core::panic;
 use std::{
 	arch::breakpoint,
+	clone,
 	cmp::max,
 	collections::{BTreeSet, HashMap, HashSet, hash_map::Entry},
+	fmt::format,
 	sync::atomic::{AtomicI32, Ordering},
 	usize,
 };
@@ -133,7 +135,20 @@ pub fn predict(
 
 			let initial_layouts = need_more_info_result.expect("Udhfhfhfh");
 
-			let mut layouts = with_theoretical_testimony(log, state, initial_layouts);
+			let mut initial_problem_space = HashMap::new();
+			for layout in &initial_layouts {
+				match initial_problem_space.entry(layout.layout.evil_locations.clone()) {
+					Entry::Occupied(mut occupied_entry) => {
+						let new_value = occupied_entry.get() + 1;
+						occupied_entry.insert(new_value);
+					}
+					Entry::Vacant(vacant_entry) => {
+						vacant_entry.insert(1);
+					}
+				}
+			}
+
+			let mut layouts = with_theoretical_testimony(log, state, &initial_layouts);
 
 			let mut attempt_order = Vec::with_capacity(layouts.attempt_predictions.len());
 			attempt_order.extend(
@@ -155,6 +170,7 @@ pub fn predict(
 				HashSet<AbilityAttempt>,
 				HashSet<BTreeSet<VillagerIndex>>,
 				f64,
+				usize,
 			)> = None;
 			let mut invalidated_evil_layouts = HashSet::new();
 			'outer: loop {
@@ -168,26 +184,32 @@ pub fn predict(
 							previously_caluclated_attempts.len()
 						);
 
-						let (_, mutation) = mutation_option.expect("Impossble");
+						let (_, mutations) = mutation_option.expect("Impossble");
 
-						info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", mutation.potential_layouts.len(), ability_attempt, mutation.potential_layouts[0].layout.description);
+						let total_layouts_in_mutations: usize = mutations
+							.iter()
+							.map(|mutation| mutation.potential_layouts.len())
+							.sum();
+
+						info!(logger: log, "Theorizing ({} board layouts): {}", total_layouts_in_mutations, ability_attempt);
 
 						if let PredictionResult2::ConfigCountsAfterAbility(
 							layout_counts_from_prediction,
-						) =
-							predict_core(
-								log,
-								state,
-								mutation.potential_layouts.iter().cloned().map(
-									|potential_layout| {
-										(
-											potential_layout.layout,
-											Some(potential_layout.satisfying_assignments),
-										)
-									},
-								),
-								true,
-							) {
+						) = predict_core(
+							log,
+							state,
+							mutations
+								.iter()
+								.flat_map(|mutation| mutation.potential_layouts.iter())
+								.cloned()
+								.map(|potential_layout| {
+									(
+										potential_layout.layout,
+										Some(potential_layout.satisfying_assignments),
+									)
+								}),
+							true,
+						) {
 							previously_caluclated_attempts.push(layout_counts_from_prediction);
 						} else {
 							unreachable!(
@@ -202,14 +224,21 @@ pub fn predict(
 					let mut total_board_layouts = 0;
 					let mut highest_evils_layout = None;
 
+					let mut mutually_exclusive_layouts: HashMap<
+						&Expression<Testimony>,
+						Vec<&BTreeSet<VillagerIndex>>,
+					> = HashMap::new();
 					let layout_counts_len = layout_counts.len();
-					for (layout_count, evils_layout) in layout_counts {
+
+					for (layouts, evils_layout) in layout_counts {
 						if invalidated_evil_layouts.contains(evils_layout) {
 							continue;
 						}
 
-						if *layout_count == 0 {
-							if let Some((_, contributing_evil_layouts, _)) =
+						let layout_count = layouts.len();
+
+						if layout_count == 0 {
+							if let Some((_, contributing_evil_layouts, _, _)) =
 								abilities_with_highest_factor_of_single_evil_layout.as_mut()
 								&& contributing_evil_layouts.contains(&evils_layout)
 							{
@@ -223,19 +252,63 @@ pub fn predict(
 							continue;
 						}
 
-						if *layout_count > highest_entry {
-							highest_entry = *layout_count;
+						if layout_count > highest_entry {
+							highest_entry = layout_count;
 							highest_evils_layout = Some(evils_layout);
 						}
 
 						total_board_layouts += layout_count;
+						for theorized_layout in layouts {
+							debug_assert_eq!(theorized_layout.evil_locations, *evils_layout);
+							let generated_testimony = theorized_layout.villagers
+								[ability_attempt.source().0]
+								.inner
+								.instance()
+								.testimony()
+								.as_ref()
+								.expect("Ability usage didn't generate testimony?");
+							match mutually_exclusive_layouts.entry(generated_testimony) {
+								Entry::Occupied(mut occupied_entry) => {
+									let vec = occupied_entry.get_mut();
+									vec.push(&theorized_layout.evil_locations);
+								}
+								Entry::Vacant(vacant_entry) => {
+									let vec = vec![&theorized_layout.evil_locations];
+									vacant_entry.insert(vec);
+								}
+							}
+						}
+					}
+
+					let mut mutually_exclusive_groups: Vec<HashSet<&BTreeSet<VillagerIndex>>> =
+						Vec::new();
+
+					for (_, mut mutually_exclusive_layout) in mutually_exclusive_layouts {
+						mutually_exclusive_groups.retain(|previous_group| {
+							let mut any_overlap = false;
+							for i in 0..mutually_exclusive_layout.len() {
+								let layout = mutually_exclusive_layout[i];
+								let overlap = previous_group.contains(layout);
+								if overlap {
+									mutually_exclusive_layout.extend(previous_group.iter());
+									any_overlap = true;
+								}
+							}
+
+							!any_overlap
+						});
+
+						mutually_exclusive_groups
+							.push(mutually_exclusive_layout.into_iter().collect());
 					}
 
 					let factor = highest_entry as f64 / total_board_layouts as f64;
 					let highest_evils_layout = highest_evils_layout.expect("sign bruh");
 
+					let problem_space_reduction = mutually_exclusive_groups.len();
+
 					info!(
-						"Theory resulted in {} possible evil configurations factor: {} ({} ({}) / {})",
+						"Theory resulted in {} possible evil configurations factor: {} ({} ({}) / {}). PSR: {}",
 						layout_counts_len,
 						factor,
 						highest_entry,
@@ -243,20 +316,26 @@ pub fn predict(
 							.iter()
 							.map(|index| format!("{}", index))
 							.join("|"),
-						total_board_layouts
+						total_board_layouts,
+						problem_space_reduction
 					);
 
 					let (
 						ability_uses,
 						new_contributing_evil_layouts,
 						evil_location_configurations_reduction,
+						new_problem_space_reduction,
 					) = match abilities_with_highest_factor_of_single_evil_layout {
 						Some((
 							mut old_highest_factor_abilities,
 							mut contributing_evil_layouts,
 							old_highest_factor,
+							old_problem_space_reduction,
 						)) => {
-							if old_highest_factor < factor {
+							if old_highest_factor < factor
+								|| (old_highest_factor == factor
+									&& old_problem_space_reduction < problem_space_reduction)
+							{
 								let mut new_highest_factor_abilities = HashSet::new();
 								new_highest_factor_abilities.insert(ability_attempt.clone());
 								contributing_evil_layouts.insert(highest_evils_layout.clone());
@@ -264,9 +343,12 @@ pub fn predict(
 									new_highest_factor_abilities,
 									contributing_evil_layouts,
 									factor,
+									problem_space_reduction,
 								)
 							} else {
-								if old_highest_factor == factor {
+								if old_highest_factor == factor
+									&& old_problem_space_reduction == problem_space_reduction
+								{
 									old_highest_factor_abilities.insert(ability_attempt.clone());
 									contributing_evil_layouts.insert(highest_evils_layout.clone());
 								}
@@ -275,6 +357,7 @@ pub fn predict(
 									old_highest_factor_abilities,
 									contributing_evil_layouts,
 									old_highest_factor,
+									old_problem_space_reduction,
 								)
 							}
 						}
@@ -287,6 +370,7 @@ pub fn predict(
 								new_highest_factor_abilities,
 								new_contributing_evil_layouts,
 								factor,
+								problem_space_reduction,
 							)
 						}
 					};
@@ -298,6 +382,7 @@ pub fn predict(
 						ability_uses,
 						new_contributing_evil_layouts,
 						evil_location_configurations_reduction,
+						new_problem_space_reduction,
 					));
 
 					if this_one_works {
@@ -309,15 +394,16 @@ pub fn predict(
 				break;
 			}
 
-			let (ability_attempts, _, factor) = abilities_with_highest_factor_of_single_evil_layout
-				.expect("No value ability usages found??");
+			let (ability_attempts, _, factor, problem_space_reduction) =
+				abilities_with_highest_factor_of_single_evil_layout
+					.expect("No value ability usages found??");
 
 			let mut attempt_strings: Vec<String> = ability_attempts
 				.iter()
 				.map(|attempt| format!("{}", attempt))
 				.collect();
 			attempt_strings.sort();
-			info!(logger: log, "Selecting the path of \"{}\" which has a factor of {} of layouts being equivalent to one evil layout. {} invalid layouts were eliminated", attempt_strings.join("|"), factor, invalidated_evil_layouts.len());
+			info!(logger: log, "Selecting the path of \"{}\" which has a factor of {} of layouts being equivalent to one evil layout (PSR: {}). {} invalid layouts were eliminated", attempt_strings.join("|"), factor, problem_space_reduction, invalidated_evil_layouts.len());
 
 			Ok(ability_attempts
 				.into_iter()
@@ -329,7 +415,7 @@ pub fn predict(
 
 enum PredictionResult2 {
 	KillResult(Result<HashSet<PlayerAction>, PredictionError>),
-	ConfigCountsAfterAbility(Vec<(usize, BTreeSet<VillagerIndex>)>),
+	ConfigCountsAfterAbility(Vec<(Vec<BoardLayout>, BTreeSet<VillagerIndex>)>),
 	NeedMoreInfoResult(Vec<LayoutWithTestimonyAssigments>),
 }
 
@@ -366,12 +452,12 @@ fn predict_core(
 							initial_evil_layouts
 								.into_iter()
 								.map(|evils_layout| {
-									let board_layouts_len = valid_prediction
+									let board_layouts = valid_prediction
 										.board_layouts_by_similar_configs
 										.get(&evils_layout)
-										.map(|layouts| layouts.len())
-										.unwrap_or(0);
-									(board_layouts_len, evils_layout)
+										.map(|layouts| layouts.iter().cloned().collect())
+										.unwrap_or(Vec::new());
+									(board_layouts, evils_layout)
 								})
 								.collect(),
 						);
@@ -1044,7 +1130,7 @@ fn validate_assignment(
 					let confirmed_target = &theoreticals[slay_result.index().0].inner;
 					let theoretical = &theoreticals[index_testimony.index.0];
 					if_unknown_good_use_truthful(
-						theoretical,
+						&theoreticals[slay_result.index().0],
 						!confirmed_target.true_identity().appears_evil(),
 						true,
 					) || theoretical.inner.corrupted()
@@ -1243,6 +1329,26 @@ fn validate_assignment(
 					.iter()
 					.all(|theoretical| !theoretical.inner.corrupted()),
 			},
+			Testimony::FortuneTeller(fortune_teller_claim) => {
+				let targets = fortune_teller_claim.targets();
+				let thing_1 = &theoreticals[targets[0].0];
+				let thing_2 = &theoreticals[targets[1].0];
+				let correct_1 = if_unknown_good_use_truthful(
+					thing_1,
+					thing_1.inner.true_identity().appears_evil(),
+					true,
+				);
+				let correct_2 = if_unknown_good_use_truthful(
+					thing_2,
+					thing_2.inner.true_identity().appears_evil(),
+					true,
+				);
+				if fortune_teller_claim.evil() {
+					correct_1 || correct_2
+				} else {
+					!correct_1 && !correct_2
+				}
+			}
 		};
 
 		let full_testimony = board_config.villagers[index_testimony.index.0]
@@ -1257,7 +1363,6 @@ fn validate_assignment(
 			return false;
 		}
 	}
-
 	trace!(logger: log, "Validation passed: {}", board_config.description);
 
 	true
