@@ -145,6 +145,8 @@ pub fn predict(
 			);
 			attempt_order.sort();
 
+			let mut previously_caluclated_attempts = Vec::with_capacity(attempt_order.len());
+
 			// evaluating every ability combination is too damn expensive (and impossible to empiracally verify in the game)
 			// order here wants to be deterministic for testing purposes, so collect and sort the keys
 
@@ -156,7 +158,7 @@ pub fn predict(
 			)> = None;
 			let mut invalidated_evil_layouts = HashSet::new();
 			'outer: loop {
-				for ability_attempt in &attempt_order {
+				for (ability_attempt_index, ability_attempt) in attempt_order.iter().enumerate() {
 					let (_, mutation) = layouts
 						.attempt_predictions
 						.remove_entry(&ability_attempt)
@@ -164,132 +166,142 @@ pub fn predict(
 
 					info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", mutation.potential_layouts.len(), ability_attempt, mutation.potential_layouts[0].layout.description);
 
-					if let PredictionResult2::ConfigCountsAfterAbility(layout_counts) = predict_core(
-						log,
-						state,
-						mutation
-							.potential_layouts
-							.iter()
-							.cloned()
-							.map(|potential_layout| {
-								(
-									potential_layout.layout,
-									Some(potential_layout.satisfying_assignments),
-								)
-							}),
-						true,
-					) {
-						let mut highest_entry = 0;
-						let mut total_board_layouts = 0;
-						let mut highest_evils_layout = None;
+					if previously_caluclated_attempts.len() <= ability_attempt_index {
+						debug_assert_eq!(
+							ability_attempt_index,
+							previously_caluclated_attempts.len()
+						);
+						if let PredictionResult2::ConfigCountsAfterAbility(
+							layout_counts_from_prediction,
+						) =
+							predict_core(
+								log,
+								state,
+								mutation.potential_layouts.iter().cloned().map(
+									|potential_layout| {
+										(
+											potential_layout.layout,
+											Some(potential_layout.satisfying_assignments),
+										)
+									},
+								),
+								true,
+							) {
+							previously_caluclated_attempts.push(layout_counts_from_prediction);
+						} else {
+							unreachable!(
+								"Prediction was not allowed to return non and it did it anyway"
+							);
+						}
+					}
 
-						let layout_counts_len = layout_counts.len();
-						for (layout_count, evils_layout) in layout_counts {
-							if invalidated_evil_layouts.contains(&evils_layout) {
-								continue;
-							}
+					let layout_counts = &previously_caluclated_attempts[ability_attempt_index];
 
-							if layout_count == 0 {
-								if let Some((_, contributing_evil_layouts, _)) =
-									abilities_with_highest_factor_of_single_evil_layout.as_mut()
-									&& contributing_evil_layouts.contains(&evils_layout)
-								{
-									// need to recalculate everything now since we could have just invalidated the best factor
-									abilities_with_highest_factor_of_single_evil_layout = None;
-									invalidated_evil_layouts.insert(evils_layout);
-									continue 'outer;
-								}
+					let mut highest_entry = 0;
+					let mut total_board_layouts = 0;
+					let mut highest_evils_layout = None;
 
-								invalidated_evil_layouts.insert(evils_layout);
-								continue;
-							}
-
-							if layout_count > highest_entry {
-								highest_entry = layout_count;
-								highest_evils_layout = Some(evils_layout);
-							}
-
-							total_board_layouts += layout_count;
+					let layout_counts_len = layout_counts.len();
+					for (layout_count, evils_layout) in layout_counts {
+						if invalidated_evil_layouts.contains(evils_layout) {
+							continue;
 						}
 
-						let factor = highest_entry as f64 / total_board_layouts as f64;
-						let highest_evils_layout = highest_evils_layout.expect("sign bruh");
-
-						info!(
-							"Theory resulted in {} possible evil configurations factor: {} ({} ({}) / {})",
-							layout_counts_len,
-							factor,
-							highest_entry,
-							highest_evils_layout
-								.iter()
-								.map(|index| format!("{}", index))
-								.join("|"),
-							total_board_layouts
-						);
-
-						let (
-							ability_uses,
-							new_contributing_evil_layouts,
-							evil_location_configurations_reduction,
-						) = match abilities_with_highest_factor_of_single_evil_layout {
-							Some((
-								mut old_highest_factor_abilities,
-								mut contributing_evil_layouts,
-								old_highest_factor,
-							)) => {
-								if old_highest_factor < factor {
-									let mut new_highest_factor_abilities = HashSet::new();
-									new_highest_factor_abilities.insert(ability_attempt.clone());
-									contributing_evil_layouts.insert(highest_evils_layout);
-									(
-										new_highest_factor_abilities,
-										contributing_evil_layouts,
-										factor,
-									)
-								} else {
-									if old_highest_factor == factor {
-										old_highest_factor_abilities
-											.insert(ability_attempt.clone());
-										contributing_evil_layouts.insert(highest_evils_layout);
-									}
-
-									(
-										old_highest_factor_abilities,
-										contributing_evil_layouts,
-										old_highest_factor,
-									)
-								}
+						if *layout_count == 0 {
+							if let Some((_, contributing_evil_layouts, _)) =
+								abilities_with_highest_factor_of_single_evil_layout.as_mut()
+								&& contributing_evil_layouts.contains(&evils_layout)
+							{
+								// need to recalculate everything now since we could have just invalidated the best factor
+								abilities_with_highest_factor_of_single_evil_layout = None;
+								invalidated_evil_layouts.insert(evils_layout.clone());
+								continue 'outer;
 							}
-							None => {
+
+							invalidated_evil_layouts.insert(evils_layout.clone());
+							continue;
+						}
+
+						if *layout_count > highest_entry {
+							highest_entry = *layout_count;
+							highest_evils_layout = Some(evils_layout);
+						}
+
+						total_board_layouts += layout_count;
+					}
+
+					let factor = highest_entry as f64 / total_board_layouts as f64;
+					let highest_evils_layout = highest_evils_layout.expect("sign bruh");
+
+					info!(
+						"Theory resulted in {} possible evil configurations factor: {} ({} ({}) / {})",
+						layout_counts_len,
+						factor,
+						highest_entry,
+						highest_evils_layout
+							.iter()
+							.map(|index| format!("{}", index))
+							.join("|"),
+						total_board_layouts
+					);
+
+					let (
+						ability_uses,
+						new_contributing_evil_layouts,
+						evil_location_configurations_reduction,
+					) = match abilities_with_highest_factor_of_single_evil_layout {
+						Some((
+							mut old_highest_factor_abilities,
+							mut contributing_evil_layouts,
+							old_highest_factor,
+						)) => {
+							if old_highest_factor < factor {
 								let mut new_highest_factor_abilities = HashSet::new();
-								let mut new_contributing_evil_layouts = HashSet::new();
 								new_highest_factor_abilities.insert(ability_attempt.clone());
-								new_contributing_evil_layouts.insert(highest_evils_layout);
+								contributing_evil_layouts.insert(highest_evils_layout.clone());
 								(
 									new_highest_factor_abilities,
-									new_contributing_evil_layouts,
+									contributing_evil_layouts,
 									factor,
 								)
+							} else {
+								if old_highest_factor == factor {
+									old_highest_factor_abilities.insert(ability_attempt.clone());
+									contributing_evil_layouts.insert(highest_evils_layout.clone());
+								}
+
+								(
+									old_highest_factor_abilities,
+									contributing_evil_layouts,
+									old_highest_factor,
+								)
 							}
-						};
-
-						// optimization, take the first result that gives us one layout
-						let this_one_works = factor == 1.0;
-
-						abilities_with_highest_factor_of_single_evil_layout = Some((
-							ability_uses,
-							new_contributing_evil_layouts,
-							evil_location_configurations_reduction,
-						));
-
-						if this_one_works {
-							info!(logger: log, "Found an ability path that leads to a single evil configuration taking it and earlying out on theorizing");
-							break;
 						}
-					} else {
-						unreachable!(
-							"Prediction was not allowed to return non and it did it anyway"
-						);
+						None => {
+							let mut new_highest_factor_abilities = HashSet::new();
+							let mut new_contributing_evil_layouts = HashSet::new();
+							new_highest_factor_abilities.insert(ability_attempt.clone());
+							new_contributing_evil_layouts.insert(highest_evils_layout.clone());
+							(
+								new_highest_factor_abilities,
+								new_contributing_evil_layouts,
+								factor,
+							)
+						}
+					};
+
+					// optimization, take the first result that gives us one layout
+					let this_one_works = factor == 1.0;
+
+					abilities_with_highest_factor_of_single_evil_layout = Some((
+						ability_uses,
+						new_contributing_evil_layouts,
+						evil_location_configurations_reduction,
+					));
+
+					if this_one_works {
+						info!(logger: log, "Found an ability path that leads to a single evil configuration taking it and earlying out on theorizing");
+						break;
 					}
 				}
 
