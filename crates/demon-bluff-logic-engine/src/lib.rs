@@ -159,18 +159,19 @@ pub fn predict(
 			let mut invalidated_evil_layouts = HashSet::new();
 			'outer: loop {
 				for (ability_attempt_index, ability_attempt) in attempt_order.iter().enumerate() {
-					let (_, mutation) = layouts
-						.attempt_predictions
-						.remove_entry(&ability_attempt)
-						.expect("Impossble");
-
-					info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", mutation.potential_layouts.len(), ability_attempt, mutation.potential_layouts[0].layout.description);
+					let mutation_option =
+						layouts.attempt_predictions.remove_entry(&ability_attempt);
 
 					if previously_caluclated_attempts.len() <= ability_attempt_index {
 						debug_assert_eq!(
 							ability_attempt_index,
 							previously_caluclated_attempts.len()
 						);
+
+						let (_, mutation) = mutation_option.expect("Impossble");
+
+						info!(logger: log, "Theorizing ({} board layouts): {}. First: {}", mutation.potential_layouts.len(), ability_attempt, mutation.potential_layouts[0].layout.description);
+
 						if let PredictionResult2::ConfigCountsAfterAbility(
 							layout_counts_from_prediction,
 						) =
