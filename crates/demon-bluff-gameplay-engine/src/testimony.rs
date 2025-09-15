@@ -256,12 +256,12 @@ pub enum Testimony {
 	Evil(VillagerIndex),
 	Corrupt(VillagerIndex),
 	Lying(VillagerIndex),
-	Cured(VillagerIndex),
+	Cured(usize),
 	Baker(BakerClaim),
 	Role(RoleClaim),
 	Invincible(VillagerIndex),
 	// TODO: What are they saying?
-	Affected(AffectedClaim),
+	Affected(Option<AffectedClaim>),
 	FakeEvil(VillagerIndex),
 	SelfDestruct(VillagerIndex),
 	Slayed(SlayResult),
@@ -326,66 +326,7 @@ impl Testimony {
 		villagers_cured: usize,
 		total_villagers: usize,
 	) -> Expression<Testimony> {
-		let start_index = start_index.0;
-		let cure_range = ALCHEMIST_CURE_RANGE;
-		let candidate_count = cure_range * 2;
-		let mut potential_indicies = Vec::with_capacity(candidate_count);
-		let mut current_index = if start_index >= cure_range {
-			start_index - cure_range
-		} else {
-			total_villagers - (cure_range - start_index)
-		};
-
-		for _ in 0..cure_range {
-			potential_indicies.push(current_index);
-			current_index = if current_index + 1 >= total_villagers {
-				0
-			} else {
-				current_index + 1
-			}
-		}
-
-		current_index = if current_index + 1 >= total_villagers {
-			0
-		} else {
-			current_index + 1
-		};
-
-		for _ in 0..cure_range {
-			potential_indicies.push(current_index);
-			current_index = if current_index + 1 >= total_villagers {
-				0
-			} else {
-				current_index + 1
-			}
-		}
-
-		let mut expr;
-		if villagers_cured == 0 {
-			expr = Expression::and_from_iterator(potential_indicies.iter().map(|index| {
-				Expression::Not(Box::new(Expression::Leaf(Testimony::Corrupt(
-					VillagerIndex(*index),
-				))))
-			}));
-		} else {
-			expr = None;
-			for combo in potential_indicies.iter().combinations(villagers_cured) {
-				let new_expr = Expression::and_from_iterator(
-					combo
-						.iter()
-						.map(|index| Expression::Leaf(Testimony::Cured(VillagerIndex(**index)))),
-				);
-
-				let new_expr =
-					new_expr.expect("There should have been at least one villager that was cured");
-				expr = Some(match expr {
-					Some(old_expr) => Expression::Or(Box::new(old_expr), Box::new(new_expr)),
-					None => new_expr,
-				});
-			}
-		}
-
-		expr.expect("logic error in cure expression builder")
+		Expression::Leaf(Testimony::Cured(villagers_cured))
 	}
 
 	pub fn hunter(
@@ -709,7 +650,10 @@ impl Display for Testimony {
 				write!(f, "{} is a {}", role_claim.villager, role_claim.archetype)
 			}
 			Self::Invincible(villager_index) => write!(f, "{villager_index} is invincible"),
-			Self::Affected(claim) => write!(f, "{} was {}", claim.index(), claim.affect_type()),
+			Self::Affected(claim) => match claim {
+				Some(claim) => write!(f, "{} was {}", claim.index(), claim.affect_type()),
+				None => write!(f, "No one was affected"),
+			},
 			Self::FakeEvil(villager_index) => write!(f, "{villager_index} looks evil but isn't"),
 			Self::SelfDestruct(villager_index) => {
 				write!(f, "{villager_index} will self destruct")

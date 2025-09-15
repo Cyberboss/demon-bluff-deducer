@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 pub struct TheoreticalVillager {
 	pub inner: ConfirmedVillager,
 	pub actually_dead: bool,
-	pub was_corrupt: bool,
+	pub cured_by: Option<VillagerIndex>,
 	pub revealed: bool,
 	pub baked_from: Option<VillagerArchetype>,
 	pub affection: Option<AffectType>,
@@ -28,11 +28,10 @@ pub struct TheoreticalVillager {
 
 impl TheoreticalVillager {
 	pub fn new(value: ConfirmedVillager, dead: bool, revealed: bool) -> Self {
-		let was_corrupt = value.corrupted();
 		Self {
 			actually_dead: dead,
 			inner: value,
-			was_corrupt,
+			cured_by: None,
 			baked_from: None,
 			affection: None,
 			revealed,
@@ -400,8 +399,6 @@ gen fn with_adjacent_affects(layout: BoardLayout) -> BoardLayout {
 							if affector_identity.is_evil() {
 								affected_villager.affection = Some(AffectType::CorruptedByEvil);
 							}
-
-							affected_villager.was_corrupt = true;
 						}
 					}
 					Affect::Puppet(_) => {
@@ -584,7 +581,6 @@ gen fn with_pooka_corruptions(mut layout: BoardLayout) -> BoardLayout {
 			{
 				target_theoretical.affection = Some(AffectType::CorruptedByEvil);
 				target_theoretical.inner.set_corrupted(true);
-				target_theoretical.was_corrupt = true;
 				layout.description = format!(
 					"{} - {} was corrupted by {}",
 					layout.description, affectable_index, pooka_index
@@ -623,7 +619,6 @@ gen fn with_plague_doctors_corruptions(layout: BoardLayout) -> BoardLayout {
 		any_affecteable_indicies = true;
 		let mut next_layout = layout.clone();
 		let mutated_theoretical = &mut next_layout.villagers[index];
-		mutated_theoretical.was_corrupt = true;
 		mutated_theoretical.inner.set_corrupted(true);
 		next_layout.description = format!(
 			"{} - {} was corrupted by the PD",
@@ -841,6 +836,7 @@ fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
 					"{} - {} was cured by {}",
 					layout.description, curable_index, villager_index
 				);
+				curable_theoretical.cured_by = Some(villager_index.clone());
 			}
 		}
 	};

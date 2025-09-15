@@ -1069,9 +1069,43 @@ fn validate_assignment(
 					drunk_in_play,
 				)
 			}
-			Testimony::Cured(villager_index) => {
-				let theoretical = &theoreticals[villager_index.0];
-				theoretical.was_corrupt && !theoretical.inner.corrupted()
+			Testimony::Cured(amount) => {
+				let indicies_to_check = [
+					index_offset(
+						&index_testimony.index,
+						game_state.total_villagers(),
+						2,
+						true,
+					),
+					index_offset(
+						&index_testimony.index,
+						game_state.total_villagers(),
+						1,
+						true,
+					),
+					index_offset(
+						&index_testimony.index,
+						game_state.total_villagers(),
+						1,
+						false,
+					),
+					index_offset(
+						&index_testimony.index,
+						game_state.total_villagers(),
+						2,
+						false,
+					),
+				];
+
+				let mut cure_count = 0;
+				for cured_index in indicies_to_check {
+					let theoretical = &theoreticals[cured_index.0];
+					if theoretical.cured_by == Some(index_testimony.index.clone()) {
+						cure_count += 1;
+					}
+				}
+
+				cure_count == *amount
 			}
 			Testimony::Baker(baker_claim) => {
 				let theoretical = &theoreticals[index_testimony.index.0];
@@ -1099,10 +1133,15 @@ fn validate_assignment(
 					knight_in_play,
 				)
 			}
-			Testimony::Affected(affected_claim) => {
-				theoreticals[affected_claim.index().0].affection.as_ref()
-					== Some(affected_claim.affect_type())
-			}
+			Testimony::Affected(affected_claim) => match affected_claim {
+				Some(affected_claim) => {
+					theoreticals[affected_claim.index().0].affection.as_ref()
+						== Some(affected_claim.affect_type())
+				}
+				None => theoreticals
+					.iter()
+					.all(|theoretical| theoretical.affection.is_none()),
+			},
 			Testimony::FakeEvil(villager_index) => {
 				let theoretical = &theoreticals[villager_index.0];
 
@@ -1372,10 +1411,9 @@ fn validate_assignment(
 				None => {
 					let mut found_match = false;
 					for target in druid_claim.targets() {
-						found_match |= matches!(
-							theoreticals[target.0].inner.true_identity(),
-							VillagerArchetype::Outcast(_)
-						);
+						let target_archetype = theoreticals[target.0].inner.true_identity();
+						found_match |= matches!(target_archetype, VillagerArchetype::Outcast(_))
+							&& !target_archetype.appears_evil();
 					}
 
 					!found_match

@@ -62,6 +62,37 @@ pub fn run_game(
 	log_after: Option<usize>,
 	reveal_strategy: RevealStrategy,
 ) {
+	run_game_core(
+		game_state,
+		expected_actions,
+		log_after,
+		reveal_strategy,
+		false,
+	)
+}
+
+pub fn run_game_ack_unsolvable(
+	game_state: &GameState,
+	expected_actions: Vec<TestAction>,
+	log_after: Option<usize>,
+	reveal_strategy: RevealStrategy,
+) {
+	run_game_core(
+		game_state,
+		expected_actions,
+		log_after,
+		reveal_strategy,
+		true,
+	)
+}
+
+fn run_game_core(
+	game_state: &GameState,
+	expected_actions: Vec<TestAction>,
+	log_after: Option<usize>,
+	reveal_strategy: RevealStrategy,
+	expect_multi_match_last_action: bool,
+) {
 	let mut game_state = game_state.clone();
 	let total_actions = expected_actions.len();
 	let mut log = log::logger();
@@ -82,15 +113,22 @@ pub fn run_game(
 			predict(&log, &game_state, reveal_strategy).expect("Failed prediction!");
 		let end_time = Instant::now();
 
-		if index == total_actions - 1 && player_actions.len() > 1 {
+		if index == total_actions - 1
+			&& ((player_actions.len() > 1) != expect_multi_match_last_action)
+		{
 			let mut action_strings: Vec<String> = player_actions
 				.iter()
 				.map(|action| format!("{}", action))
 				.collect();
 			action_strings.sort();
 			panic!(
-				"Last prediction (#{}) should always be decisive! Got:\n - {}",
+				"Last prediction (#{}) should {} be decisive! Got:\n - {}",
 				index + 1,
+				if expect_multi_match_last_action {
+					"NEVER"
+				} else {
+					"ALWAYS"
+				},
 				action_strings.join("\n - ")
 			);
 		}

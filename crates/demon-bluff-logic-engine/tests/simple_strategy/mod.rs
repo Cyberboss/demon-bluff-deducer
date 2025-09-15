@@ -15,3 +15,16 @@ fn run_game(game_state: &GameState, expected_actions: Vec<TestAction>, log_after
 		RevealStrategy::Simple,
 	);
 }
+
+fn run_game_ack_unsolvable(
+	game_state: &GameState,
+	expected_actions: Vec<TestAction>,
+	log_after: Option<usize>,
+) {
+	super::helpers::run_game_ack_unsolvable(
+		game_state,
+		expected_actions,
+		log_after,
+		RevealStrategy::Simple,
+	);
+}
