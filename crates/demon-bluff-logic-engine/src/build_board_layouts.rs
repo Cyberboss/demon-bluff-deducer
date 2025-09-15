@@ -308,9 +308,10 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				adjacency_affected_theoreticals.flat_map(with_pooka_corruptions);
 			let counsellor_affected_theoreticals =
 				pooka_affected_theoreticals.flat_map(with_counsellors);
-			// TODO: Shaman (Cloner) pass
+			let shaman_affected_theoreticals =
+				counsellor_affected_theoreticals.flat_map(with_shamans);
 			let plague_doctor_affected_theoreticals =
-				counsellor_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
+				shaman_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
 			let alchemist_cured_theoreticals =
 				plague_doctor_affected_theoreticals.map(apply_alchemist_cures);
 			// TODO: Drunk pass (alchemist cannot cure)
@@ -489,6 +490,51 @@ gen fn with_counsellors(layout: BoardLayout) -> BoardLayout {
 				next_layout.villagers[target_index.0].affection = Some(AffectType::Outcasted);
 				yield next_layout;
 				any_generated = true;
+			}
+		}
+	}
+
+	if !any_generated {
+		yield layout;
+	}
+}
+
+gen fn with_shamans(layout: BoardLayout) -> BoardLayout {
+	let mut any_generated = false;
+	if let Some((shaman_index, _)) = layout
+		.villagers
+		.iter()
+		.enumerate()
+		.filter(|(_, villager)| {
+			*villager.inner.true_identity() == VillagerArchetype::Minion(Minion::Shaman)
+		})
+		.next()
+	{
+		for index_1 in 0..layout.villagers.len() {
+			for index_2 in 0..layout.villagers.len() {
+				if index_1 == index_2 {
+					continue;
+				}
+
+				let theoretical_1 = &layout.villagers[index_1];
+				let theoretical_2 = &layout.villagers[index_2];
+
+				let archetype = theoretical_1.inner.true_identity();
+				if archetype == theoretical_2.inner.true_identity()
+					&& matches!(archetype, VillagerArchetype::GoodVillager(_))
+				{
+					let mut next_layout = layout.clone();
+					next_layout.description = format!(
+						"{} - {} was cloned from {} by {}",
+						layout.description,
+						VillagerIndex(index_2),
+						VillagerIndex(index_1),
+						VillagerIndex(shaman_index)
+					);
+					next_layout.villagers[index_2].affection = Some(AffectType::Cloned);
+					yield next_layout;
+					any_generated = true;
+				}
 			}
 		}
 	}

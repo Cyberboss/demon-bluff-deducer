@@ -198,6 +198,7 @@ pub enum Testimony {
 	Bard(Option<NonZeroUsize>),
 	FortuneTeller(FortuneTellerClaim),
 	Druid(DruidClaim),
+	Architect(ArchitectClaim),
 }
 
 impl EvilPairsClaim {
@@ -612,10 +613,6 @@ impl Testimony {
 			)
 		}
 	}
-
-	pub fn architect(claim: ArchitectClaim, total_villagers: usize) -> Expression<Testimony> {
-		todo!("Architect claim")
-	}
 }
 
 impl Display for Testimony {
@@ -695,6 +692,15 @@ impl Display for Testimony {
 					None => write!(f, "are NO outcasts"),
 				}
 			}
+			Self::Architect(architect_claim) => write!(
+				f,
+				"{}",
+				match architect_claim {
+					ArchitectClaim::Left => "Left side is more evil",
+					ArchitectClaim::Right => "Right side is more evil",
+					ArchitectClaim::Equal => "Both sides are equally evil",
+				}
+			),
 		}
 	}
 }

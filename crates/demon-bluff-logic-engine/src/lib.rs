@@ -34,7 +34,7 @@ use demon_bluff_gameplay_engine::{
 	Expression,
 	affect::Affect,
 	game_state::GameState,
-	testimony::{ConfessorClaim, Direction, Testimony, index_offset},
+	testimony::{ArchitectClaim, ConfessorClaim, Direction, Testimony, index_offset},
 	villager::{Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
 use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
@@ -1381,6 +1381,46 @@ fn validate_assignment(
 					!found_match
 				}
 			},
+			Testimony::Architect(architect_claim) => {
+				let mut left_count = 0;
+				let mut right_count = 0;
+
+				let center_index_1 = theoreticals.len() - 1;
+
+				let halfpoint = theoreticals.len() / 2;
+				let odd_villagers = (theoreticals.len() % 2) == 1;
+				let center_index_2 = if odd_villagers {
+					None
+				} else {
+					Some(halfpoint - 1)
+				};
+
+				for (index, theoretical) in theoreticals.iter().enumerate() {
+					if theoretical.inner.true_identity().appears_evil() {
+						if index == center_index_1 {
+							continue;
+						}
+
+						if let Some(center_index_2) = center_index_2
+							&& index == center_index_2
+						{
+							continue;
+						}
+
+						if index < halfpoint {
+							right_count += 1;
+						} else {
+							left_count += 1;
+						}
+					}
+				}
+
+				match architect_claim {
+					ArchitectClaim::Left => left_count > right_count,
+					ArchitectClaim::Right => right_count > left_count,
+					ArchitectClaim::Equal => left_count == right_count,
+				}
+			}
 		};
 
 		let full_testimony = board_config.villagers[index_testimony.index.0]
