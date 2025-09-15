@@ -37,7 +37,7 @@ use demon_bluff_gameplay_engine::{
 	testimony::{ArchitectClaim, BishopEvil, ConfessorClaim, Direction, Testimony, index_offset},
 	villager::{Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
-use expression_assertion::{collect_satisfying_assignments};
+use expression_assertion::collect_satisfying_assignments;
 use itertools::Itertools;
 use log::{Level, Log, debug, info, log_enabled, trace, warn};
 use optimized_expression::OptimizedExpression;
@@ -1461,6 +1461,18 @@ fn validate_assignment(
 						},
 						None => true,
 					}
+			}
+			Testimony::Dreamer(dreamer_claim) => {
+				let target_theoretical = &theoreticals[dreamer_claim.target().0];
+				match dreamer_claim.role() {
+					Some(evil_role) => {
+						target_theoretical.inner.true_identity() == evil_role
+							|| (matches!(evil_role, VillagerArchetype::Minion(_))
+								&& target_theoretical.inner.true_identity().appears_evil()
+								&& !target_theoretical.inner.true_identity().is_evil())
+					}
+					None => !target_theoretical.inner.true_identity().appears_evil(), // TODO: Double check
+				}
 			}
 		};
 

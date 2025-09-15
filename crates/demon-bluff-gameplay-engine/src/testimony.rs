@@ -64,6 +64,39 @@ impl Display for RoleClaim {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub struct DreamerClaim {
+	villager: VillagerIndex,
+	archetype: Option<VillagerArchetype>,
+}
+
+impl DreamerClaim {
+	pub fn new(villager: VillagerIndex, archetype: Option<VillagerArchetype>) -> Self {
+		Self {
+			villager,
+			archetype,
+		}
+	}
+
+	pub fn target(&self) -> &VillagerIndex {
+		&self.villager
+	}
+
+	pub fn role(&self) -> &Option<VillagerArchetype> {
+		&self.archetype
+	}
+}
+
+impl Display for DreamerClaim {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} is a ", self.villager)?;
+		match &self.archetype {
+			Some(role) => write!(f, "{}", role),
+			None => write!(f, "cabbage"),
+		}
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct ScoutClaim {
 	evil_role: VillagerArchetype,
 	distance: usize,
@@ -243,6 +276,7 @@ pub enum Testimony {
 	Druid(DruidClaim),
 	Architect(ArchitectClaim),
 	Bishop(BishopClaim),
+	Dreamer(DreamerClaim),
 }
 
 impl EvilPairsClaim {
@@ -780,6 +814,12 @@ impl Display for Testimony {
 					None => Ok(()),
 				}
 			}
+			Self::Dreamer(dreamer_claim) => match &dreamer_claim.archetype {
+				Some(role) => {
+					write!(f, "{} is a {}", dreamer_claim.villager, role)
+				}
+				None => write!(f, "{} is a cabbage", dreamer_claim.villager),
+			},
 		}
 	}
 }
