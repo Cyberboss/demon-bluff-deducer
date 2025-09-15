@@ -1,7 +1,4 @@
-use std::{
-	fmt::{Display, write},
-	num::{NonZero, NonZeroU8, NonZeroUsize},
-};
+use std::{fmt::Display, num::NonZeroUsize};
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -174,6 +171,52 @@ impl DruidClaim {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub enum BishopEvil {
+	Minion,
+	Demon,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub struct BishopClaim {
+	targets: [VillagerIndex; 3],
+	good_villager: bool,
+	outcast: bool,
+	evil: Option<BishopEvil>,
+}
+
+impl BishopClaim {
+	pub fn new(
+		targets: &[VillagerIndex; 3],
+		good_villager: bool,
+		outcast: bool,
+		evil: Option<BishopEvil>,
+	) -> Self {
+		Self {
+			targets: targets.clone(),
+			good_villager,
+			outcast,
+			evil,
+		}
+	}
+
+	pub fn targets(&self) -> &[VillagerIndex; 3] {
+		&self.targets
+	}
+
+	pub fn good_villager(&self) -> bool {
+		self.good_villager
+	}
+
+	pub fn outcast(&self) -> bool {
+		self.outcast
+	}
+
+	pub fn evil(&self) -> &Option<BishopEvil> {
+		&self.evil
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub enum Testimony {
 	Good(VillagerIndex),
 	// both are needed because of wretch (looks evil) != !(looks good)
@@ -199,6 +242,7 @@ pub enum Testimony {
 	FortuneTeller(FortuneTellerClaim),
 	Druid(DruidClaim),
 	Architect(ArchitectClaim),
+	Bishop(BishopClaim),
 }
 
 impl EvilPairsClaim {
@@ -701,6 +745,41 @@ impl Display for Testimony {
 					ArchitectClaim::Equal => "Both sides are equally evil",
 				}
 			),
+			Self::Bishop(bishop_claim) => {
+				write!(f, "Among ")?;
+				let mut first = true;
+				for target in bishop_claim.targets() {
+					if first {
+						first = false;
+					} else {
+						write!(f, ", ")?;
+					}
+
+					write!(f, "{}", target)?;
+				}
+
+				write!(f, " there are",)?;
+
+				if bishop_claim.good_villager {
+					write!(f, " GoodVillager")?;
+				}
+
+				if bishop_claim.outcast {
+					write!(f, " Outcast")?;
+				}
+
+				match bishop_claim.evil() {
+					Some(bishop_evil) => write!(
+						f,
+						" {}",
+						match bishop_evil {
+							BishopEvil::Minion => "Minion",
+							BishopEvil::Demon => "Demon",
+						}
+					),
+					None => Ok(()),
+				}
+			}
 		}
 	}
 }

@@ -34,10 +34,10 @@ use demon_bluff_gameplay_engine::{
 	Expression,
 	affect::Affect,
 	game_state::GameState,
-	testimony::{ArchitectClaim, ConfessorClaim, Direction, Testimony, index_offset},
+	testimony::{ArchitectClaim, BishopEvil, ConfessorClaim, Direction, Testimony, index_offset},
 	villager::{Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype, VillagerIndex},
 };
-use expression_assertion::{collect_satisfying_assignments, evaluate_with_assignment};
+use expression_assertion::{collect_satisfying_assignments};
 use itertools::Itertools;
 use log::{Level, Log, debug, info, log_enabled, trace, warn};
 use optimized_expression::OptimizedExpression;
@@ -1421,6 +1421,47 @@ fn validate_assignment(
 					ArchitectClaim::Equal => left_count == right_count,
 				}
 			}
+			Testimony::Bishop(bishop_claim) => {
+				let mut found_good = false;
+				let mut found_outcast = false;
+				let mut found_minion = false;
+				let mut found_demon = false;
+
+				for target_index in bishop_claim.targets() {
+					let target = &theoreticals[target_index.0];
+					found_good |= if_unknown_good_use_truthful(
+						target,
+						matches!(
+							target.inner.true_identity(),
+							VillagerArchetype::GoodVillager(_)
+						),
+						true,
+					);
+
+					// the only outcast we don't currently track is bombadier, though that's subject to change
+					// TODO: should really do a max outcasts check here
+					found_outcast |= if_unknown_good_use_truthful(
+						target,
+						matches!(target.inner.true_identity(), VillagerArchetype::Outcast(_)),
+						true,
+					);
+
+					found_minion |=
+						matches!(target.inner.true_identity(), VillagerArchetype::Minion(_));
+					found_demon |=
+						matches!(target.inner.true_identity(), VillagerArchetype::Demon(_));
+				}
+
+				(!bishop_claim.good_villager() || found_good)
+					&& (!bishop_claim.outcast() || found_outcast)
+					&& match bishop_claim.evil() {
+						Some(bishop_evil) => match bishop_evil {
+							BishopEvil::Minion => found_minion,
+							BishopEvil::Demon => found_demon,
+						},
+						None => true,
+					}
+			}
 		};
 
 		let full_testimony = board_config.villagers[index_testimony.index.0]
@@ -1435,6 +1476,7 @@ fn validate_assignment(
 			return false;
 		}
 	}
+
 	trace!(logger: log, "Validation passed: {}", board_config.description);
 
 	true

@@ -9,7 +9,7 @@ use demon_bluff_gameplay_engine::{
 	game_state::GameState,
 	testimony::{AffectType, index_offset},
 	villager::{
-		self, ConfirmedVillager, Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
+		ConfirmedVillager, Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
 		VillagerIndex, VillagerInstance,
 	},
 };
@@ -86,7 +86,9 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			}
 			Villager::Confirmed(confirmed_villager) => {
 				let true_identity = confirmed_villager.true_identity();
-				if true_identity.is_evil() {
+				if true_identity.is_evil()
+					&& *true_identity != VillagerArchetype::Minion(Minion::Puppet)
+				{
 					remaining_evils -= 1;
 				}
 
@@ -403,11 +405,27 @@ gen fn with_adjacent_affects(layout: BoardLayout) -> BoardLayout {
 						}
 					}
 					Affect::Puppet(_) => {
-						if affected_villager.inner.true_identity().can_be_converted() {
+						// skip this if there is already a puppet on the board
+						let puppet_index = layout
+							.villagers
+							.iter()
+							.enumerate()
+							.filter(|(_, theoretical)| {
+								theoretical.actually_dead
+									&& *theoretical.inner.true_identity()
+										== VillagerArchetype::Minion(Minion::Puppet)
+							})
+							.map(|(index, _)| index)
+							.next();
+						if (puppet_index.is_none()
+							&& affected_villager.inner.true_identity().can_be_converted())
+							|| (puppet_index.is_some() && puppet_index.unwrap() == affected_index.0)
+						{
 							next_layout.description = format!(
 								"{} - {} was puppeted by {}",
 								next_layout.description, affected_index, affector_index
 							);
+							next_layout.evil_locations.insert(affected_index);
 							affected_villager.inner = ConfirmedVillager::new(
 								affected_villager.inner.instance().clone(),
 								Some(VillagerArchetype::Minion(Minion::Puppet)),
@@ -852,6 +870,16 @@ fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
 }
 
 fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
+	if layout
+		.villagers
+		.iter()
+		.filter(|theoretical| theoretical.inner.true_identity().is_evil())
+		.count()
+		!= game_state.total_evils()
+	{
+		return false;
+	}
+
 	let mut max_outcasts = game_state.draw_stats().outcasts();
 	for _counsellor in layout.villagers.iter().filter(|theoretical| {
 		*theoretical.inner.true_identity() == VillagerArchetype::Minion(Minion::Counsellor)

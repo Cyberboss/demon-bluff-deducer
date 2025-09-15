@@ -7,8 +7,8 @@ use demon_bluff_gameplay_engine::{
 		SlayerKill, UnrevealedKillData, new_game,
 	},
 	testimony::{
-		ArchitectClaim, ConfessorClaim, Direction, DruidClaim, EvilPairsClaim, RoleClaim,
-		ScoutClaim, Testimony,
+		ArchitectClaim, BishopClaim, BishopEvil, ConfessorClaim, Direction, DruidClaim,
+		EvilPairsClaim, RoleClaim, ScoutClaim, Testimony,
 	},
 	villager::{
 		Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
@@ -695,3 +695,132 @@ fn game_25() {
 		None,
 	);
 }
+
+// https://cdn.discordapp.com/attachments/487268744419344384/1416949095666421830/image.png
+// https://cdn.discordapp.com/attachments/487268744419344384/1416956112598601748/image.png
+#[test]
+fn game_26() {
+	let game_state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Knitter),
+			VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+			VillagerArchetype::GoodVillager(GoodVillager::Bishop),
+			VillagerArchetype::GoodVillager(GoodVillager::Bard),
+			VillagerArchetype::GoodVillager(GoodVillager::Knight),
+			VillagerArchetype::GoodVillager(GoodVillager::Oracle),
+			VillagerArchetype::GoodVillager(GoodVillager::Lover),
+			VillagerArchetype::Outcast(Outcast::PlagueDoctor),
+			VillagerArchetype::Outcast(Outcast::Drunk),
+			VillagerArchetype::Minion(Minion::Puppeteer),
+			VillagerArchetype::Demon(Demon::Pooka),
+		],
+		DrawStats::new(5, 1, 1, 1),
+		3,
+		false,
+	);
+
+	run_game(
+		&game_state,
+		vec![
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(1),
+				Some(VillagerInstance::new(
+					VillagerArchetype::Outcast(Outcast::PlagueDoctor),
+					None,
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(2),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Bishop),
+					Some(Expression::Leaf(Testimony::Bishop(BishopClaim::new(
+						&[
+							VillagerIndex::number(2),
+							VillagerIndex::number(4),
+							VillagerIndex::number(6),
+						],
+						true,
+						true,
+						Some(BishopEvil::Minion),
+					)))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(3),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+					Some(Expression::Leaf(Testimony::Confess(ConfessorClaim::Good))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(4),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Bard),
+					Some(Expression::Leaf(Testimony::Bard(Some(
+						NonZeroUsize::new(1).unwrap(),
+					)))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(5),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Knitter),
+					Some(Expression::Leaf(Testimony::Knitter(EvilPairsClaim::new(2)))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(6),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Lover),
+					Some(Testimony::lover(
+						&VillagerIndex::number(6),
+						0,
+						game_state.total_villagers(),
+					)),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(7),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Knight),
+					Some(Expression::Leaf(Testimony::Invincible(
+						VillagerIndex::number(7),
+					))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(8),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Oracle),
+					Some(Testimony::oracle(
+						&[VillagerIndex::number(5), VillagerIndex::number(6)],
+						VillagerArchetype::Minion(Minion::Puppeteer),
+					)),
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(1),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Puppeteer)), false)
+						.expect("Bad kill data?"),
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(2),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Puppet)), false)
+						.expect("Bad kill data?"),
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(8),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Demon(Demon::Pooka)), false)
+						.expect("Bad kill data?"),
+				)),
+			)),
+		],
+		None,
+	);
+}
+//#1: Puppeteer, #2: Puppet, #3: Confessor, #4: Bard, #5: Knitter, #6: Lover, #7: Knight, #8: Oracle (actually a Pooka) - #4 is Drunk - #2 was puppeted by #1 - #7 was corrupted by #8
