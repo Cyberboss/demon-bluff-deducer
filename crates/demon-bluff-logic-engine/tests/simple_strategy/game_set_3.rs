@@ -6,7 +6,9 @@ use demon_bluff_gameplay_engine::{
 		AbilityResult, Action, DrawStats, KillAttempt, KillData, KillResult, RevealResult,
 		SlayerKill, UnrevealedKillData, new_game,
 	},
-	testimony::{ConfessorClaim, Direction, EvilPairsClaim, RoleClaim, ScoutClaim, Testimony},
+	testimony::{
+		ConfessorClaim, Direction, DruidClaim, EvilPairsClaim, RoleClaim, ScoutClaim, Testimony,
+	},
 	villager::{
 		Demon, GoodVillager, Minion, Outcast, VillagerArchetype, VillagerIndex, VillagerInstance,
 	},
@@ -447,5 +449,129 @@ fn game_23() {
 			)),
 		],
 		Some(10),
+	);
+}
+
+// https://cdn.discordapp.com/attachments/487268744419344384/1416931826273878057/image.png
+// https://cdn.discordapp.com/attachments/487268744419344384/1416941370731532401/image.png
+#[test]
+fn game_24() {
+	let game_state = new_game(
+		vec![
+			VillagerArchetype::GoodVillager(GoodVillager::Knight),
+			VillagerArchetype::GoodVillager(GoodVillager::Bard),
+			VillagerArchetype::GoodVillager(GoodVillager::Scout),
+			VillagerArchetype::GoodVillager(GoodVillager::Oracle),
+			VillagerArchetype::GoodVillager(GoodVillager::Druid),
+			VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+			VillagerArchetype::Outcast(Outcast::Drunk),
+			VillagerArchetype::Outcast(Outcast::Wretch),
+			VillagerArchetype::Outcast(Outcast::Bombardier),
+			VillagerArchetype::Minion(Minion::Counsellor),
+			VillagerArchetype::Demon(Demon::Baa),
+		],
+		DrawStats::new(4, 1, 1, 1),
+		2,
+		false,
+	);
+
+	run_game(
+		&game_state,
+		vec![
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(1),
+				Some(VillagerInstance::new(
+					VillagerArchetype::Outcast(Outcast::Bombardier),
+					Some(Expression::Leaf(Testimony::SelfDestruct(
+						VillagerIndex::number(1),
+					))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(2),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Confessor),
+					Some(Expression::Leaf(Testimony::Confess(ConfessorClaim::Good))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(3),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Knight),
+					Some(Expression::Leaf(Testimony::Invincible(
+						VillagerIndex::number(3),
+					))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(4),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Druid),
+					None,
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(5),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Scout),
+					Some(Expression::Leaf(Testimony::Scout(ScoutClaim::new(
+						VillagerArchetype::Demon(Demon::Baa),
+						3,
+					)))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(6),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Bard),
+					Some(Expression::Leaf(Testimony::Bard(Some(
+						NonZeroUsize::new(2).unwrap(),
+					)))),
+				)),
+			)),
+			TestAction::TryReveal(RevealResult::new(
+				VillagerIndex::number(7),
+				Some(VillagerInstance::new(
+					VillagerArchetype::GoodVillager(GoodVillager::Knight),
+					Some(Expression::Leaf(Testimony::Invincible(
+						VillagerIndex::number(7),
+					))),
+				)),
+			)),
+			TestAction::Ability(
+				vec![
+					VillagerIndex::number(1),
+					VillagerIndex::number(3),
+					VillagerIndex::number(7),
+				],
+				AbilityResult::new(
+					VillagerIndex::number(4),
+					Some(Expression::Leaf(Testimony::Druid(DruidClaim::new(
+						&[
+							VillagerIndex::number(1),
+							VillagerIndex::number(3),
+							VillagerIndex::number(7),
+						],
+						None,
+					)))),
+					None,
+				),
+			),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(7),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Demon(Demon::Baa)), false)
+						.expect("Bad kill data?"),
+				)),
+			)),
+			TestAction::TryExecute(KillAttempt::new(
+				VillagerIndex::number(3),
+				Some(KillResult::Revealed(
+					KillData::new(Some(VillagerArchetype::Minion(Minion::Counsellor)), false)
+						.expect("Bad kill data?"),
+				)),
+			)),
+		],
+		None,
 	);
 }

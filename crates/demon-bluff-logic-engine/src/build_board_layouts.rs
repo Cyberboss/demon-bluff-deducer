@@ -296,7 +296,9 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let wretch_spawned_theoreticals = with_wretch_locations(game_state, initial_layout);
 			let plague_doctor_spawned_theoreticals = wretch_spawned_theoreticals
 				.flat_map(|layout| with_real_plague_doctor_locations(game_state, layout));
-			let alchemist_spawned_theoreticals = plague_doctor_spawned_theoreticals
+			let drunk_spawned_theoreticals = plague_doctor_spawned_theoreticals
+				.flat_map(|layout| with_real_drunk_locations(game_state, layout));
+			let alchemist_spawned_theoreticals = drunk_spawned_theoreticals
 				.flat_map(|layout| with_real_alchemist_locations(game_state, layout));
 			let dopple_spawned_theoreticals = alchemist_spawned_theoreticals
 				.flat_map(|layout| with_dopple_locations(game_state, layout));
@@ -609,6 +611,40 @@ gen fn with_real_plague_doctor_locations(
 	yield layout;
 }
 
+gen fn with_real_drunk_locations(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
+	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Drunk))
+		// this check is for if one was revealed already. There can only be one real PD
+		&& layout.villagers.iter().all(|villager| {
+			*villager.inner.true_identity() != VillagerArchetype::Outcast(Outcast::Drunk)
+		}) {
+		for index in 0..layout.villagers.len() {
+			let theoretical = &layout.villagers[index];
+			if matches!(
+				theoretical.inner.true_identity(),
+				VillagerArchetype::GoodVillager(_)
+			) && !theoretical.inner.corrupted()
+			{
+				let mut next_layout = layout.clone();
+				next_layout.description = format!(
+					"{} - {} is Drunk",
+					next_layout.description,
+					VillagerIndex(index)
+				);
+				next_layout.villagers[index].inner = ConfirmedVillager::new(
+					theoretical.inner.instance().clone(),
+					Some(VillagerArchetype::Outcast(Outcast::Drunk)),
+					true,
+				);
+
+				yield next_layout;
+			}
+		}
+	}
+
+	// just in case the drunk isn't drawn
+	yield layout;
+}
+
 gen fn with_wretch_locations(game_state: &GameState, layout: BoardLayout) -> BoardLayout {
 	if game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch))
 		// this check is for if one was revealed already. There can only be one real PD
@@ -777,7 +813,7 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 		max_outcasts += 1;
 	}
 
-	if layout
+	let outcast_count = layout
 		.villagers
 		.iter()
 		.filter(|theoretical| {
@@ -786,9 +822,18 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 				VillagerArchetype::Outcast(_)
 			)
 		})
-		.count()
-		> max_outcasts
-	{
+		.count();
+	if outcast_count > max_outcasts {
+		return false;
+	}
+
+	let hidden_villagers_count = layout
+		.villagers
+		.iter()
+		.filter(|theoretical| !theoretical.revealed)
+		.count();
+
+	if (outcast_count + hidden_villagers_count) < game_state.draw_stats().outcasts() {
 		return false;
 	}
 

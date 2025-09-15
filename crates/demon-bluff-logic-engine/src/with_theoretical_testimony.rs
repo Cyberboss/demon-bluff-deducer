@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashMap, hash_map::Entry};
 use demon_bluff_gameplay_engine::{
 	Expression,
 	game_state::GameState,
-	testimony::{FortuneTellerClaim, SlayResult, Testimony},
+	testimony::{DruidClaim, FortuneTellerClaim, SlayResult, Testimony},
 	villager::{GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
 };
 use itertools::Itertools;
@@ -283,7 +283,87 @@ gen fn theoretical_testimonies(
 			GoodVillager::Bard => todo!("Bard testimony generation"),
 			GoodVillager::Bishop => todo!("Bishop testimony generation"),
 			GoodVillager::Dreamer => todo!("Dreamer testimony generation"),
-			GoodVillager::Druid => todo!("Druid testimony generation"),
+			GoodVillager::Druid => {
+				for index_combo in theoreticals
+					.iter()
+					.enumerate()
+					.map(|(index, _)| VillagerIndex(index))
+					.combinations(3)
+				{
+					let mut targets = BTreeSet::new();
+					targets.extend(index_combo.iter().cloned());
+					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
+
+					let mut outcasts_in_targets = Vec::with_capacity(3);
+					for theoretical in index_combo
+						.iter()
+						.map(|target_index| &theoreticals[target_index.0])
+					{
+						if let VillagerArchetype::Outcast(outcast) =
+							theoretical.inner.true_identity()
+						{
+							outcasts_in_targets.push(outcast.clone());
+						}
+					}
+
+					if outcasts_in_targets.len() == 0 {
+						let mut next_layout = board_config.clone();
+						next_layout.description = format!(
+							"{} - {} says no outcasts among {}, {}, and {}",
+							next_layout.description,
+							testifier_index,
+							index_combo[0],
+							index_combo[1],
+							index_combo[2],
+						);
+
+						let instance_to_modify = next_layout.villagers[testifier_index.0]
+							.inner
+							.instance_mut();
+
+						let testimony = Testimony::Druid(DruidClaim::new(
+							index_combo.as_slice().try_into().unwrap(),
+							None,
+						));
+						let expression = Expression::Leaf(testimony.clone());
+						instance_to_modify.set_testimony(expression);
+
+						let testimonies =
+							vec![IndexTestimony::new(testifier_index.clone(), testimony)];
+
+						yield (next_layout, ability_attempt.clone(), testimonies);
+					} else {
+						for outcast in outcasts_in_targets {
+							let mut next_layout = board_config.clone();
+							next_layout.description = format!(
+								"{} - {} says {} among {}, {}, and {}",
+								next_layout.description,
+								testifier_index,
+								outcast,
+								index_combo[0],
+								index_combo[1],
+								index_combo[2],
+							);
+
+							let instance_to_modify = next_layout.villagers[testifier_index.0]
+								.inner
+								.instance_mut();
+
+							let testimony = Testimony::Druid(DruidClaim::new(
+								index_combo.as_slice().try_into().unwrap(),
+								Some(outcast),
+							));
+							let expression = Expression::Leaf(testimony.clone());
+							instance_to_modify.set_testimony(expression);
+
+							let testimonies =
+								vec![IndexTestimony::new(testifier_index.clone(), testimony)];
+
+							yield (next_layout, ability_attempt.clone(), testimonies);
+						}
+					}
+				}
+			}
 			GoodVillager::FortuneTeller => {
 				for index_combo in theoreticals
 					.iter()
@@ -312,7 +392,7 @@ gen fn theoretical_testimonies(
 
 						instance_to_modify.set_testimony(expression);
 
-						let mut testimonies = vec![IndexTestimony::new(
+						let testimonies = vec![IndexTestimony::new(
 							testifier_index.clone(),
 							Testimony::FortuneTeller(FortuneTellerClaim::new(
 								index_combo.as_slice().try_into().unwrap(),

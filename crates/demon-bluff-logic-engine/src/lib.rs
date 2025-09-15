@@ -1306,6 +1306,11 @@ fn validate_assignment(
 					let mut i = 0;
 					loop {
 						i += 1;
+						if i > distance.get() {
+							matches = false;
+							break;
+						}
+
 						let clockwise_read =
 							index_offset(&bard_index, game_state.total_villagers(), i, true);
 						let counterclockwise_read =
@@ -1349,6 +1354,33 @@ fn validate_assignment(
 					!correct_1 && !correct_2
 				}
 			}
+			Testimony::Druid(druid_claim) => match druid_claim.outcast() {
+				Some(minion) => {
+					let mut found_match = false;
+					for target in druid_claim.targets() {
+						let target_theoretical = &theoreticals[target.0];
+						found_match |= if_unknown_good_use_truthful(
+							target_theoretical,
+							*target_theoretical.inner.true_identity()
+								== VillagerArchetype::Outcast(minion.clone()),
+							true,
+						);
+					}
+
+					found_match
+				}
+				None => {
+					let mut found_match = false;
+					for target in druid_claim.targets() {
+						found_match |= matches!(
+							theoreticals[target.0].inner.true_identity(),
+							VillagerArchetype::Outcast(_)
+						);
+					}
+
+					!found_match
+				}
+			},
 		};
 
 		let full_testimony = board_config.villagers[index_testimony.index.0]

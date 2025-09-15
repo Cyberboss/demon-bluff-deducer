@@ -9,7 +9,7 @@ use strum::Display;
 
 use crate::{
 	Expression,
-	villager::{VillagerArchetype, VillagerIndex},
+	villager::{Outcast, VillagerArchetype, VillagerIndex},
 };
 const ALCHEMIST_CURE_RANGE: usize = 2;
 
@@ -92,6 +92,12 @@ impl ScoutClaim {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct EvilPairsClaim(usize);
 
+impl Display for EvilPairsClaim {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{} pairs of adjacent evils", self.0)
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord, Display)]
 pub enum AffectType {
 	Puppeted,
@@ -144,9 +150,26 @@ impl FortuneTellerClaim {
 	}
 }
 
-impl Display for EvilPairsClaim {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{} pairs of adjacent evils", self.0)
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
+pub struct DruidClaim {
+	targets: [VillagerIndex; 3],
+	outcast: Option<Outcast>,
+}
+
+impl DruidClaim {
+	pub fn new(targets: &[VillagerIndex; 3], outcast: Option<Outcast>) -> Self {
+		Self {
+			targets: targets.clone(),
+			outcast,
+		}
+	}
+
+	pub fn targets(&self) -> &[VillagerIndex; 3] {
+		&self.targets
+	}
+
+	pub fn outcast(&self) -> &Option<Outcast> {
+		&self.outcast
 	}
 }
 
@@ -174,6 +197,7 @@ pub enum Testimony {
 	Knitter(EvilPairsClaim),
 	Bard(Option<NonZeroUsize>),
 	FortuneTeller(FortuneTellerClaim),
+	Druid(DruidClaim),
 }
 
 impl EvilPairsClaim {
@@ -651,6 +675,26 @@ impl Display for Testimony {
 					"FALSE"
 				}
 			),
+			Self::Druid(druid_claim) => {
+				write!(f, "Among ")?;
+				let mut first = true;
+				for target in druid_claim.targets() {
+					if first {
+						first = false;
+					} else {
+						write!(f, ", ")?;
+					}
+
+					write!(f, "{}", target)?;
+				}
+
+				write!(f, " there ",)?;
+
+				match druid_claim.outcast() {
+					Some(minion) => write!(f, "is a {}", minion),
+					None => write!(f, "are NO outcasts"),
+				}
+			}
 		}
 	}
 }
