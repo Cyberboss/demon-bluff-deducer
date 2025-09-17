@@ -21,7 +21,7 @@ use crate::{helpers::TestAction, simple_strategy::run_game_ack_unsolvable};
 // https://cdn.discordapp.com/attachments/487268744419344384/1417689458253234176/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1417695190604320808/image.png
 #[test]
-fn game_31() {
+fn game_0031() {
 	// TODO: This test is SLOW profile it!
 	let game_state = new_game(
 		vec![

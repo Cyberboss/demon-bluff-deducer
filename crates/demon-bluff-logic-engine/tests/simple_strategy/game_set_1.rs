@@ -13,7 +13,7 @@ use super::run_game;
 use crate::helpers::TestAction;
 
 #[test]
-pub fn game_1() {
+pub fn game_0001() {
 	let log = log::logger();
 
 	let mut state = new_game(
@@ -96,7 +96,7 @@ pub fn game_1() {
 }
 
 #[test]
-pub fn game_2() {
+pub fn game_0002() {
 	let log = log::logger();
 
 	let mut state = new_game(
@@ -155,7 +155,7 @@ pub fn game_2() {
 }
 
 #[test]
-pub fn game_3() {
+pub fn game_0003() {
 	let log = log::logger();
 
 	let mut state = new_game(
@@ -231,7 +231,7 @@ pub fn game_3() {
 }
 
 #[test]
-fn game_4() {
+fn game_0004() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -309,7 +309,7 @@ fn game_4() {
 }
 
 #[test]
-fn game_5() {
+fn game_0005() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -404,7 +404,7 @@ fn game_5() {
 }
 
 #[test]
-fn game_6() {
+fn game_0006() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -497,7 +497,7 @@ fn game_6() {
 }
 
 #[test]
-fn game_7() {
+fn game_0007() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -592,7 +592,7 @@ fn game_7() {
 }
 
 #[test]
-fn game_8() {
+fn game_0008() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -685,7 +685,7 @@ fn game_8() {
 }
 
 #[test]
-fn game_9() {
+fn game_0009() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),
@@ -778,7 +778,7 @@ fn game_9() {
 }
 
 #[test]
-fn game_10() {
+fn game_0010() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Lover),

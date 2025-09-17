@@ -21,7 +21,7 @@ use crate::{helpers::TestAction, simple_strategy::run_game_ack_unsolvable};
 // https://cdn.discordapp.com/attachments/1145879778457550850/1415492973050990652/image.png
 // https://cdn.discordapp.com/attachments/1145879778457550850/1415496362002354247/image.png
 #[test]
-fn game_21() {
+fn game_0021() {
 	// TODO: This test is SLOW profile it!
 	let game_state = new_game(
 		vec![
@@ -154,7 +154,7 @@ fn game_21() {
 // https://cdn.discordapp.com/attachments/1145879778457550850/1415501038366101535/image.png
 // This game didn't seem solvable...
 #[test]
-fn game_22() {
+fn game_0022() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Knight),
@@ -316,7 +316,7 @@ fn game_22() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416926552557359205/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416928394201010321/image.png
 #[test]
-fn game_23() {
+fn game_0023() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Enlightened),
@@ -455,7 +455,7 @@ fn game_23() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416931826273878057/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416941370731532401/image.png
 #[test]
-fn game_24() {
+fn game_0024() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Knight),
@@ -579,7 +579,7 @@ fn game_24() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416944187521110118/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416948590609170563/image.png
 #[test]
-fn game_25() {
+fn game_0025() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Medium),
@@ -698,7 +698,7 @@ fn game_25() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416949095666421830/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416956112598601748/image.png
 #[test]
-fn game_26() {
+fn game_0026() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Knitter),
@@ -826,7 +826,7 @@ fn game_26() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416969360433745920/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416970735338917980/image.png
 #[test]
-fn game_27() {
+fn game_0027() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Confessor),
@@ -908,7 +908,7 @@ fn game_27() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416971173266325564/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416973680822452307/image.png
 #[test]
-fn game_28() {
+fn game_0028() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Druid),
@@ -1080,7 +1080,7 @@ fn game_28() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1416994656121524357/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1417283366759432314/image.png
 #[test]
-fn game_29() {
+fn game_0029() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Empress),
@@ -1233,7 +1233,7 @@ fn game_29() {
 // https://cdn.discordapp.com/attachments/487268744419344384/1417685446737268818/image.png
 // It was #3 poisoner, #9 Baa
 #[test]
-fn game_30() {
+fn game_0030() {
 	let game_state = new_game(
 		vec![
 			VillagerArchetype::GoodVillager(GoodVillager::Druid),
