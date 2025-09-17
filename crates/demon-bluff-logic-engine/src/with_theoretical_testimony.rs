@@ -296,16 +296,25 @@ gen fn theoretical_testimonies(
 					let target_is_evil = theoretical.inner.true_identity().is_evil();
 
 					if testifier.inner.will_lie() {
-						if target_is_evil {
+						for valid_evil in game_state
+							.deck()
+							.iter()
+							.filter(|archetype| archetype.is_evil())
+						{
+							if valid_evil == theoretical.inner.true_identity() {
+								continue;
+							}
+
 							let mut next_layout = board_config.clone();
 							next_layout.description = format!(
-								"{} - {} said {} was a cabbage",
-								next_layout.description, testifier_index, target_index
+								"{} - {} says {} is a {} (LIE)",
+								next_layout.description, testifier_index, target_index, valid_evil
 							);
 
-							let testimony =
-								Testimony::Dreamer(DreamerClaim::new(target_index, None));
-
+							let testimony = Testimony::Dreamer(DreamerClaim::new(
+								target_index.clone(),
+								Some(theoretical.inner.true_identity().clone()),
+							));
 							let expression = Expression::Leaf(testimony.clone());
 							next_layout.villagers[testifier_index.0]
 								.inner
@@ -316,36 +325,6 @@ gen fn theoretical_testimonies(
 								vec![IndexTestimony::new(testifier_index.clone(), testimony)];
 
 							yield (next_layout, ability_attempt.clone(), testimonies);
-						} else {
-							for valid_evil in game_state
-								.deck()
-								.iter()
-								.filter(|archetype| archetype.is_evil())
-							{
-								let mut next_layout = board_config.clone();
-								next_layout.description = format!(
-									"{} - {} says {} is a {} (LIE)",
-									next_layout.description,
-									testifier_index,
-									target_index,
-									valid_evil
-								);
-
-								let testimony = Testimony::Dreamer(DreamerClaim::new(
-									target_index.clone(),
-									Some(theoretical.inner.true_identity().clone()),
-								));
-								let expression = Expression::Leaf(testimony.clone());
-								next_layout.villagers[testifier_index.0]
-									.inner
-									.instance_mut()
-									.set_testimony(expression);
-
-								let testimonies =
-									vec![IndexTestimony::new(testifier_index.clone(), testimony)];
-
-								yield (next_layout, ability_attempt.clone(), testimonies);
-							}
 						}
 					} else {
 						let mut next_layout = board_config.clone();
