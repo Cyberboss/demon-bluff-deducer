@@ -907,7 +907,6 @@ fn game_27() {
 
 // https://cdn.discordapp.com/attachments/487268744419344384/1416971173266325564/image.png
 // https://cdn.discordapp.com/attachments/487268744419344384/1416973680822452307/image.png
-// Another one that might be unsolvable
 #[test]
 fn game_28() {
 	let game_state = new_game(
