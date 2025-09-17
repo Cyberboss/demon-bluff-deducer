@@ -100,8 +100,6 @@ fn run_game_core(
 	let total_actions = expected_actions.len();
 	let mut log = log::logger();
 
-	colog::init();
-
 	for (index, action) in expected_actions.into_iter().enumerate() {
 		if let Some(log_after) = log_after
 			&& log_after == index

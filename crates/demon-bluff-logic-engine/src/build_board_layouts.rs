@@ -4,6 +4,7 @@ use std::{
 	str::FromStr,
 };
 
+use dashmap::DashSet;
 use demon_bluff_gameplay_engine::{
 	Expression,
 	affect::Affect,
@@ -53,7 +54,7 @@ pub struct BoardLayout {
 	pub description: String,
 }
 
-pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
+pub fn build_board_layouts(game_state: &GameState) -> DashSet<BoardLayout> {
 	let zone = span!("Build Board Layouts");
 
 	info!("Layout allocation size: {}", size_of::<BoardLayout>());
@@ -134,10 +135,9 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 		.collect();
 
 	let zone = span!("BBC Work Zone");
-	let layouts: HashSet<BoardLayout> = iterations
+	let layouts: DashSet<BoardLayout> = iterations
 		.into_par_iter()
 		.filter_map(|(disguise_index_combo_index, evil_archetype_combo_index)| {
-			let zone = span!("BBC Work Unit");
 			let disguise_index_combo = &disguise_index_permutations[disguise_index_combo_index];
 			let evil_archetype_combo = &evil_archetype_permutations[evil_archetype_combo_index];
 
@@ -145,7 +145,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let mut first_desc = true;
 			let mut desc = String::new();
 
-			let zone = span!("Build initial layout");
 			let theoreticals: Vec<TheoreticalVillager> = game_state
 				.villagers()
 				.iter()
@@ -329,8 +328,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			Some(initial_layout)
 		})
 		.flat_map(|initial_layout| {
-			let zone = span!("Apply passes");
-
 			// TODO: Test pass order once deck builder mode releases
 			let wretch_spawned_theoreticals = with_wretch_locations(game_state, initial_layout);
 			let plague_doctor_spawned_theoreticals = wretch_spawned_theoreticals
@@ -358,8 +355,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				alchemist_cured_theoreticals.filter(|layout| validate_board(game_state, layout));
 
 			let result = valid_boards.collect::<Vec<BoardLayout>>();
-
-			drop(zone);
 
 			result
 		})
