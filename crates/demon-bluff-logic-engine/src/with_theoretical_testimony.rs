@@ -296,13 +296,12 @@ gen fn theoretical_testimonies(
 					let target_is_evil = theoretical.inner.true_identity().is_evil();
 
 					if testifier.inner.will_lie() {
-						for valid_evil in game_state
-							.deck()
-							.iter()
-							.filter(|archetype| archetype.is_evil())
-						{
-							if valid_evil == theoretical.inner.true_identity() {
-								continue;
+						let check_evil = |valid_evil,
+						                  testifier_index: &VillagerIndex,
+						                  ability_attempt: &AbilityAttempt,
+						                  target_index: &VillagerIndex| {
+							if valid_evil == *theoretical.inner.true_identity() {
+								return None;
 							}
 
 							let mut next_layout = board_config.clone();
@@ -324,7 +323,46 @@ gen fn theoretical_testimonies(
 							let testimonies =
 								vec![IndexTestimony::new(testifier_index.clone(), testimony)];
 
-							yield (next_layout, ability_attempt.clone(), testimonies);
+							Some((next_layout, ability_attempt.clone(), testimonies))
+						};
+
+						let mut any_valid_evil = false;
+
+						let in_game_evils: Vec<VillagerArchetype> = game_state
+							.deck()
+							.iter()
+							.filter(|archetype| archetype.is_evil())
+							.cloned()
+							.collect();
+
+						for i in 0..in_game_evils.len() {
+							let valid_evil = in_game_evils[i].clone();
+							if let Some(result) = check_evil(
+								valid_evil,
+								&testifier_index,
+								&ability_attempt,
+								&target_index,
+							) {
+								any_valid_evil = true;
+								yield result;
+							}
+						}
+
+						if !any_valid_evil {
+							for valid_evil in VillagerArchetype::iter() {
+								if in_game_evils.contains(&valid_evil) {
+									continue;
+								}
+
+								if let Some(result) = check_evil(
+									valid_evil,
+									&testifier_index,
+									&ability_attempt,
+									&target_index,
+								) {
+									yield result;
+								}
+							}
 						}
 					} else {
 						let mut next_layout = board_config.clone();
