@@ -2,8 +2,8 @@ use std::collections::{BTreeSet, HashMap, hash_map::Entry};
 
 use demon_bluff_gameplay_engine::{
 	Expression,
-	game_state::GameState,
-	testimony::{DruidClaim, FortuneTellerClaim, SlayResult, Testimony},
+	game_state::{self, GameState},
+	testimony::{DreamerClaim, DruidClaim, FortuneTellerClaim, SlayResult, Testimony},
 	villager::{GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
 };
 use itertools::Itertools;
@@ -70,6 +70,7 @@ pub fn with_theoretical_testimony(
 			.map(|layout_with_testimony_assigments| {
 				let local_results: Vec<(AbilityAttempt, LayoutWithTestimonyAssigments)> =
 					generate_theoreticals_for_first_villager_with_ability(
+						game_state,
 						layout_with_testimony_assigments,
 					)
 					.collect();
@@ -220,6 +221,7 @@ pub fn with_theoretical_testimony(
 }
 
 gen fn generate_theoreticals_for_first_villager_with_ability(
+	game_state: &GameState,
 	original_layout_with_testimonies: &LayoutWithTestimonyAssigments,
 ) -> (AbilityAttempt, LayoutWithTestimonyAssigments) {
 	for (index, theoretical) in original_layout_with_testimonies
@@ -232,6 +234,7 @@ gen fn generate_theoreticals_for_first_villager_with_ability(
 			&& let None = theoretical.inner.instance().testimony()
 		{
 			for (board_layout, ability_attempt, generated_testimonies) in theoretical_testimonies(
+				game_state,
 				&original_layout_with_testimonies.layout,
 				VillagerIndex(index),
 			) {
@@ -270,6 +273,7 @@ gen fn generate_theoreticals_for_first_villager_with_ability(
 }
 
 gen fn theoretical_testimonies(
+	game_state: &GameState,
 	board_config: &BoardLayout,
 	testifier_index: VillagerIndex,
 ) -> (BoardLayout, AbilityAttempt, Vec<IndexTestimony>) {
@@ -282,7 +286,102 @@ gen fn theoretical_testimonies(
 			GoodVillager::Alchemist => todo!("Alchemist testimony generation"),
 			GoodVillager::Bard => todo!("Bard testimony generation"),
 			GoodVillager::Bishop => todo!("Bishop testimony generation"),
-			GoodVillager::Dreamer => todo!("Dreamer testimony generation"),
+			GoodVillager::Dreamer => {
+				for (index, theoretical) in theoreticals.iter().enumerate() {
+					let mut targets = BTreeSet::new();
+					let target_index = VillagerIndex(index);
+					targets.insert(target_index.clone());
+					let ability_attempt = AbilityAttempt::new(testifier_index.clone(), targets);
+
+					let target_is_evil = theoretical.inner.true_identity().is_evil();
+
+					if testifier.inner.will_lie() {
+						if target_is_evil {
+							let mut next_layout = board_config.clone();
+							next_layout.description = format!(
+								"{} - {} said {} was a cabbage",
+								next_layout.description, testifier_index, target_index
+							);
+
+							let testimony =
+								Testimony::Dreamer(DreamerClaim::new(target_index, None));
+
+							let expression = Expression::Leaf(testimony.clone());
+							next_layout.villagers[testifier_index.0]
+								.inner
+								.instance_mut()
+								.set_testimony(expression);
+
+							let testimonies =
+								vec![IndexTestimony::new(testifier_index.clone(), testimony)];
+
+							yield (next_layout, ability_attempt.clone(), testimonies);
+						} else {
+							for valid_evil in game_state
+								.deck()
+								.iter()
+								.filter(|archetype| archetype.is_evil())
+							{
+								let mut next_layout = board_config.clone();
+								next_layout.description = format!(
+									"{} - {} says {} is a {} (LIE)",
+									next_layout.description,
+									testifier_index,
+									target_index,
+									valid_evil
+								);
+
+								let testimony = Testimony::Dreamer(DreamerClaim::new(
+									target_index.clone(),
+									Some(theoretical.inner.true_identity().clone()),
+								));
+								let expression = Expression::Leaf(testimony.clone());
+								next_layout.villagers[testifier_index.0]
+									.inner
+									.instance_mut()
+									.set_testimony(expression);
+
+								let testimonies =
+									vec![IndexTestimony::new(testifier_index.clone(), testimony)];
+
+								yield (next_layout, ability_attempt.clone(), testimonies);
+							}
+						}
+					} else {
+						let mut next_layout = board_config.clone();
+						let testimony;
+						if target_is_evil {
+							next_layout.description = format!(
+								"{} - {} exposed {} in a dream",
+								next_layout.description, testifier_index, target_index
+							);
+
+							testimony = Testimony::Dreamer(DreamerClaim::new(
+								target_index,
+								Some(theoretical.inner.true_identity().clone()),
+							))
+						} else {
+							next_layout.description = format!(
+								"{} - {} said {} was a cabbage",
+								next_layout.description, testifier_index, target_index
+							);
+
+							testimony = Testimony::Dreamer(DreamerClaim::new(target_index, None))
+						}
+
+						let expression = Expression::Leaf(testimony.clone());
+						next_layout.villagers[testifier_index.0]
+							.inner
+							.instance_mut()
+							.set_testimony(expression);
+
+						let testimonies =
+							vec![IndexTestimony::new(testifier_index.clone(), testimony)];
+
+						yield (next_layout, ability_attempt.clone(), testimonies);
+					}
+				}
+			}
 			GoodVillager::Druid => {
 				for index_combo in theoreticals
 					.iter()
