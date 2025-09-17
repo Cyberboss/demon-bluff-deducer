@@ -15,5 +15,5 @@ demon-bluff-logic-engine = { path = "../demon-bluff-logic-engine" }
 # ocrs = "0.10.4"
 # rten = "0.21.0"
 # rustautogui = "2.5.0"
-serde_json = "1.0.143"
+serde_json = "1.0.145"
 # thiserror = "2.0.16"
