@@ -5,9 +5,10 @@ use std::{
 };
 
 use demon_bluff_gameplay_engine::{
+	Expression,
 	affect::Affect,
 	game_state::GameState,
-	testimony::{AffectType, index_offset},
+	testimony::{AffectType, Testimony, index_offset},
 	villager::{
 		ConfirmedVillager, Demon, GoodVillager, Minion, Outcast, Villager, VillagerArchetype,
 		VillagerIndex, VillagerInstance,
@@ -22,7 +23,6 @@ pub struct TheoreticalVillager {
 	pub actually_dead: bool,
 	pub cured_by: Option<VillagerIndex>,
 	pub revealed: bool,
-	pub baked_from: Option<VillagerArchetype>,
 	pub affection: Option<AffectType>,
 }
 
@@ -32,7 +32,6 @@ impl TheoreticalVillager {
 			actually_dead: dead,
 			inner: value,
 			cured_by: None,
-			baked_from: None,
 			affection: None,
 			revealed,
 		}
@@ -315,8 +314,6 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				shaman_affected_theoreticals.flat_map(with_plague_doctors_corruptions);
 			let alchemist_cured_theoreticals =
 				plague_doctor_affected_theoreticals.map(apply_alchemist_cures);
-			// TODO: Drunk pass (alchemist cannot cure)
-			// TODO: Baker pass
 
 			let valid_boards =
 				alchemist_cured_theoreticals.filter(|layout| validate_board(game_state, layout));
@@ -843,10 +840,29 @@ fn apply_alchemist_cures(mut layout: BoardLayout) -> BoardLayout {
 
 	for index in (0..total_villagers).rev() {
 		let theoretical = &layout.villagers[index];
-		if *theoretical.inner.instance().archetype()
-			!= VillagerArchetype::GoodVillager(GoodVillager::Alchemist)
-			|| theoretical.inner.will_lie()
+
+		let mut is_effective_alchemist = *theoretical.inner.instance().archetype()
+			== VillagerArchetype::GoodVillager(GoodVillager::Alchemist);
+
+		if !is_effective_alchemist
+			&& theoretical.revealed
+			&& *theoretical.inner.instance().archetype()
+				== VillagerArchetype::GoodVillager(GoodVillager::Baker)
 		{
+			if let Some(Expression::Leaf(Testimony::Baker(baker_claim))) =
+				theoretical.inner.instance().testimony()
+			{
+				if let Some(previous_identity) = baker_claim.was()
+					&& *previous_identity == GoodVillager::Alchemist
+				{
+					is_effective_alchemist = true;
+				}
+			} else {
+				unreachable!("A revealed baker must have a testimony!");
+			}
+		}
+
+		if !is_effective_alchemist || theoretical.inner.will_lie() {
 			continue;
 		}
 
@@ -922,6 +938,11 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 		}
 
 		if let VillagerArchetype::GoodVillager(good_villager) = theoretical.inner.true_identity() {
+			if *good_villager == GoodVillager::Baker {
+				// leave me alone lol
+				continue;
+			}
+
 			let mut seen_already = true;
 			seen_good_villagers.get_or_insert_with(good_villager, |good_villager| {
 				seen_already = false;
@@ -931,6 +952,41 @@ fn validate_board(game_state: &GameState, layout: &BoardLayout) -> bool {
 			if seen_already {
 				return false;
 			}
+		}
+	}
+
+	// baker validation
+	// originals never lie
+	// dupes can only exist via shaman or dopple
+	for index in game_state.reveal_order() {
+		let theoretical = &layout.villagers[index.0];
+		if *theoretical.inner.instance().archetype()
+			!= VillagerArchetype::GoodVillager(GoodVillager::Baker)
+		{
+			continue;
+		}
+
+		if let Some(Expression::Leaf(Testimony::Baker(baker_claim))) =
+			theoretical.inner.instance().testimony()
+		{
+			let bakers_true_identity = theoretical.inner.true_identity();
+			let baker_is_real = *bakers_true_identity
+				== VillagerArchetype::GoodVillager(GoodVillager::Baker)
+				|| *bakers_true_identity == VillagerArchetype::Outcast(Outcast::Doppelganger);
+			match baker_claim.was() {
+				Some(_) => {
+					if baker_is_real && !theoretical.inner.will_lie() {
+						return false;
+					}
+				}
+				None => {
+					if !baker_is_real {
+						return false;
+					}
+				}
+			}
+		} else {
+			unreachable!("A revealed baker must always have a testimony!");
 		}
 	}
 

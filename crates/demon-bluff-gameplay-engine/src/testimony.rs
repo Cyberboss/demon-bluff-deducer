@@ -6,7 +6,7 @@ use strum::Display;
 
 use crate::{
 	Expression,
-	villager::{Outcast, VillagerArchetype, VillagerIndex},
+	villager::{GoodVillager, Outcast, VillagerArchetype, VillagerIndex},
 };
 const ALCHEMIST_CURE_RANGE: usize = 2;
 
@@ -32,15 +32,15 @@ pub enum ArchitectClaim {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
 pub struct BakerClaim {
-	was: Option<VillagerArchetype>,
+	was: Option<GoodVillager>,
 }
 
 impl BakerClaim {
-	pub fn new(was: Option<VillagerArchetype>) -> Self {
+	pub fn new(was: Option<GoodVillager>) -> Self {
 		Self { was }
 	}
 
-	pub fn was(&self) -> &Option<VillagerArchetype> {
+	pub fn was(&self) -> &Option<GoodVillager> {
 		&self.was
 	}
 }
@@ -264,7 +264,7 @@ pub enum Testimony {
 	Affected(Option<AffectedClaim>),
 	FakeEvil(VillagerIndex),
 	SelfDestruct(VillagerIndex),
-	Slayed(SlayResult),
+	SlayAttempt(SlayResult),
 	Confess(ConfessorClaim),
 	Scout(ScoutClaim),
 	// as sane as it'd sound to express these in terms of good/evil it blows up the problem space way too much due to associating testimonies with indexes in the boolean expression tree
@@ -613,25 +613,6 @@ impl Testimony {
 			_ => panic!("A jester can only have up to {} targets", targets.len()),
 		}
 	}
-
-	pub fn slayer(
-		slayer: VillagerIndex,
-		target: VillagerIndex,
-		slayed: bool,
-	) -> Expression<Testimony> {
-		if slayed {
-			Expression::Leaf(Testimony::Evil(target))
-		} else {
-			// kinda complicated because if a corrupt slayer fails to kill a good villager, we need to "explain" ourselves throughly so the engine doesn't erroneously label us exclusively good
-			Expression::And(
-				Box::new(Expression::Leaf(Testimony::Good(slayer.clone()))),
-				Box::new(Expression::Not(Box::new(Expression::Or(
-					Box::new(Expression::Leaf(Testimony::Evil(target))),
-					Box::new(Expression::Leaf(Testimony::Corrupt(slayer))),
-				)))),
-			)
-		}
-	}
 }
 
 impl Display for Testimony {
@@ -658,7 +639,7 @@ impl Display for Testimony {
 			Self::SelfDestruct(villager_index) => {
 				write!(f, "{villager_index} will self destruct")
 			}
-			Self::Slayed(slay_result) => {
+			Self::SlayAttempt(slay_result) => {
 				if slay_result.slayed {
 					write!(f, "I killed {}", slay_result.index)
 				} else {

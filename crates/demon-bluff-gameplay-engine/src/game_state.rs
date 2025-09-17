@@ -627,7 +627,8 @@ impl GameState {
 						}
 
 						if let Expression::<Testimony>::Leaf(unary_testimony) = &testimony
-							&& let Testimony::Slayed(slay_testimony) = unary_testimony
+							&& let Testimony::SlayAttempt(slay_testimony) = unary_testimony
+							&& slay_testimony.slayed()
 						{
 							match result.slayer_kill {
 								Some(local_slayer_kill) => {

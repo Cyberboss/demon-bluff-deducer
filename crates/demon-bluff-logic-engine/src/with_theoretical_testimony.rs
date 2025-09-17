@@ -519,6 +519,14 @@ gen fn theoretical_testimonies(
 						continue;
 					}
 
+					if target_theoretical.inner.true_identity().appears_evil()
+						&& !target_theoretical.inner.true_identity().is_evil()
+					{
+						// killing wretches is NOT a good idea
+						// and the engine loves to try it, because it's already validated the target CAN be killed
+						continue;
+					}
+
 					let mut targets = BTreeSet::new();
 					let target_index = VillagerIndex(target_index);
 					targets.insert(target_index.clone());
@@ -552,7 +560,8 @@ gen fn theoretical_testimonies(
 					let testifier_instance_to_modify = next_layout.villagers[testifier_index.0]
 						.inner
 						.instance_mut();
-					let raw_testimony = Testimony::Slayed(SlayResult::new(target_index, slayed));
+					let raw_testimony =
+						Testimony::SlayAttempt(SlayResult::new(target_index, slayed));
 					testifier_instance_to_modify
 						.set_testimony(Expression::Leaf(raw_testimony.clone()));
 

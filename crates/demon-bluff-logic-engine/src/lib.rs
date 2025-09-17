@@ -24,7 +24,10 @@ use std::{
 	cmp::max,
 	collections::{BTreeSet, HashMap, HashSet, hash_map::Entry},
 	fmt::format,
-	sync::atomic::{AtomicI32, Ordering},
+	sync::{
+		Mutex,
+		atomic::{AtomicI32, Ordering},
+	},
 	usize,
 };
 
@@ -303,7 +306,8 @@ pub fn predict(
 					}
 
 					let factor = highest_entry as f64 / total_board_layouts as f64;
-					let highest_evils_layout = highest_evils_layout.expect("sign bruh");
+					let highest_evils_layout =
+						highest_evils_layout.expect("sign of bad validations bruh");
 
 					let problem_space_reduction = mutually_exclusive_groups.len();
 
@@ -713,7 +717,10 @@ fn predict_board_configs(
 
 					let (layout, _) = &potential_board_configurations[board_index];
 
-					if board_expression.satisfies(|variable_index| assignment[variable_index])
+					let assignment_satisfies =
+						board_expression.satisfies(|variable_index| assignment[variable_index]);
+
+					if assignment_satisfies
 						&& validate_assignment(
 							log,
 							&assignment,
@@ -1026,6 +1033,20 @@ fn validate_assignment(
 ) -> bool {
 	debug_assert_eq!(variables.len(), assignment.len());
 
+	let mut interested = false;
+	if false
+		&& game_state.reveal_order().len() == 9
+		&& *board_config.villagers[0].inner.true_identity()
+			== VillagerArchetype::Minion(Minion::Shaman)
+		&& *board_config.villagers[6].inner.true_identity()
+			== VillagerArchetype::Demon(Demon::Pooka)
+		&& board_config.villagers[1].inner.corrupted()
+		&& board_config.villagers[5].inner.corrupted()
+		&& board_config.villagers[7].inner.corrupted()
+	{
+		interested = true;
+	}
+
 	let theoreticals = &board_config.villagers;
 	for (variable_index, truthful) in assignment.iter().enumerate() {
 		let index_testimony = &variables[variable_index];
@@ -1108,8 +1129,18 @@ fn validate_assignment(
 				cure_count == *amount
 			}
 			Testimony::Baker(baker_claim) => {
-				let theoretical = &theoreticals[index_testimony.index.0];
-				theoretical.baked_from == *baker_claim.was()
+				// not too sure what validation can be performed here...
+				match baker_claim.was() {
+					Some(_) => {
+						let theoretical_identity =
+							theoreticals[index_testimony.index.0].inner.true_identity();
+						*theoretical_identity
+							== VillagerArchetype::GoodVillager(GoodVillager::Baker)
+							|| *theoretical_identity
+								== VillagerArchetype::Outcast(Outcast::Doppelganger)
+					}
+					None => true,
+				}
 			}
 			Testimony::Role(role_claim) => {
 				let theoretical = &theoreticals[role_claim.index().0];
@@ -1162,17 +1193,18 @@ fn validate_assignment(
 					bombardier_in_play,
 				)
 			}
-			Testimony::Slayed(slay_result) => {
+			Testimony::SlayAttempt(slay_result) => {
 				if slay_result.slayed() {
 					true
-				} else {
-					let confirmed_target = &theoreticals[slay_result.index().0].inner;
-					let theoretical = &theoreticals[index_testimony.index.0];
+				} else if *truthful {
+					let target = &theoreticals[slay_result.index().0];
 					if_unknown_good_use_truthful(
-						&theoreticals[slay_result.index().0],
-						!confirmed_target.true_identity().appears_evil(),
+						target,
+						!target.inner.true_identity().appears_evil(),
 						true,
-					) || theoretical.inner.corrupted()
+					)
+				} else {
+					false
 				}
 			}
 			Testimony::Confess(confession) => {
@@ -1514,20 +1546,28 @@ fn validate_assignment(
 			}
 		};
 
-		let full_testimony = board_config.villagers[index_testimony.index.0]
-			.inner
-			.instance()
-			.testimony()
-			.as_ref()
-			.unwrap();
-
 		if testimony_valid != *truthful {
-			trace!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
+			let full_testimony = board_config.villagers[index_testimony.index.0]
+				.inner
+				.instance()
+				.testimony()
+				.as_ref()
+				.unwrap();
+
+			if interested {
+				info!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
+			} else {
+				trace!(logger: log, "Validation failed ({}: {}|FULL: {}): {}", if *truthful { "TRUE" } else { "FALSE" }, index_testimony, full_testimony, board_config.description);
+			}
 			return false;
 		}
 	}
 
-	trace!(logger: log, "Validation passed: {}", board_config.description);
+	if interested {
+		info!(logger: log, "Validation passed: {}", board_config.description);
+	} else {
+		trace!(logger: log, "Validation passed: {}", board_config.description);
+	}
 
 	true
 }
