@@ -6,6 +6,7 @@ use crate::helpers::TestAction;
 mod game_set_1;
 mod game_set_2;
 mod game_set_3;
+mod game_set_4;
 
 fn run_game(game_state: &GameState, expected_actions: Vec<TestAction>, log_after: Option<usize>) {
 	super::helpers::run_game(
