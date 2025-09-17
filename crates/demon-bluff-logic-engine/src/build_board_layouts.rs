@@ -55,6 +55,8 @@ pub struct BoardLayout {
 
 pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	let zone = span!("Build Board Layouts");
+
+	info!("Layout allocation size: {}", size_of::<BoardLayout>());
 	let mut remaining_initial_draw = Vec::with_capacity(game_state.deck().len());
 	remaining_initial_draw.extend(game_state.deck().iter().cloned());
 	remaining_initial_draw.sort();
@@ -135,6 +137,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	let layouts: HashSet<BoardLayout> = iterations
 		.into_par_iter()
 		.filter_map(|(disguise_index_combo_index, evil_archetype_combo_index)| {
+			let zone = span!("BBC Work Unit");
 			let disguise_index_combo = &disguise_index_permutations[disguise_index_combo_index];
 			let evil_archetype_combo = &evil_archetype_permutations[evil_archetype_combo_index];
 
@@ -142,6 +145,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let mut first_desc = true;
 			let mut desc = String::new();
 
+			let zone = span!("Build initial layout");
 			let theoreticals: Vec<TheoreticalVillager> = game_state
 				.villagers()
 				.iter()
@@ -322,6 +326,11 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 				description: desc,
 			};
 
+			Some(initial_layout)
+		})
+		.flat_map(|initial_layout| {
+			let zone = span!("Apply passes");
+
 			// TODO: Test pass order once deck builder mode releases
 			let wretch_spawned_theoreticals = with_wretch_locations(game_state, initial_layout);
 			let plague_doctor_spawned_theoreticals = wretch_spawned_theoreticals
@@ -348,13 +357,16 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let valid_boards =
 				alchemist_cured_theoreticals.filter(|layout| validate_board(game_state, layout));
 
-			let vec: Vec<BoardLayout> = valid_boards.collect();
+			let result = valid_boards.collect::<Vec<BoardLayout>>();
 
-			Some(vec)
+			drop(zone);
+
+			result
 		})
-		.flat_map(|iterator| iterator)
 		.collect();
 	drop(zone);
+
+	info!("{} Initial Layouts", layouts.len());
 
 	layouts
 }
