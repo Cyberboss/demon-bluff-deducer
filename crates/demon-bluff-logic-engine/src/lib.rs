@@ -312,6 +312,7 @@ pub fn predict(
 					let problem_space_reduction = mutually_exclusive_groups.len();
 
 					info!(
+						logger: log,
 						"Theory resulted in {} possible evil configurations factor: {} ({} ({}) / {}). PSR: {}",
 						layout_counts_len,
 						factor,
