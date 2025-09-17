@@ -15,6 +15,7 @@ use demon_bluff_gameplay_engine::{
 use demon_bluff_logic_engine::{AbilityAttempt, PlayerAction, RevealStrategy, predict};
 use itertools::Itertools;
 use log::info;
+use tracy_client::{Client, frame_mark, span};
 
 pub fn test_game_state(
 	state_name: &str,
@@ -93,6 +94,8 @@ fn run_game_core(
 	reveal_strategy: RevealStrategy,
 	expect_multi_match_last_action: bool,
 ) {
+	Client::start();
+
 	let mut game_state = game_state.clone();
 	let total_actions = expected_actions.len();
 	let mut log = log::logger();
@@ -178,6 +181,8 @@ fn run_game_core(
 				assert_ne!(total_actions - 1, index, "Game should be over by now")
 			}
 		}
+
+		frame_mark();
 	}
 }
 

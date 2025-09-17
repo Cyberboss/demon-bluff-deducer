@@ -8,6 +8,7 @@ use demon_bluff_gameplay_engine::{
 };
 use itertools::Itertools;
 use log::Log;
+use tracy_client::span;
 
 use crate::{
 	build_board_layouts::BoardLayout,
@@ -62,6 +63,7 @@ pub fn with_theoretical_testimony(
 	game_state: &GameState,
 	board_configs_and_satisfying_assignments: &Vec<LayoutWithTestimonyAssigments>,
 ) -> AbilityPrediction {
+	let zone = span!("With Theoretical Testimony");
 	let mut results: HashMap<AbilityAttempt, Vec<PostAbilityBoardMutation>> = HashMap::new();
 
 	for (original_layout, mutation_vec) in

@@ -15,7 +15,10 @@ use demon_bluff_gameplay_engine::{
 	},
 };
 use itertools::Itertools;
+use log::info;
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
+use tracy_client::span;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TheoreticalVillager {
@@ -51,6 +54,7 @@ pub struct BoardLayout {
 }
 
 pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
+	let zone = span!("Build Board Layouts");
 	let mut remaining_initial_draw = Vec::with_capacity(game_state.deck().len());
 	remaining_initial_draw.extend(game_state.deck().iter().cloned());
 	remaining_initial_draw.sort();
@@ -62,6 +66,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 	let mut outcast_count = 0;
 
 	game_state.iter_villagers(|index, villager| {
+		let zone = span!("Iter villager");
 		match villager {
 			Villager::Hidden(hidden_villager) => {
 				if !hidden_villager.cant_kill() {
@@ -100,14 +105,39 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 		true
 	});
 
+	let disguise_index_permutations: Vec<Vec<&VillagerIndex>> = disguisable_indicies
+		.iter()
+		.permutations(remaining_evils)
+		.collect();
+
+	let evil_archetype_permutations: Vec<Vec<&VillagerArchetype>> = remaining_initial_draw
+		.iter()
+		.filter(|archetype| archetype.is_evil())
+		.permutations(remaining_evils)
+		.collect();
+
 	// there's probably redundancies in this loop but they will be deduplicated
-	let mut layouts = HashSet::new();
-	for disguise_index_combo in disguisable_indicies.iter().permutations(remaining_evils) {
-		for evil_archetype_combo in remaining_initial_draw
-			.iter()
-			.filter(|archetype| archetype.is_evil())
-			.permutations(remaining_evils)
-		{
+	let iterations: Vec<(usize, usize)> = disguise_index_permutations
+		.iter()
+		.enumerate()
+		.flat_map(|(disguise_index_combo_index, _)| {
+			evil_archetype_permutations
+				.iter()
+				.enumerate()
+				.map(|(evil_archetype_combo_index, _)| {
+					(disguise_index_combo_index, evil_archetype_combo_index)
+				})
+				.collect::<Vec<(usize, usize)>>()
+		})
+		.collect();
+
+	let zone = span!("BBC Work Zone");
+	let layouts: HashSet<BoardLayout> = iterations
+		.into_par_iter()
+		.filter_map(|(disguise_index_combo_index, evil_archetype_combo_index)| {
+			let disguise_index_combo = &disguise_index_permutations[disguise_index_combo_index];
+			let evil_archetype_combo = &evil_archetype_permutations[evil_archetype_combo_index];
+
 			assert_eq!(disguise_index_combo.len(), evil_archetype_combo.len());
 			let mut first_desc = true;
 			let mut desc = String::new();
@@ -278,7 +308,7 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 
 			if theoreticals.len() != game_state.total_villagers() {
 				// tried to disguise as something undisguisable
-				continue;
+				return None;
 			}
 
 			let evil_locations = disguise_index_combo
@@ -318,9 +348,13 @@ pub fn build_board_layouts(game_state: &GameState) -> HashSet<BoardLayout> {
 			let valid_boards =
 				alchemist_cured_theoreticals.filter(|layout| validate_board(game_state, layout));
 
-			layouts.extend(valid_boards);
-		}
-	}
+			let vec: Vec<BoardLayout> = valid_boards.collect();
+
+			Some(vec)
+		})
+		.flat_map(|iterator| iterator)
+		.collect();
+	drop(zone);
 
 	layouts
 }

@@ -6,6 +6,7 @@ use std::{
 };
 
 use demon_bluff_gameplay_engine::Expression;
+use tracy_client::span;
 
 pub struct OptimizedExpression<'a, T>
 where

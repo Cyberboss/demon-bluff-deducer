@@ -26,7 +26,7 @@ use std::{
 	fmt::format,
 	sync::{
 		Mutex,
-		atomic::{AtomicI32, Ordering},
+		atomic::{AtomicI32, AtomicUsize, Ordering},
 	},
 	usize,
 };
@@ -44,7 +44,10 @@ use expression_assertion::collect_satisfying_assignments;
 use itertools::Itertools;
 use log::{Level, Log, debug, info, log_enabled, trace, warn};
 use optimized_expression::OptimizedExpression;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use rayon::prelude::{
+	IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+};
+use tracy_client::{frame_mark, span};
 use with_theoretical_testimony::{LayoutWithTestimonyAssigments, with_theoretical_testimony};
 
 pub use self::{
@@ -64,6 +67,7 @@ pub fn predict(
 	state: &GameState,
 	reveal_strategy: RevealStrategy,
 ) -> Result<HashSet<PlayerAction>, PredictionError> {
+	let zone = span!("Predict");
 	let mut any_revealed = false;
 	state.iter_villagers(|_, villager| {
 		if let Villager::Hidden(_) = villager {
@@ -186,6 +190,7 @@ pub fn predict(
 							ability_attempt_index,
 							previously_caluclated_attempts.len()
 						);
+						let zone = span!("Theory Evaluation");
 
 						let (_, mutations) = mutation_option.expect("Impossble");
 
@@ -435,6 +440,7 @@ fn predict_core(
 	layouts: impl Iterator<Item = (BoardLayout, Option<Vec<HashMap<IndexTestimony, bool>>>)>,
 	count_configs: bool,
 ) -> PredictionResult2 {
+	let zone = span!("Predict Core");
 	// Step one, build possible board layouts as an ExpressionWithTag HashMap<Vec<VillagerArchetype, ExpressionWithTag<Testimony>>>
 	let mut initial_evil_layouts = HashSet::new();
 	let prediction_result = predict_board_configs(
@@ -538,6 +544,7 @@ fn predict_board_configs(
 	configs: impl Iterator<Item = (BoardLayout, Option<Vec<HashMap<IndexTestimony, bool>>>)>,
 	non_hypothetical_pass: bool,
 ) -> Result<PredictionResult3, PredictionError> {
+	let zone = span!("Predict Board Configs");
 	let potential_board_configurations: Vec<(
 		BoardLayout,
 		Option<Vec<HashMap<IndexTestimony, bool>>>,
@@ -588,6 +595,7 @@ fn predict_board_configs(
 	}
 
 	if potential_board_expressions.iter().next().is_some() {
+		let zone = span!("Expression Optimization");
 		let optimized_expressions: Vec<OptimizedExpression<IndexTestimony>> =
 			potential_board_expressions
 				.iter()
@@ -595,14 +603,18 @@ fn predict_board_configs(
 				.collect();
 		let master_expression = Expression::MajorOr(potential_board_expressions);
 		let optimized_master_expression = OptimizedExpression::new(&master_expression);
+		drop(zone);
 
 		let master_expression_satisfying_assignments: Vec<AssignmentsType> =
 			if non_hypothetical_pass {
+				let zone = span!("Collect satisfying assignments");
 				collect_satisfying_assignments(&optimized_master_expression)
 					.into_iter()
 					.map(|assignment| AssignmentsType::All(assignment))
 					.collect()
 			} else {
+				let zone = span!("Theoretical assignment collection");
+
 				// all board configurations should have potential assignments alongside them and they should NOT overlap
 				// convert them to optimized form
 				potential_board_configurations
@@ -637,14 +649,22 @@ fn predict_board_configs(
 			HashMap::new();
 		let mut matching_layouts = HashSet::new();
 
-		let assignments_to_iterate: Vec<(usize, ExpandedAssignmentsType)> =
-			match &master_expression_satisfying_assignments[0] {
-				// check every assignment against every board
-				AssignmentsType::All(_) => optimized_expressions
-					.iter()
+		let matching_configs = AtomicI32::new(0);
+
+		let board_index_satisfying_assignments = match &master_expression_satisfying_assignments[0]
+		{
+			// check every assignment against every board
+			AssignmentsType::All(_) => applicator(
+				log,
+				game_state,
+				&matching_configs,
+				&potential_board_configurations,
+				&optimized_expressions,
+				optimized_expressions
+					.par_iter()
 					.enumerate()
 					.flat_map(|(board_index, _)| {
-						master_expression_satisfying_assignments.iter().map(
+						master_expression_satisfying_assignments.par_iter().map(
 							move |satisfying_assignment| {
 								(
 									board_index,
@@ -661,103 +681,33 @@ fn predict_board_configs(
 								)
 							},
 						)
-					})
-					.collect(),
-				// check only previously satisfying assignments against their source boards
-				AssignmentsType::Previous(_) => master_expression_satisfying_assignments
-					.into_iter()
+					}),
+			),
+			// check only previously satisfying assignments against their source boards
+			AssignmentsType::Previous(_) => applicator(
+				log,
+				game_state,
+				&matching_configs,
+				&potential_board_configurations,
+				&optimized_expressions,
+				master_expression_satisfying_assignments
+					.into_par_iter()
 					.flat_map(|assignment_type| match assignment_type {
 						AssignmentsType::All(_) => unreachable!(
 							"Index 0 was AssignmentsType::Previous but another index was AssignmentsType::All??"
 						),
 						AssignmentsType::Previous(previous_assignments) => previous_assignments
 							.previous_assignments
-							.into_iter()
+							.into_par_iter()
 							.map(move |assignment_map| {
 								(
 									previous_assignments.matching_board_index,
 									ExpandedAssignmentsType::Previous(assignment_map),
 								)
 							}),
-					})
-					.collect(),
-			};
-
-		let matching_configs = AtomicI32::new(0);
-		let wretch_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch));
-		let drunk_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Drunk));
-		let knight_in_play =
-			game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
-		let bombardier_in_play =
-			game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
-
-		let board_index_satisfying_assignments: Vec<(usize, HashMap<IndexTestimony, bool>)> =
-			assignments_to_iterate
-				.into_par_iter()
-				.filter_map(|(board_index, assignment_type)| {
-					let mapped_assignment;
-					let board_expression = &optimized_expressions[board_index];
-					let assignment = match assignment_type {
-						ExpandedAssignmentsType::All(items) => items,
-						ExpandedAssignmentsType::Previous(previous_assignments) => {
-							let mut assignment_vec =
-								Vec::with_capacity(board_expression.variables().len());
-
-							for variable in board_expression.variables().iter() {
-								if let Some(testimony_trutfulness) =
-									previous_assignments.get(variable)
-								{
-									assignment_vec.push(*testimony_trutfulness)
-								}
-							}
-
-							mapped_assignment = assignment_vec;
-							&mapped_assignment
-						}
-					};
-
-					let (layout, _) = &potential_board_configurations[board_index];
-
-					let assignment_satisfies =
-						board_expression.satisfies(|variable_index| assignment[variable_index]);
-
-					if assignment_satisfies
-						&& validate_assignment(
-							log,
-							&assignment,
-							board_expression.variables(),
-							layout,
-							game_state,
-							wretch_in_play,
-							drunk_in_play,
-							knight_in_play,
-							bombardier_in_play,
-						) {
-						matching_configs.fetch_add(1, Ordering::Relaxed);
-
-						let satisfying_assignment = match assignment_type {
-							ExpandedAssignmentsType::All(_) => {
-								let mut satisfying_assignment_builder =
-									HashMap::with_capacity(board_expression.variables().len());
-								for (index, variable) in
-									board_expression.variables().iter().enumerate()
-								{
-									satisfying_assignment_builder
-										.insert(variable.clone(), assignment[index]);
-								}
-
-								satisfying_assignment_builder
-							}
-							ExpandedAssignmentsType::Previous(previous_assignments) => {
-								previous_assignments.clone()
-							}
-						};
-						Some((board_index, satisfying_assignment))
-					} else {
-						None
-					}
-				})
-				.collect();
+					}),
+			),
+		};
 
 		for (matching_board_config_index, satisfying_assignment) in
 			board_index_satisfying_assignments
@@ -991,6 +941,83 @@ fn predict_board_configs(
 				.collect(),
 		))
 	}
+}
+
+fn applicator<'a>(
+	log: &impl Log,
+	game_state: &GameState,
+	matching_configs: &AtomicI32,
+	potential_board_configurations: &Vec<(BoardLayout, Option<Vec<HashMap<IndexTestimony, bool>>>)>,
+	optimized_expressions: &Vec<OptimizedExpression<IndexTestimony>>,
+	assignments_to_iterate: impl ParallelIterator<Item = (usize, ExpandedAssignmentsType<'a>)>,
+) -> Vec<(usize, HashMap<IndexTestimony, bool>)> {
+	let zone = span!("Work Zone");
+	let wretch_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Wretch));
+	let drunk_in_play = game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Drunk));
+	let knight_in_play =
+		game_state.role_in_play(VillagerArchetype::GoodVillager(GoodVillager::Knight));
+	let bombardier_in_play =
+		game_state.role_in_play(VillagerArchetype::Outcast(Outcast::Bombardier));
+	assignments_to_iterate
+		.filter_map(|(board_index, assignment_type)| {
+			let mapped_assignment;
+			let board_expression = &optimized_expressions[board_index];
+			let assignment = match assignment_type {
+				ExpandedAssignmentsType::All(items) => items,
+				ExpandedAssignmentsType::Previous(previous_assignments) => {
+					let mut assignment_vec = Vec::with_capacity(board_expression.variables().len());
+
+					for variable in board_expression.variables().iter() {
+						if let Some(testimony_trutfulness) = previous_assignments.get(variable) {
+							assignment_vec.push(*testimony_trutfulness)
+						}
+					}
+
+					mapped_assignment = assignment_vec;
+					&mapped_assignment
+				}
+			};
+
+			let (layout, _) = &potential_board_configurations[board_index];
+
+			let assignment_satisfies =
+				board_expression.satisfies(|variable_index| assignment[variable_index]);
+
+			if assignment_satisfies
+				&& validate_assignment(
+					log,
+					&assignment,
+					board_expression.variables(),
+					layout,
+					game_state,
+					wretch_in_play,
+					drunk_in_play,
+					knight_in_play,
+					bombardier_in_play,
+				) {
+				matching_configs.fetch_add(1, Ordering::Relaxed);
+
+				let satisfying_assignment = match assignment_type {
+					ExpandedAssignmentsType::All(_) => {
+						let mut satisfying_assignment_builder =
+							HashMap::with_capacity(board_expression.variables().len());
+						for (index, variable) in board_expression.variables().iter().enumerate() {
+							satisfying_assignment_builder
+								.insert(variable.clone(), assignment[index]);
+						}
+
+						satisfying_assignment_builder
+					}
+					ExpandedAssignmentsType::Previous(previous_assignments) => {
+						previous_assignments.clone()
+					}
+				};
+				Some((board_index, satisfying_assignment))
+			} else {
+				None
+			}
+		})
+		.collect()
 }
 
 fn kill_board_configs(
