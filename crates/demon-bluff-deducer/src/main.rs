@@ -1,15 +1,16 @@
-use std::collections::HashMap;
-use std::io::prelude::*;
-use std::path::Path;
-use std::{env::temp_dir, path::PathBuf};
+use std::{
+	collections::HashMap,
+	env::temp_dir,
+	io::prelude::*,
+	path::{Path, PathBuf},
+};
 
 use anyhow::Result;
 use demon_bluff_gameplay_engine::villager::{GoodVillager, VillagerArchetype};
 use image::ColorType;
 use ocrs::{ImageSource, OcrEngine, OcrEngineParams};
 use rten::Model;
-use rustautogui::errors::AutoGuiError;
-use rustautogui::{MatchMode, RustAutoGui};
+use rustautogui::{MatchMode, RustAutoGui, errors::AutoGuiError};
 use thiserror::Error;
 use xcap::{Monitor, Window};
 
