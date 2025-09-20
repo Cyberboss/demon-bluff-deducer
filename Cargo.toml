@@ -4,6 +4,7 @@ members = [
     "crates/demon-bluff-deducer",
     "crates/demon-bluff-gameplay-engine",
     "crates/demon-bluff-logic-engine",
+    "crates/training-data-generator",
 ]
 
 [profile.release]
