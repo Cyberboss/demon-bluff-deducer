@@ -29,14 +29,14 @@ impl ImageId {
 		self.counter
 	}
 
-	pub fn path(&self) -> PathBuf {
+	pub fn jpg_path(&self) -> PathBuf {
 		PathBuf::from(format!(
-			"X:/workspace/demon-bluff-deducer/dataset/images/train/{:07}.jpg",
+			"S:/workspace/demon-bluff-deducer/dataset/images/train/{:07}.jpg",
 			self.counter
 		))
 	}
 
 	fn has_collision(&self) -> bool {
-		self.path().exists()
+		self.jpg_path().exists()
 	}
 }

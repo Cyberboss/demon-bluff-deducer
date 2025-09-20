@@ -18,16 +18,17 @@ use crate::{
 pub fn keyboard_handler(
 	mut commands: Commands,
 	mut assets: ResMut<Assets<Image>>,
-	current_annotation: Option<Single<(Entity, &AnnotatingImageComponent)>>,
+	current_annotation: Option<Single<(Entity, &mut AnnotatingImageComponent)>>,
 	window: Res<WindowResource>,
 	keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
 	if keyboard_input.just_pressed(KeyCode::KeyN) {
 		let next_image_id;
 		if let Some(current_annotation) = current_annotation {
-			let (current_annotation_entity, current_annotation) = current_annotation.into_inner();
+			let (current_annotation_entity, mut current_annotation) =
+				current_annotation.into_inner();
 
-			next_image_id = current_annotation.next_image_id();
+			next_image_id = current_annotation.complete_and_get_next_image_id();
 
 			commands.entity(current_annotation_entity).despawn();
 		} else {
