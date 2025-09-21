@@ -7,11 +7,10 @@ use bevy::{
 };
 
 use self::{
-	data::image_id::ImageId,
 	resources::window::WindowResource,
 	systems::{
 		keyboard_handler::keyboard_handler, mouse_button_handler::mouse_button_handler,
-		setup::setup,
+		setup::setup, text_input::text_input, word_selection_renderer::word_selection_renderer,
 	},
 };
 
@@ -26,7 +25,15 @@ fn main() -> Result<ExitCode> {
 	app.add_plugins(DefaultPlugins)
 		.insert_resource(WindowResource::new()?)
 		.add_systems(Startup, setup)
-		.add_systems(Update, (keyboard_handler, mouse_button_handler));
+		.add_systems(
+			Update,
+			(
+				keyboard_handler,
+				mouse_button_handler,
+				word_selection_renderer,
+				text_input,
+			),
+		);
 
 	let termination = app.run();
 

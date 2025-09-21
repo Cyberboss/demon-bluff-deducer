@@ -39,6 +39,10 @@ impl LineBuilder {
 		}
 	}
 
+	pub fn add_word(&mut self, word: Word) {
+		self.inner.words.push(word);
+	}
+
 	pub fn build(self) -> Line {
 		let mut line = self.inner;
 		line.text = line

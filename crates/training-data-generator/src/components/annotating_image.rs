@@ -1,12 +1,15 @@
-use std::{fs::OpenOptions, io::Write, path::PathBuf};
+use std::{fs::OpenOptions, io::Write, mem::replace, path::PathBuf};
 
-use bevy::ecs::component::Component;
+use bevy::{
+	ecs::component::Component,
+	math::{UVec2, Vec2},
+};
 use image::{RgbImage, RgbaImage, buffer::ConvertBuffer};
 use owned_drop::{DropOwned, OwnedDroppable};
 
 use crate::data::{
 	annotation::AnnotationBuilder, image_id::ImageId, line::LineBuilder,
-	paragraph::ParagraphBuilder,
+	paragraph::ParagraphBuilder, word::Word,
 };
 
 #[derive(Component)]
@@ -38,11 +41,35 @@ impl AnnotatingImageComponent {
 		}
 	}
 
+	pub fn reset(&mut self) {
+		self.inner.annotation = AnnotationBuilder::new(&self.inner.image_id, &self.inner.image);
+		self.inner.paragraph = ParagraphBuilder::new();
+		self.inner.line = LineBuilder::new();
+	}
+
+	pub fn image_size(&self) -> UVec2 {
+		UVec2::new(self.inner.image.width(), self.inner.image.height())
+	}
+
 	pub fn complete_and_get_next_image_id(&mut self) -> ImageId {
 		self.inner.save_on_drop = true;
 		let mut next_image_id = self.inner.image_id.clone();
 		next_image_id.inc();
 		next_image_id
+	}
+
+	pub fn add_word(&mut self, word: Word) {
+		self.inner.line.add_word(word);
+	}
+
+	pub fn finish_line(&mut self) {
+		let line = replace(&mut self.inner.line, LineBuilder::new());
+		self.inner.paragraph.add_line(line);
+	}
+
+	pub fn finish_paragraph(&mut self) {
+		let paragraph = replace(&mut self.inner.paragraph, ParagraphBuilder::new());
+		self.inner.annotation.add_paragraph(paragraph);
 	}
 }
 

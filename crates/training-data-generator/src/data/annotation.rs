@@ -22,7 +22,7 @@ impl AnnotationBuilder {
 	pub fn new(image_id: &ImageId, image: &RgbaImage) -> Self {
 		Self {
 			inner: Annotation {
-				image_id: format!("{}", image_id.id()),
+				image_id: format!("{:07}", image_id.id()),
 				image_width: image.width(),
 				image_height: image.height(),
 				paragraphs: Vec::new(),
