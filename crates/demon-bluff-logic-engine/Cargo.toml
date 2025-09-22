@@ -9,7 +9,7 @@ enum_delegate = "0.2.0"
 thiserror = "2.0.16"
 log = "0.4.28"
 enum-display-derive = "0.1.1"
-serde = { version = "1.0.219", features = ["serde_derive"] }
+serde = { version = "1.0.226", features = ["serde_derive"] }
 itertools = "0.14.0"
 rayon = "1.11.0"
 tracy-client = "0.18.2"                                                   # TODO: Set enable = false by default
