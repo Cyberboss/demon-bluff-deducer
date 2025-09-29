@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 demon-bluff-gameplay-engine = { path = "../demon-bluff-gameplay-engine" }
 enum_delegate = "0.2.0"
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 log = "0.4.28"
 enum-display-derive = "0.1.1"
 serde = { version = "1.0.219", features = ["serde_derive"] }
