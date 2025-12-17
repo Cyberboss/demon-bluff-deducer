@@ -17,4 +17,4 @@ rten = "0.22.0"
 rustautogui = "2.5.0"
 # serde_json = "1.0.143"
 thiserror = "2.0.16"
-xcap = { version = "0.7.1", features = ["image"] }
+xcap = { version = "0.8.0", features = ["image"] }
