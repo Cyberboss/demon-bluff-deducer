@@ -11,4 +11,4 @@ owned-drop = "0.1.1"
 serde = "1.0.225"
 serde_json = "1.0.145"
 thiserror = "2.0.16"
-xcap = { version = "0.7.1", features = ["image"] }
+xcap = { version = "0.8.1", features = ["image"] }
