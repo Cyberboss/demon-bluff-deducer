@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.99"
+anyhow = "1.0.101"
 # async-channel = "2.5.0"
 # bevy = "0.16.1"
 demon-bluff-gameplay-engine = { path = "../demon-bluff-gameplay-engine" }
